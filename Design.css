@@ -1,0 +1,58 @@
+@CHARSET "UTF-8";
+
+#bodyTable
+{
+	width:100%;
+}
+
+.layoutTableSide
+{
+	width:17%;
+	vertical-align:top;
+}
+
+.layoutTableCenter
+{
+	width:66%;
+	vertical-align:top;
+}
+
+#title
+{
+	font-size: large;
+}
+
+.clickableBar
+{
+	cursor:pointer;
+	transition: all .5s linear;
+}
+
+.clickable
+{
+	cursor:pointer;
+}
+
+.textShadow
+{
+	text-shadow: black 0.0em 0.0em 0.2em;
+}
+
+.textShadowWhite
+{
+	text-shadow: 0 0 3px #FFF;
+}
+
+.dataTable
+{
+	vertical-align:top;
+	font-size: x-small;
+	width:100%;
+	border-collapse: collapse;
+}
+
+.dataTable th, .dataTable td
+{
+	vertical-align:top;
+	border: 1px solid black;
+}
