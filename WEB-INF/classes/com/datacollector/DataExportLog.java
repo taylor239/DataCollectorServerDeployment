@@ -193,23 +193,14 @@ public class DataExportLog extends HttpServlet {
 			}
 			if(toSelect.contains("video"))
 			{
-				System.out.println("Getting screenshots for video");
 				dataTypes.add("video");
 				ConcurrentHashMap screenshotMap = myConnector.getScreenshotsHierarchy(eventName, admin, userSelectList, false, false);
-				System.out.println("Normalizing time");
 				screenshotMap = myConnector.normalizeAllTime(screenshotMap);
-				System.out.println("Converting to video");
 				ConcurrentHashMap videoPair = toVideo(screenshotMap, zip);
-				System.out.println("Done encoding video");
-				System.out.println(videoPair.keySet());
 				if(zip)
 				{
 					ConcurrentHashMap videoMap = (ConcurrentHashMap) videoPair.get("json");
 					ConcurrentHashMap videoMapBinary = (ConcurrentHashMap) videoPair.get("binary");
-					
-					System.out.println(videoMap.keySet());
-					System.out.println(videoMapBinary.keySet());
-					
 					headMap = myConnector.mergeMaps(headMap, videoMap);
 					fileWriteMap = myConnector.mergeMaps(fileWriteMap, videoMapBinary);
 				}
@@ -533,11 +524,11 @@ public class DataExportLog extends HttpServlet {
 				String curSession = (String) sessionEntry.getKey();
 				ConcurrentHashMap dataMap = (ConcurrentHashMap) sessionEntry.getValue();
 				
-				System.out.println("Doing video for " + curUser + ", " + curSession);
+				//System.out.println("Doing video for " + curUser + ", " + curSession);
 				
-				System.out.println(dataMap.keySet());
+				//System.out.println(dataMap.keySet());
 				ArrayList screenshotEntries = (ArrayList) dataMap.get("screenshots");
-				System.out.println(screenshotEntries.size());
+				//System.out.println(screenshotEntries.size());
 				BufferedImageVideoEncoder myEncoder = new BufferedImageVideoEncoder();
 				
 				ArrayList outputList = new ArrayList();
@@ -545,26 +536,26 @@ public class DataExportLog extends HttpServlet {
 				
 				Object curStartDate = null;
 				ConcurrentHashMap curImage = (ConcurrentHashMap) screenshotEntries.get(0);
-				System.out.println(curImage.keySet());
-				System.out.println(curImage.get("Index"));
+				//System.out.println(curImage.keySet());
+				//System.out.println(curImage.get("Index"));
 				curStartDate = curImage.get("Index");
-				System.out.println(curStartDate);
-				System.out.println("First video");
+				//System.out.println(curStartDate);
+				//System.out.println("First video");
 				for(int x=0; x<screenshotEntries.size(); x++)
 				{
-					System.out.println("Encoding image to video...");
+					//System.out.println("Encoding image to video...");
 					curImage = (ConcurrentHashMap) screenshotEntries.get(x);
-					System.out.println("Checking if need for new video");
+					//System.out.println("Checking if need for new video");
 					if(!myEncoder.addImage(curImage) || (x + 1) == screenshotEntries.size())
 					{
-						System.out.println("Needs new video or done with session, recording last");
+						//System.out.println("Needs new video or done with session, recording last");
 						ConcurrentHashMap dataEntryMap = new ConcurrentHashMap();
 						ConcurrentHashMap dataEntryMapBinary = new ConcurrentHashMap();
 						byte[] theData = myEncoder.getVideoBytes();
-						System.out.println("Adding dates");
+						//System.out.println("Adding dates");
 						dataEntryMap.put("Index", curStartDate);
 						dataEntryMap.put("Start", curStartDate);
-						System.out.println("Adding paths and data");
+						//System.out.println("Adding paths and data");
 						if(toZip)
 						{
 							dataEntryMapBinary.put("Index", (curStartDate.toString()).replaceAll(" ", "_") + ".mkv");
@@ -581,11 +572,11 @@ public class DataExportLog extends HttpServlet {
 						if(!((x + 1) == screenshotEntries.size()))
 						{
 							x--;
-							System.out.println("Next video in same session");
+							//System.out.println("Next video in same session");
 						}
 						else
 						{
-							System.out.println("Next session");
+							//System.out.println("Next session");
 						}
 						curStartDate = curImage.get("Index");
 					}
@@ -599,7 +590,7 @@ public class DataExportLog extends HttpServlet {
 				curUserMap.put(curSession, curSessionMap);
 				curUserMapBinary.put(curSession, curSessionMapBinary);
 				
-				System.out.println("Done with session " + curUser + ", " + curSession);
+				//System.out.println("Done with session " + curUser + ", " + curSession);
 				
 			}
 			videoEntrys.put(curUser, curUserMap);

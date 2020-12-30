@@ -40,12 +40,12 @@ public class BufferedImageVideoEncoder
 	public BufferedImageVideoEncoder()
 	{
 		myConverter = new Java2DFrameConverter();
-		System.out.println("Instantiate up encoer");
+		
 	}
 	
 	public void setupEncoder(int width, int height)
 	{
-		System.out.println("Setting up encoder with " + width + ", " + height);
+		
 		if(width % 2 == 1)
 		{
 			width++;
@@ -69,22 +69,22 @@ public class BufferedImageVideoEncoder
 	
 	public boolean addImage(ConcurrentHashMap toAdd)
 	{
-		System.out.println("Adding image to video");
+		
 		//imagesToEncode.add(toAdd);
-		System.out.println("Getting image " + toAdd.get("Screenshot").getClass());
+		
 		byte[] imageData = (byte[]) toAdd.get("Screenshot");
 		ByteArrayInputStream toImage = new ByteArrayInputStream(imageData);
 		try
 		{
-			System.out.println("Converting bytes to image");
+			
 			BufferedImage toEncode = ImageIO.read((InputStream)toImage);
 			int curWidth = toEncode.getWidth();
 			int curHeight = toEncode.getHeight();
 			
-			System.out.println("Checking resolution");
+			
 			if((!first) && (curWidth != maxWidth || curHeight != maxHeight))
 			{
-				System.out.println("Resolution changed");
+				
 				first = true;
 				myRecorder.flush();
 				return false;
@@ -108,7 +108,7 @@ public class BufferedImageVideoEncoder
 			Frame curFrame = myConverter.convert(toEncode);
 			for(long x=0; x<timeDiff; x+=1000)
 			{
-				//System.out.println("Filler frame at " + (lastTime + x - curOffset));
+				//
 				myRecorder.setTimestamp((lastTime + x - curOffset)*1000);
 				if(x > timeDiff/2 || lastFrame == null)
 				{
@@ -120,9 +120,9 @@ public class BufferedImageVideoEncoder
 				}
 			}
 			
-			System.out.println("Frame size: " + curFrame.imageWidth + ", " + curFrame.imageHeight);
+			
 			myRecorder.setTimestamp((sessionTime - curOffset)*1000);
-			System.out.println("Adding frame at " + (sessionTime - curOffset));
+			
 			myRecorder.record(curFrame);
 			
 			lastTime = curTime;
@@ -145,7 +145,7 @@ public class BufferedImageVideoEncoder
 			e.printStackTrace();
 		}
 		byte[] toReturn = videoBytes.toByteArray();
-		System.out.println("Video is " + toReturn.length +" bytes");
+		
 		return toReturn;
 	}
 }
