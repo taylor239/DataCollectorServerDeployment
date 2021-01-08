@@ -1976,7 +1976,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public byte[] getScreenshot(String username, String myTimestamp, String event, String admin)
+	public byte[] getScreenshot(String username, String session, String myTimestamp, String event, String admin)
 	{
 		byte[] myReturn = null;
 		
@@ -1990,9 +1990,10 @@ public class DatabaseConnector
 		{
 			PreparedStatement myStatement = myConnector.prepareStatement(imageQuery);
 			myStatement.setString(1, username);
-			myStatement.setString(2, myTimestamp);
+			myStatement.setString(2, session);
 			myStatement.setString(3, event);
 			myStatement.setString(4, admin);
+			myStatement.setString(5, myTimestamp);
 			//myStatement.setString(3, myTimestamp);
 			//System.err.println(myStatement.toString());
 			ResultSet myResults = myStatement.executeQuery();

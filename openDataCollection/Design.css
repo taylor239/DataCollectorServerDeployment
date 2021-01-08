@@ -1,5 +1,10 @@
 @CHARSET "UTF-8";
 
+body
+{
+	overflow-y: scroll; /* Show vertical scrollbar */
+}
+
 #bodyTable
 {
 	width:100%;
@@ -28,6 +33,12 @@
 	transition: all .5s linear;
 }
 
+.clickableBarHelp
+{
+	cursor:help;
+	transition: all .5s linear;
+}
+
 .clickable
 {
 	cursor:pointer;
@@ -46,12 +57,26 @@
 .dataTable
 {
 	vertical-align:top;
-	font-size: x-small;
+	font-size: medium;
+	width:100%;
+	
+}
+
+.dataTable th, .dataTable td
+{
+	vertical-align:top;
+	
+}
+
+table
+{
+	vertical-align:top;
+	font-size: medium;
 	width:100%;
 	border-collapse: collapse;
 }
 
-.dataTable th, .dataTable td
+table th, table td
 {
 	vertical-align:top;
 	border: 1px solid black;

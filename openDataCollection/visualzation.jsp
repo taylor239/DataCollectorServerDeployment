@@ -4,6 +4,7 @@
 <html>
 <head>
 <link rel="stylesheet" type="text/css" href="Design.css">
+<script src="./sha_func.js"></script>
 <script src="./d3.v4.min.js"></script>
 <script src="./d3-scale-chromatic.v0.3.min.js"></script>
 <meta charset="UTF-8">
@@ -57,13 +58,61 @@ if(request.getParameter("email") != null)
 <table id="bodyTable">
 	<tr>
 		<td class="layoutTableSide">
-		
+			<table width="100%" height="100%">
+					<tr>
+						<td>
+								<div align="center">
+									Options
+								</div>
+						</td>
+					</tr>
+					<tr>
+						<td colwidth="2">
+									Time Normalization
+						</td>
+					</tr>
+					<tr>
+						<td colwidth="2">
+									<form id="timeScaleSelection">
+									  <input type="radio" id="sessionTime" name="timeScale" value="Session" onclick="setTimeScale(this.value)" checked>
+									  <label for="sessionTime">Session</label><br>
+									  <input type="radio" id="userTime" name="timeScale" value="User" onclick="setTimeScale(this.value)">
+									  <label for="sessionTime">User</label><br>
+									  <input type="radio" id="universalTime" name="timeScale" value="Universal" onclick="setTimeScale(this.value)">
+									  <label for="sessionTime">Universal</label><br>
+									</form>
+						</td>
+					</tr>
+					<tr>
+						<td colwidth="2">
+									Playback Speed
+						</td>
+					</tr>
+					<tr>
+						<td colwidth="2">
+									<input type="text" size="4" id="playbackSpeed" name="playbackSpeed" value="10">x
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<div align="center">
+									Filters
+							</div>
+						</td>
+					</tr>
+			</table>
 		</td>
-		<td class="layoutTableCenter">
-		<div align="center" id="title">User Timelines for <%=eventName %></div>
-		<div align="center" id="mainVisualization">
-		
-		</div>
+		<td class="layoutTableCenter" id="mainVisContainer">
+			<table>
+			<tr><td>
+			<div align="center" id="title">User Timelines for <%=eventName %></div>
+			</td></tr>
+			<tr><td>
+			<div align="center" id="mainVisualization">
+			</div>
+			</td></tr>
+			</table>
+		</td>
 		<td class="layoutTableSide">
 			<table width="100%" height="100%">
 					<tr>
@@ -99,18 +148,34 @@ if(request.getParameter("email") != null)
 			</table>
 		</td>
 		<td class="layoutTableCenter">
-			<table id="infoTable" width="100%" class="dataTable">
+			<table id="graphTable" width="100%" class="dataTable">
 				<tr>
-					<td colspan=4>
+					<td>
 					<div align="center">Details</div>
 					</td>
 				</tr>
+			</table>
+			<table id="infoTable" width="100%" class="dataTable">
+				
 			</table>
 		</td>
 			</div>	
 		</td>
 		<td class="layoutTableSide">
-		
+			<table id="highlightTable" width="100%" class="dataTable">
+				<tr>
+					<td colspan=1>
+					<div align="center">Highlights</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan=1>
+							<div align="center" id="highlightDiv">
+							
+							</div>
+					</td>
+				</tr>
+			</table>
 		</td>
 	</tr>
 </table>
@@ -238,29 +303,40 @@ function fadeOutLightbox()
 
 
 <script>
-
-
+	
+	var containingTableRow = document.getElementById("mainVisContainer");
+	
 	var windowWidth = window.innerWidth;
 	var windowHeight = window.innerHeight;
 	
 	console.log(windowHeight + ", " + windowWidth);
 	
-	var visWidth = 900;
-	var visHeight = 400;
+	var visPadding = 20;
+	
+	var visWidth = containingTableRow.offsetWidth - visPadding;
+	var visHeight = windowHeight * .6;
+	var bottomVisHeight = windowHeight * .25;
 	var sidePadding = 24;
 	
-	var barHeight = 50;
+	var barHeight = visHeight / 10;
+	var xAxisPadding = 3 * barHeight;
+	//var xAxisPadding = .2 * visWidth;
 	
 	var eventName = "<%=eventName %>";
 	
+	var highlightMap = {};
+	highlightMap["TaskName"] = true;
+	highlightMap["SecondClass"] = true;
 	
 	var theNormData;
+	var theNormDataClone;
 	var theNormDataDone = false;
 	d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes,mouse,processes,windows,events,screenshotindices&normalize=none", function(error, data)
 			{
 				theNormData = data;
+				theNormDataClone = JSON.parse(JSON.stringify(theNormData));
 				theNormDataDone = true;
-				start();
+				start(true);
 			});
 	
 	
@@ -274,8 +350,6 @@ function fadeOutLightbox()
 	var svg;
 	var userOrdering;
 	
-	var xAxisPadding = 150;
-	
 	var keySlots = 200;
 	var keyMap;
 	
@@ -283,7 +357,10 @@ function fadeOutLightbox()
 	
 	var lookupTable;
 	
+	var processMap;
+	
 	var curStroke;
+	var curHighlight = [];
 	
 	var tickWidth = 4;
 	
@@ -292,145 +369,210 @@ function fadeOutLightbox()
 	
 	var timeMode = "Session";
 	
-	function start()
+	function setTimeScale(type)
 	{
+		timeMode = type;
+		if(theNormDataDone)
+		{
+			start(false);
+		}
+	}
+	
+	var colorScale = d3.scaleOrdinal(d3.schemeCategory20);
+	var colorScaleAccent = d3.scaleOrdinal(d3["schemeAccent"]);
+	
+	
+	function start(needsUpdate)
+	{
+		if(needsUpdate)
+		{
+			theNormData = JSON.parse(JSON.stringify(theNormDataClone));
+		}
 		lookupTable = {};
 		//Prepare data with sorting and finding mins, maxes
-		var colorScale = d3.scaleOrdinal(d3.schemeCategory20);
-		var colorScaleAccent = d3.scaleOrdinal(d3["schemeAccent"]);
 		
 		var curWindowNum = 0;
 		var windowColorNumber = {};
 		var windowLegend = [];
 		
-		userOrderMap = {};
-		for(user in theNormData)
+		if(needsUpdate)
 		{
-			sessionOrderMap = {};
-			maxTimeUser = 0;
-			minTimeUser = Number.POSITIVE_INFINITY;
-			maxTimeUserDate = "";
-			minTimeUserDate = "";
-			minTimeUserUniversal = Number.POSITIVE_INFINITY;
-			for(session in theNormData[user])
+			processMap = {};
+			lookupTable = {};
+			userOrderMap = {};
+			for(user in theNormData)
 			{
-				maxTimeSession = 0;
-				minTimeSession = Number.POSITIVE_INFINITY;
-				minTimeUserSession = Number.POSITIVE_INFINITY;
-				maxTimeSessionDate = "";
-				minTimeSessionDate = "";
-				theCurData = theNormData[user][session];
-				for(dataType in theCurData)
+				sessionOrderMap = {};
+				maxTimeUser = 0;
+				minTimeUser = Number.POSITIVE_INFINITY;
+				maxTimeUserDate = "";
+				minTimeUserDate = "";
+				minTimeUserUniversal = Number.POSITIVE_INFINITY;
+				for(session in theNormData[user])
 				{
-					thisData = theCurData[dataType];
-					
-					for(x=0; x<thisData.length; x++)
+					maxTimeSession = 0;
+					minTimeSession = Number.POSITIVE_INFINITY;
+					minTimeUserSession = Number.POSITIVE_INFINITY;
+					maxTimeSessionDate = "";
+					minTimeSessionDate = "";
+					theCurData = theNormData[user][session];
+					for(dataType in theCurData)
 					{
-						if(dataType == "windows")
+						thisData = theCurData[dataType];
+						
+						for(x=0; x<thisData.length; x++)
 						{
-							if(!(thisData[x]["SecondClass"] in windowColorNumber))
+							if(dataType == "windows")
 							{
-								windowColorNumber[thisData[x]["SecondClass"]] = curWindowNum % 20;
-								curWindowNum++;
-								windowLegend.push(thisData[x]["SecondClass"])
+								if(!(thisData[x]["SecondClass"] in windowColorNumber))
+								{
+									windowColorNumber[thisData[x]["SecondClass"]] = curWindowNum % 20;
+									curWindowNum++;
+									windowLegend.push(thisData[x]["SecondClass"])
+								}
 							}
+							
+							if(dataType == "processes")
+							{
+								if(!(user in processMap))
+								{
+									processMap[user] = {};
+								}
+								if(!(session in processMap[user]))
+								{
+									processMap[user][session] = {};
+								}
+								curUserSessionMap = processMap[user][session];
+								
+								curPid = thisData[x]["PID"]
+								curOSUser = thisData[x]["User"]
+								curStart = thisData[x]["Start"]
+								thisData[x]["CPU"] = Number(thisData[x]["CPU"])
+								curCPU = thisData[x]["CPU"]
+								thisData[x]["Mem"] = Number(thisData[x]["Mem"])
+								curMem = thisData[x]["Mem"]
+								
+								if(!(curOSUser in curUserSessionMap))
+								{
+									curUserSessionMap[curOSUser] = {};
+								}
+								if(!(curStart in curUserSessionMap[curOSUser]))
+								{
+									curUserSessionMap[curOSUser][curStart] = {};
+								}
+								if(!(curPid in curUserSessionMap[curOSUser][curStart]))
+								{
+									thisData[x]["Aggregate CPU"] = curCPU
+									thisData[x]["Aggregate Mem"] = curMem
+									curUserSessionMap[curOSUser][curStart][curPid] = [];
+									curUserSessionMap[curOSUser][curStart][curPid].push(thisData[x]);
+								}
+								else
+								{
+									curList = curUserSessionMap[curOSUser][curStart][curPid];
+									thisData[x]["Aggregate CPU"] = curCPU + curList[curList.length - 1]["Aggregate CPU"]
+									thisData[x]["Aggregate Mem"] = curMem + curList[curList.length - 1]["Aggregate Mem"]
+									thisData[x]["Prev"] = curList[curList.length - 1];
+									curList[curList.length - 1]["Next"] = thisData[x];
+									curList.push(thisData[x]);
+								}
+							}
+							
+							thisData[x]["Index MS Universal"] = Number(thisData[x]["Index MS Universal"]);
+							thisData[x]["Index MS"] = Number(thisData[x]["Index MS"]);
+							thisData[x]["Index MS User"] = Number(thisData[x]["Index MS User"]);
+							thisData[x]["Index MS Session"] = Number(thisData[x]["Index MS Session"]);
 						}
 						
-						thisData[x]["Index MS Universal"] = Number(thisData[x]["Index MS Universal"]);
-						thisData[x]["Index MS"] = Number(thisData[x]["Index MS"]);
-						thisData[x]["Index MS User"] = Number(thisData[x]["Index MS User"]);
-						thisData[x]["Index MS Session"] = Number(thisData[x]["Index MS Session"]);
+						lastTimeSession = thisData[thisData.length - 1]["Index MS Session"];
+						lastTimeUser = thisData[thisData.length - 1]["Index MS User"];
+						lastTimeDate = thisData[thisData.length - 1]["Index"];
+						
+						firstTimeSession = thisData[0]["Index MS Session"];
+						firstTimeUser = thisData[0]["Index MS User"];
+						firstTimeDate = thisData[0]["Index"];
+						
+						if(lastTimeSession > maxTimeSession)
+						{
+							maxTimeSession = lastTimeSession;
+							maxTimeSessionDate = lastTimeDate;
+						}
+						if(firstTimeSession < minTimeSession)
+						{
+							minTimeSession = firstTimeSession;
+							minTimeSessionDate = firstTimeDate;
+						}
+						if(firstTimeUser < minTimeUserSession)
+						{
+							minTimeUserSession = firstTimeUser;
+						}
+						if(lastTimeUser > maxTimeUser)
+						{
+							maxTimeUser = lastTimeUser;
+							maxTimeUserDate = lastTimeDate;
+						}
+						if(firstTimeUser < minTimeUser)
+						{
+							minTimeUser = firstTimeUser;
+							minTimeUserDate = firstTimeDate;
+						}
+						firstTimeUniversal = thisData[0]["Index MS Universal"];
+						if(firstTimeUniversal < minTimeUserUniversal)
+						{
+							minTimeUserUniversal = firstTimeUniversal;
+						}
 					}
+					theCurData["Index MS Session Max"] = maxTimeSession;
+					theCurData["Index MS Session Min"] = minTimeSession;
+					theCurData["Index MS Session Max Date"] = maxTimeSessionDate;
+					theCurData["Index MS Session Min Date"] = minTimeSessionDate;
 					
-					lastTimeSession = thisData[thisData.length - 1]["Index MS Session"];
-					lastTimeUser = thisData[thisData.length - 1]["Index MS User"];
-					lastTimeDate = thisData[thisData.length - 1]["Index"];
+					theCurData["Index MS User Session Min"] = minTimeUserSession;
 					
-					firstTimeSession = thisData[0]["Index MS Session"];
-					firstTimeUser = thisData[0]["Index MS User"];
-					firstTimeDate = thisData[0]["Index"];
+					while(minTimeUserSession in sessionOrderMap)
+					{
+						minTimeUserSession++;
+					}
+					sessionOrderMap[minTimeUserSession] = session;
 					
-					if(lastTimeSession > maxTimeSession)
-					{
-						maxTimeSession = lastTimeSession;
-						maxTimeSessionDate = lastTimeDate;
-					}
-					if(firstTimeSession < minTimeSession)
-					{
-						minTimeSession = firstTimeSession;
-						minTimeSessionDate = firstTimeDate;
-					}
-					if(firstTimeUser < minTimeUserSession)
-					{
-						minTimeUserSession = firstTimeUser;
-					}
-					if(lastTimeUser > maxTimeUser)
-					{
-						maxTimeUser = lastTimeUser;
-						maxTimeUserDate = lastTimeDate;
-					}
-					if(firstTimeUser < minTimeUser)
-					{
-						minTimeUser = firstTimeUser;
-						minTimeUserDate = firstTimeDate;
-					}
-					firstTimeUniversal = thisData[0]["Index MS Universal"];
-					if(firstTimeUniversal < minTimeUserUniversal)
-					{
-						minTimeUserUniversal = firstTimeUniversal;
-					}
+					timeScale = d3.scaleLinear();
+					timeScale.domain
+								(
+									[0, maxTimeSession]
+								)
+					timeScale.range
+								(
+									[0, visWidth - xAxisPadding]
+								);
+					theCurData["Time Scale"] = timeScale;
 				}
-				theCurData["Index MS Session Max"] = maxTimeSession;
-				theCurData["Index MS Session Min"] = minTimeSession;
-				theCurData["Index MS Session Max Date"] = maxTimeSessionDate;
-				theCurData["Index MS Session Min Date"] = minTimeSessionDate;
 				
-				theCurData["Index MS User Session Min"] = minTimeUserSession;
+				theNormData[user]["Index MS Universal Min"] = minTimeUserUniversal;
+				userOrderMap[minTimeUserUniversal] = user;
 				
-				while(minTimeUserSession in sessionOrderMap)
-				{
-					minTimeUserSession++;
-				}
-				sessionOrderMap[minTimeUserSession] = session;
+				sessionOrderArray = Object.keys(sessionOrderMap).sort(function(a, b) {return a - b;});
+				sessionOrderMap["Order List"] = sessionOrderArray;
+				theNormData[user]["Session Ordering"] = sessionOrderMap;
+				
+				theNormData[user]["Index MS User Max"] = maxTimeUser;
+				theNormData[user]["Index MS User Min"] = minTimeUser;
+				theNormData[user]["Index MS User Max Date"] = maxTimeUserDate;
+				theNormData[user]["Index MS User Min Date"] = minTimeUserDate;
 				
 				timeScale = d3.scaleLinear();
 				timeScale.domain
 							(
-								[0, maxTimeSession]
+								[0, maxTimeUser]
 							)
 				timeScale.range
 							(
 								[0, visWidth - xAxisPadding]
 							);
-				theCurData["Time Scale"] = timeScale;
+				theNormData[user]["Time Scale"] = timeScale;
 			}
-			
-			theNormData[user]["Index MS Universal Min"] = minTimeUserUniversal;
-			userOrderMap[minTimeUserUniversal] = user;
-			
-			sessionOrderArray = Object.keys(sessionOrderMap).sort(function(a, b) {return a - b;});
-			sessionOrderMap["Order List"] = sessionOrderArray;
-			theNormData[user]["Session Ordering"] = sessionOrderMap;
-			
-			theNormData[user]["Index MS User Max"] = maxTimeUser;
-			theNormData[user]["Index MS User Min"] = minTimeUser;
-			theNormData[user]["Index MS User Max Date"] = maxTimeUserDate;
-			theNormData[user]["Index MS User Min Date"] = minTimeUserDate;
-			
-			timeScale = d3.scaleLinear();
-			timeScale.domain
-						(
-							[0, maxTimeUser]
-						)
-			timeScale.range
-						(
-							[0, visWidth - xAxisPadding]
-						);
-			theNormData[user]["Time Scale"] = timeScale;
+			userOrderArray = Object.keys(userOrderMap).sort(function(a, b) {return a - b;});
+			userOrderMap["Order List"] = userOrderArray;
 		}
-		
-		userOrderArray = Object.keys(userOrderMap).sort(function(a, b) {return a - b;});
-		userOrderMap["Order List"] = userOrderArray;
 		
 		console.log(theNormData);
 		
@@ -466,11 +608,35 @@ function fadeOutLightbox()
 							return legendHeight * (i + 1);
 						})
 				.attr("height", legendHeight)
-				.attr("stroke", "none")
+				.attr("stroke", "black")
+				.attr("stroke-width", 0)
 				.attr("fill", function(d, i)
 						{
 							return colorScale(windowColorNumber[d]);
-						});
+						})
+				.attr("id", function(d, i)
+						{
+							return "legend_" + SHA256(d);
+						})
+				.attr("initStrokeWidth", 0)
+				.on("click", function(d, i)
+				{
+					if(curStroke)
+					{
+						d3.select(curStroke).attr("stroke", "black").attr("stroke-width", d3.select(curStroke).attr("initStrokeWidth"));
+					}
+					if(curStroke == this)
+					{
+						d3.select(curStroke).attr("stroke-width", 0)
+						clearWindow(); curStroke = null;
+						return;
+					}
+					d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));
+					d3.select(this).attr("stroke", "#ffff00").attr("stroke-width", xAxisPadding / 50);
+					curStroke = this;
+					highlightItems("select_" + SHA256(d));
+				})
+		.classed("clickableBar", true);
 		
 		
 		var legendText = legendSVG.append("g")
@@ -519,7 +685,7 @@ function fadeOutLightbox()
 		//Get the SVG for the main viz timeline
 		svg = d3.selectAll("#mainVisualization")
 		.style("height", visHeight + "px")
-		.style('overflow', 'scroll')
+		.style('overflow-y', 'scroll')
 		.append("svg")
 		.attr("width", visWidth)
 		.attr("height", visHeight)
@@ -531,7 +697,8 @@ function fadeOutLightbox()
 		var finalTimelineHeight = 0;
 		//Paint main vis timeline
 		var curSessionCount = 0;
-		var backgroundRects = svg.append("g")
+		backgroundG = svg.append("g")
+		var backgroundRects = backgroundG
 		.selectAll("rect")
 		.data(userOrderArray)
 		.enter()
@@ -539,30 +706,30 @@ function fadeOutLightbox()
 		.attr("x",  0)
 		.attr("y", function(d, i)
 				{
-					if(d == 0)
+					if(i == 0)
 					{
 						curSessionCount = 0;
 					}
-					numSessions = Object.keys(theNormData[userOrderMap[userOrderArray[d]]]["Session Ordering"]["Order List"]).length;
-					toReturn = barHeight * d + barHeight * 2 * curSessionCount;
+					numSessions = Object.keys(theNormData[userOrderMap[d]]["Session Ordering"]["Order List"]).length;
+					toReturn = barHeight * i + barHeight * 2 * curSessionCount;
 					curSessionCount += numSessions;
 					return toReturn;
 				})
 		.attr("width", visWidth)
 		.attr("height", function(d, i)
 				{
-					if(d == 0)
+					if(i == 0)
 					{
 						finalTimelineHeight = 0;
 					}
-					numSessions = Object.keys(theNormData[userOrderMap[userOrderArray[d]]]["Session Ordering"]["Order List"]).length;
+					numSessions = Object.keys(theNormData[userOrderMap[d]]["Session Ordering"]["Order List"]).length;
 					finalTimelineHeight += barHeight * 2 * numSessions + barHeight;
 					return barHeight * 2 * numSessions + barHeight;
 				})
 		.attr("stroke", "#000000")
-		.attr("fill", function(d)
+		.attr("fill", function(d, i)
 				{
-					if(d % 2 == 1)
+					if(i % 2 == 1)
 					{
 						return "#ffffff"
 					}
@@ -572,7 +739,7 @@ function fadeOutLightbox()
 					}
 				})
 		.attr("opacity", 0.2)
-		.attr("z", 0);
+		.attr("z", 1);
 		
 		origSvg.attr("height", finalTimelineHeight);
 		
@@ -584,19 +751,19 @@ function fadeOutLightbox()
 		.attr("x",  xAxisPadding - xAxisPadding / 25)
 		.attr("y", function(d, i)
 				{
-					if(d == 0)
+					if(i == 0)
 					{
 						curSessionCount = 0;
 					}
-					numSessions = Object.keys(theNormData[userOrderMap[userOrderArray[d]]]["Session Ordering"]["Order List"]).length;
-					toReturn = barHeight * d + barHeight * 2 * curSessionCount;
+					numSessions = Object.keys(theNormData[userOrderMap[d]]["Session Ordering"]["Order List"]).length;
+					toReturn = barHeight * i + barHeight * 2 * curSessionCount;
 					curSessionCount += numSessions;
 					return toReturn + barHeight;
 				})
 		.attr("width", xAxisPadding / 25)
 		.attr("height", function(d, i)
 				{
-					numSessions = Object.keys(theNormData[userOrderMap[userOrderArray[d]]]["Session Ordering"]["Order List"]).length;
+					numSessions = Object.keys(theNormData[userOrderMap[d]]["Session Ordering"]["Order List"]).length;
 					return barHeight * 2 * numSessions;
 				})
 		.attr("stroke", "#000000")
@@ -605,7 +772,7 @@ function fadeOutLightbox()
 					return "#000000"
 				})
 		.attr("opacity", 1)
-		.attr("z", 1);
+		.attr("z", 2);
 		
 		
 		var userLabels = svg.append("g")
@@ -616,12 +783,12 @@ function fadeOutLightbox()
 		.attr("x",  0)
 		.attr("y", function(d, i)
 				{
-					if(d == 0)
+					if(i == 0)
 					{
 						curSessionCount = 0;
 					}
-					numSessions = Object.keys(theNormData[userOrderMap[userOrderArray[d]]]["Session Ordering"]["Order List"]).length;
-					toReturn = barHeight * d + barHeight * 2 * curSessionCount + barHeight / 4;
+					numSessions = Object.keys(theNormData[userOrderMap[d]]["Session Ordering"]["Order List"]).length;
+					toReturn = barHeight * i + barHeight * 2 * curSessionCount + barHeight / 4;
 					curSessionCount += numSessions;
 					return toReturn;
 				})
@@ -636,12 +803,12 @@ function fadeOutLightbox()
 					return "#000000";
 				})
 		.attr("opacity", 1)
-		.attr("z", 1)
+		.attr("z", 2)
 		.attr("font-weight", "bolder")
 		.attr("dominant-baseline", "middle")		
 		.text(function(d, i)
 				{
-					return userOrderMap[userOrderArray[d]] + ": " + theNormData[userOrderMap[userOrderArray[d]]]["Index MS User Min Date"] + " to " + theNormData[userOrderMap[userOrderArray[d]]]["Index MS User Max Date"];
+					return userOrderMap[d] + ": " + theNormData[userOrderMap[d]]["Index MS User Min Date"] + " to " + theNormData[userOrderMap[d]]["Index MS User Max Date"];
 				})
 		.style("font-size", barHeight/4 + "px");
 		
@@ -685,15 +852,15 @@ function fadeOutLightbox()
 								firstEntry = false;
 								if(timeMode == "Session")
 								{
-									windowList[z]["Time Scale"] = theNormData[theUser][curSession]["Time Scale"];
+									windowList[z]["Time Scale Session"] = theNormData[theUser][curSession]["Time Scale"];
 								}
 								else if(timeMode == "User")
 								{
-									windowList[z]["Time Scale"] = theNormData[theUser]["Time Scale"];
+									windowList[z]["Time Scale User"] = theNormData[theUser]["Time Scale"];
 								}
 								else if(timeMode == "Universal")
 								{
-									windowList[z]["Time Scale"] = theNormData["Time Scale"];
+									windowList[z]["Time Scale Universal"] = theNormData["Time Scale"];
 								}
 								toReturn.push(windowList[z]);
 								if(!(theUser in lookupTable))
@@ -726,15 +893,15 @@ function fadeOutLightbox()
 				{
 					if(timeMode == "Session")
 					{
-						return d["Time Scale"](d["Index MS Session"]) + xAxisPadding;
+						return d["Time Scale Session"](d["Index MS Session"]) + xAxisPadding;
 					}
 					else if(timeMode == "User")
 					{
-						return d["Time Scale"](d["Index MS User"]) + xAxisPadding;
+						return d["Time Scale User"](d["Index MS User"]) + xAxisPadding;
 					}
 					else if(timeMode == "Universal")
 					{
-						return d["Time Scale"](d["Index MS Universal"]) + xAxisPadding;
+						return d["Time Scale Universal"](d["Index MS Universal"]) + xAxisPadding;
 					}
 					return 0;
 				})
@@ -742,15 +909,15 @@ function fadeOutLightbox()
 				{
 					if(timeMode == "Session")
 					{
-						return d["Time Scale"](d["End MS Session"] - d["Index MS Session"]);
+						return d["Time Scale Session"](d["End MS Session"] - d["Index MS Session"]);
 					}
 					else if(timeMode == "User")
 					{
-						return d["Time Scale"](d["End MS User"] - d["Index MS User"]);
+						return d["Time Scale User"](d["End MS User"] - d["Index MS User"]);
 					}
 					else if(timeMode == "Universal")
 					{
-						return d["Time Scale"](d["End MS Universal"] - d["Index MS Universal"]);
+						return d["Time Scale Universal"](d["End MS Universal"] - d["Index MS Universal"]);
 					}
 					return timeScale(d["End Time MS"] - d["Start Time MS"]) -1;
 				})
@@ -760,22 +927,40 @@ function fadeOutLightbox()
 					return d["Session Order"] * barHeight * 2 + d["User Order"] * barHeight + barHeight;
 				})
 		.attr("height", barHeight)
-		.attr("stroke", "none")
-		.attr("stroke-width", 3)
+		.attr("stroke", "black")
+		.attr("stroke-width", xAxisPadding / 100)
 		.attr("fill", function(d, i)
+				{
+					return colorScale(windowColorNumber[d["SecondClass"]]);
+				})
+		.attr("initFill", function(d, i)
 				{
 					return colorScale(windowColorNumber[d["SecondClass"]]);
 				})
 		.attr("opacity", 1)
 		.on("click", function(d, i)
 				{
-					d3.select(curStroke).attr("stroke", "none");
-					d3.select(this).attr("stroke", "#ffff00");
+					if(curStroke)
+					{
+						d3.select(curStroke).attr("stroke", "black").attr("stroke-width", d3.select(curStroke).attr("initStrokeWidth"));
+					}
+					if(curStroke == this)
+					{
+						clearWindow(); curStroke = null;
+						return;
+					}
+					d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));
+					d3.select(this).attr("stroke", "#ffff00").attr("stroke-width", xAxisPadding / 50);
 					curStroke = this;
 					showWindow(d["Owning User"], d["Owning Session"], "Windows", d["Index MS"]);
 				})
-		.classed("clickableBar", true)
-		.attr("z", 1);
+		.attr("class", function(d)
+			{
+				return "clickableBar " + "select_" + SHA256(d["SecondClass"]) + " " + "window_process_" + SHA256(d["User"] + d["Start"] + d["PID"]);
+			})
+		
+		//.classed("clickableBar", true)
+		.attr("z", 2);
 		
 		var eventTimeline;
 		var eventTypeNumbers = {};
@@ -810,15 +995,15 @@ function fadeOutLightbox()
 							{
 								if(timeMode == "Session")
 								{
-									eventsList[z]["Time Scale"] = theNormData[theUser][curSession]["Time Scale"];
+									eventsList[z]["Time Scale Session"] = theNormData[theUser][curSession]["Time Scale"];
 								}
 								else if(timeMode == "User")
 								{
-									eventsList[z]["Time Scale"] = theNormData[theUser]["Time Scale"];
+									eventsList[z]["Time Scale User"] = theNormData[theUser]["Time Scale"];
 								}
 								else if(timeMode == "Universal")
 								{
-									eventsList[z]["Time Scale"] = theNormData["Time Scale"];
+									eventsList[z]["Time Scale Universal"] = theNormData["Time Scale"];
 								}
 								eventsList[z]["User Order"] = userNum;
 								eventsList[z]["Session Order"] = sessionNum;
@@ -941,15 +1126,15 @@ function fadeOutLightbox()
 				{
 					if(timeMode == "Session")
 					{
-						return d["Time Scale"](d["Index MS Session"]) + xAxisPadding;
+						return d["Time Scale Session"](d["Index MS Session"]) + xAxisPadding;
 					}
 					else if(timeMode == "User")
 					{
-						return d["Time Scale"](d["Index MS User"]) + xAxisPadding;
+						return d["Time Scale User"](d["Index MS User"]) + xAxisPadding;
 					}
 					else if(timeMode == "Universal")
 					{
-						return d["Time Scale"](d["Index MS Universal"]) + xAxisPadding;
+						return d["Time Scale Universal"](d["Index MS Universal"]) + xAxisPadding;
 					}
 					return 0;
 				})
@@ -957,15 +1142,15 @@ function fadeOutLightbox()
 				{
 					if(timeMode == "Session")
 					{
-						return d["Time Scale"](d["Next"]["Index MS Session"] - d["Index MS Session"]);
+						return d["Time Scale Session"](d["Next"]["Index MS Session"] - d["Index MS Session"]);
 					}
 					else if(timeMode == "User")
 					{
-						return d["Time Scale"](d["Next"]["Index MS User"] - d["Index MS User"]);
+						return d["Time Scale User"](d["Next"]["Index MS User"] - d["Index MS User"]);
 					}
 					else if(timeMode == "Universal")
 					{
-						return d["Time Scale"](d["Next"]["Index MS Universal"] - d["Index MS Universal"]);
+						return d["Time Scale Universal"](d["Next"]["Index MS Universal"] - d["Index MS Universal"]);
 					}
 					return timeScale(d["End Time MS"] - d["Start Time MS"]) -1;
 				})
@@ -979,8 +1164,8 @@ function fadeOutLightbox()
 					var totalHeight =  (barHeight - xAxisPadding / 25) / d["Max Active"];
 					return totalHeight;
 				})
-		.attr("stroke", "none")
-		.attr("stroke-width", 3)
+		.attr("stroke", "black")
+		.attr("stroke-width", xAxisPadding / 100)
 		.attr("fill", function(d, i)
 				{
 					return colorScaleAccent(eventTypeNumbers[d["Description"]]["Number"]);
@@ -988,18 +1173,28 @@ function fadeOutLightbox()
 		.attr("opacity", 1)
 		.on("click", function(d, i)
 				{
-					d3.select(curStroke).attr("stroke", "none");
-					d3.select(this).attr("stroke", "#ffff00");
+					if(curStroke)
+					{
+						d3.select(curStroke).attr("stroke", "black").attr("stroke-width", d3.select(curStroke).attr("initStrokeWidth"));
+					}
+					if(curStroke == this)
+					{
+						clearWindow(); curStroke = null;
+						return;
+					}
+					d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));
+					d3.select(this).attr("stroke", "#ffff00").attr("stroke-width", xAxisPadding / 50);
 					curStroke = this;
 					showWindow(d["Owning User"], d["Owning Session"], "Events", d["Index MS"]);
 				})
 		.classed("clickableBar", true)
-		.attr("z", 2);
+		.attr("z", 3);
 		
 		var sessionLabelFontSize = (barHeight - xAxisPadding / 25) / 5;
 		var sessionLabelFontWidth = sessionLabelFontSize *.6;
 		var sessionList;
-		var sessionBars = svg.append("g")
+		var sessionBarG = svg.append("g")
+		var sessionBars = sessionBarG
 		.selectAll("rect")
 		.data(sessionList)
 		.enter()
@@ -1015,7 +1210,53 @@ function fadeOutLightbox()
 					return toReturn;
 				})
 		.attr("fill", "#000")
-		.attr("z", "2");
+		.attr("z", 3);
+		
+		var sessionBackgroundBars = svg.append("g").lower()
+		.selectAll("rect")
+		.data(sessionList)
+		.enter()
+		.append("rect")
+		.attr("x", "0")
+		.attr("width", visWidth)
+		.attr("height", barHeight * 2 - xAxisPadding / 25)
+		.attr("y", function(d, i)
+				{
+					toReturn = d["User Number"] * barHeight + barHeight;
+					toReturn += barHeight * 2 * i;
+					return toReturn;
+				})
+		.attr("fill", "#000")
+		.attr("fill-opacity", function(d, i)
+				{
+					if(i % 2 == 0)
+					{
+						return ".2";
+					}
+					return "0";
+				})
+		.attr("stroke-opacity", ".75")
+		.attr("z", 0)
+		.attr("stroke", "black")
+		.attr("stroke-width", xAxisPadding / 100)
+		.classed("clickableBarHelp", true)
+		.on("click", function(d, i)
+				{
+					
+					if(curStroke)
+					{
+						d3.select(curStroke).attr("stroke", "black").attr("stroke-width", d3.select(curStroke).attr("initStrokeWidth"));
+					}
+					if(curStroke == this)
+					{
+						clearWindow(); curStroke = null;
+						return;
+					}
+					d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));
+					d3.select(this).attr("stroke", "#ff0000").attr("stroke-width", xAxisPadding / 50);
+					curStroke = this;
+					showSession(d["User"], d["Session"]);
+				});
 		
 		var playButtons = svg.append("g")
 		.selectAll("rect")
@@ -1032,7 +1273,7 @@ function fadeOutLightbox()
 					return toReturn;
 				})
 		.attr("fill", "Chartreuse")
-		.attr("z", "2")
+		.attr("z", 2)
 		.classed("clickableBar", true);
 		
 		var playLabels = svg.append("g")
@@ -1050,7 +1291,7 @@ function fadeOutLightbox()
 					return toReturn;
 				})
 		.attr("fill", "#000")
-		.attr("z", "2")
+		.attr("z", 2)
 		.attr("font-weight", "bolder")
 		.attr("font-family", "monospace")
 		.attr("alignment-baseline", "central")
@@ -1077,7 +1318,29 @@ function fadeOutLightbox()
 				})
 		.attr("fill", "#FFF")
 		.attr("opacity", ".85")
-		.attr("z", "2");
+		.attr("z", 2);
+		
+		var axisUnits = svg.append("g")
+		.selectAll("text")
+		.data(sessionList)
+		.enter()
+		.append("text")
+		.style("font-size", (barHeight / 8) + "px")
+		.style("font-weight", "bolder")
+		.attr("font-size", (barHeight / 8) + "px")
+		.attr("dominant-baseline", "middle")
+		.attr("x", xAxisPadding + xAxisPadding / 25)
+		.attr("y", function(d, i)
+				{
+					toReturn = d["User Number"] * barHeight;
+					toReturn += barHeight * 2 * i;
+					toReturn -= barHeight / 16;
+					return toReturn;
+				})
+		.attr("fill", "#000")
+		.attr("opacity", "1")
+		.text("Minutes")
+		.attr("z", 2);
 		
 		var sessionAxes = svg.append("g")
 		.selectAll("g")
@@ -1097,7 +1360,7 @@ function fadeOutLightbox()
 					return toReturn;
 				})
 		.attr("fill", "#FFF")
-		.attr("z", "2")
+		.attr("z", 2)
 		.attr("transform", function(d, i)
 				{
 					toReturn = d["User Number"] * barHeight;
@@ -1200,7 +1463,7 @@ function fadeOutLightbox()
 					return "#000000";
 				})
 		.attr("opacity", 1)
-		.attr("z", 1)
+		.attr("z", 2)
 		.attr("font-weight", "bolder")
 		.attr("font-family", "monospace")
 		.attr("dominant-baseline", "middle")		
@@ -1276,7 +1539,8 @@ function fadeOutLightbox()
 					}
 				});
 
-		
+		sessionBarG.lower();
+		backgroundG.lower();
 	}
 	
 	function startOld()
@@ -1469,7 +1733,7 @@ function fadeOutLightbox()
 							return userOrdering[d["Username"]] * barHeight * 2 + .25 * barHeight;
 						})
 				.attr("height", .75 * barHeight)
-				.attr("stroke", "none")
+				.attr("stroke", "black")
 				.attr("stroke-width", 3)
 				.attr("fill", function(d, i)
 						{
@@ -1480,12 +1744,17 @@ function fadeOutLightbox()
 				.on("click", function(d, i)
 						{
 							d3.select(curStroke).attr("stroke", "none");
+							if(curStroke == this)
+							{
+								clearWindow(); curStroke = null;
+								return;
+							}
 							d3.select(this).attr("stroke", "#ffff00");
 							curStroke = this;
 							showWindow(d["Username"], d["Start Time MS"]);
 						})
 				.classed("clickableBar", true)
-				.attr("z", 1);
+				.attr("z", 2);
 		
 		var foregroundWindowRectText = svg.append("g")
 			.selectAll("text")
@@ -1592,7 +1861,7 @@ function fadeOutLightbox()
 							return "#000";
 						})
 				.attr("opacity", 1)
-				.attr("z", 1);
+				.attr("z", 2);
 		
 		var taskRects = svg.append("g")
 				.selectAll("text")
@@ -1685,12 +1954,494 @@ function fadeOutLightbox()
 		
 	}
 	
+	var lastHighlighted;
+	
+	function highlightItems(className)
+	{
+		clearWindow();
+		lastHighlighted = className;
+		d3.selectAll("." + className)
+			.attr("initStrokeWidth", function()
+					{
+						return this.getAttribute("stroke-width")
+					})
+			.attr("stroke", "#ffff00").attr("stroke-width", xAxisPadding / 50);
+	}
+	
+	function clearWindow()
+	{
+		for(selection in curSelElements)
+		{
+			if(curSelElements[selection] && !(curSelElements[selection].empty()) && curSelElements[selection].attr("initFill"))
+			{
+				//curSelElements[selection].attr("fill", curSelElements[selection].attr("initFill"));
+				curSelElements[selection].attr("fill", function(){ return this.getAttribute("initFill"); });
+			}
+		}
+		curSelElements = [];
+		
+		if(curSelectProcess && curSelectProcess != null)
+		{
+			curLabel = d3.select("#process_legend_" + curSelectProcess[0]["Hash"])
+			curLabel.attr("fill", curLabel.attr("initFill"));
+		}
+		curSelectProcess = null;
+		
+		if(lastHighlighted)
+		{
+			d3.selectAll("." + lastHighlighted)
+			.attr("stroke-width", function()
+					{
+						return this.getAttribute("initStrokeWidth")
+					})
+			.attr("stroke", "black");
+		}
+		d3.select("#infoTable")
+			.selectAll("tr")
+			.remove();
+		d3.select("#screenshotDiv")
+			.selectAll("*")
+			.remove();
+		d3.select("#highlightDiv")
+			.selectAll("*")
+			.remove();
+		d3.select("#highlightDiv").style('overflow-y', 'auto').style("height", "auto")
+		//d3.select("#infoTable").append("tr").html("<td colspan=4><div align=\"center\">Details</div></td>");
+		
+		for(element in curHighlight)
+		{
+			curHighlight[element].attr("stroke-width", 0);
+		}
+		curHighlight = [];
+		
+		if(theNormDataDone)
+		{
+			showDefault();
+		}
+	}
+	
+	function showDefault()
+	{
+		
+	}
+	
+	function showSession(owningUser, owningSession)
+	{
+		clearWindow();
+		
+		curSessionMap = theNormData[owningUser][owningSession];
+		
+		d3.select("#screenshotDiv")
+		.selectAll("*")
+		.remove();
+
+		d3.select("#screenshotDiv")
+		.append("img")
+		.attr("width", "100%")
+		.attr("src", "./getClosestScreenshot.jpg?username=" + owningUser + "&timestamp=" + curSessionMap["Index MS User Min Date"] + "&session=" + owningSession + "&event=" + eventName)
+		.attr("style", "cursor:pointer;")
+		.on("click", function()
+				{
+					showLightbox("<tr><td><div width=\"100%\"><img src=\"./getClosestScreenshot.jpg?username=" + owningUser + "&timestamp=" + curSessionMap["Index MS User Min Date"] + "&session=" + owningSession + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
+				});
+		
+		curProcessMap = processMap[owningUser][owningSession];
+		
+		var newSVG = d3.select("#infoTable").append("tr").append("td").append("svg")
+			.attr("width", visWidth + "px")
+			.attr("height", bottomVisHeight + "px")
+			.append("g");
+		
+		cpuSortedList = [];
+		var maxCPU = 0;
+		for(osUser in curProcessMap)
+		{
+			for(start in curProcessMap[osUser])
+			{
+				for(pid in curProcessMap[osUser][start])
+				{
+					curProcList = curProcessMap[osUser][start][pid]
+					totalAverage = curProcList[curProcList.length-1]["Aggregate CPU"] / curProcList.length;
+					curProcList[0]["Average CPU"] = totalAverage;
+					for(entry in curProcList)
+					{
+						if(curProcList[entry]["CPU"] > maxCPU)
+						{
+							maxCPU = curProcList[entry]["CPU"];
+						}
+						curProcList[entry]["Hash"] = SHA256(osUser + start + pid);
+					}
+					cpuSortedList.push(curProcList);
+				}
+			}
+		}
+		
+		cpuSortedList.sort(function(a, b)
+		{
+			if(a[0]["Average CPU"] > b[0]["Average CPU"]) { return -1; }
+			if(a[0]["Average CPU"] < b[0]["Average CPU"]) { return 1; }
+			return 0;
+		})
+		
+		
+		var cpuScale = d3.scaleLinear();
+		cpuScale.domain([0, maxCPU]);
+		cpuScale.range([bottomVisHeight, 0]);
+		
+		var timeScale;
+		if(timeMode == "Universal")
+		{
+			timeScale = theNormData["Time Scale"];
+		}
+		else if(timeMode == "User")
+		{
+			timeScale = theNormData[owningUser]["Time Scale"];
+		}
+		else
+		{
+			timeScale = theNormData[owningUser][owningSession]["Time Scale"];
+		}
+		
+		var finalProcList = [];
+		
+		var lineFormattedData = []
+		
+		for(entry in cpuSortedList)
+		{
+			for(subEntry in cpuSortedList[entry])
+			{
+				cpuSortedList[entry][subEntry]["Process Order"] = entry;
+			}
+			
+			name = cpuSortedList[entry][0]["User"] + cpuSortedList[entry][0]["Start"] + cpuSortedList[entry][0]["PID"];
+			value = cpuSortedList[entry];
+			lineEntry = {};
+			lineEntry["name"] = name;
+			lineEntry["values"] = value;
+			lineFormattedData.push(lineEntry);
+			
+			finalProcList = finalProcList.concat(cpuSortedList[entry]);
+		}
+		
+		cpuSortedList = cpuSortedList.reverse();
+		
+		finalProcList = finalProcList.reverse();
+		
+		var procPoints = newSVG.selectAll("circle")
+			.data(finalProcList)
+			.enter()
+			.append("circle")
+			.attr("cx", function(d, i)
+					{
+						if(timeMode == "Universal")
+						{
+							return xAxisPadding +  timeScale(d["Index MS Universal"]);
+						}
+						else if(timeMode == "User")
+						{
+							return xAxisPadding + timeScale(d["Index MS User"]);
+						}
+						else
+						{
+							return xAxisPadding +  timeScale(d["Index MS Session"]);
+						}
+					})
+			.attr("cy", function(d, i)
+					{
+						return cpuScale(d["CPU"]);
+					})
+			.attr("class", function(d, i)
+					{
+						return "process_" + d["Hash"];
+					})
+			.attr("r", bottomVisHeight / 50)
+			.attr("initR", bottomVisHeight / 50)
+			//.attr("r", 5)
+			.attr("fill", function(d, i)
+					{
+						return colorScale(d["Process Order"] % 20);
+					})
+			.attr("initFill", function(d, i)
+					{
+						return colorScale(d["Process Order"] % 20);
+					});
+		
+		var line = d3.line()
+				.x
+				(
+					function(d, i)
+					{
+						if(timeMode == "Universal")
+						{
+							return xAxisPadding +  timeScale(d["Index MS Universal"]);
+						}
+						else if(timeMode == "User")
+						{
+							return xAxisPadding + timeScale(d["Index MS User"]);
+						}
+						else
+						{
+							return xAxisPadding +  timeScale(d["Index MS Session"]);
+						}
+					}
+				)
+				.y
+				(
+					function(d, i)
+					{
+						return cpuScale(d["CPU"]);
+					}
+				)
+				.curve(d3.curveMonotoneX);
+		
+		var procLines = newSVG.selectAll("path")
+				.data(lineFormattedData)
+				.enter()
+				.append("path")
+				.attr('d', d => line(d.values))
+				.attr("fill", "none")
+				.attr("class", function(d, i)
+						{
+							return "process_" + colorScale(d["values"][0]["Hash"] % 20);
+						})
+				.style("stroke-width", bottomVisHeight / 100)
+				.attr("initStrokeWidth", bottomVisHeight / 100)
+				.style("stroke", function(d, i)
+						{
+							return colorScale(d["values"][0]["Process Order"] % 20);
+						})
+				.attr("initStroke", function(d, i)
+						{
+							return colorScale(d["values"][0]["Process Order"] % 20);
+						});
+		
+		var yAxis = d3.axisLeft().scale(cpuScale)
+		
+		var cpuAxis = newSVG.append("g")
+				.attr("transform", "translate(" + xAxisPadding + ", 0)")
+				.call(yAxis);
+		
+		var axisLabel = newSVG.append("g")
+				.append("text")
+				.attr("y", bottomVisHeight / 2 + "px")
+				.attr("x", xAxisPadding / 2 + "px")
+				//.attr("width", xAxisPadding + "px")
+				//.attr("height", bottomVisHeight + "px")
+				.attr("alignment-baseline", "central")
+				.attr("dominant-baseline", "middle")
+				.attr("text-anchor", "middle")
+				.text("% CPU");
+		
+		var visLabel = newSVG.append("g")
+		.append("text")
+		.attr("y", "0px")
+		.attr("x", xAxisPadding / 2 + "px")
+		//.attr("width", xAxisPadding + "px")
+		//.attr("height", bottomVisHeight + "px")
+		.attr("alignment-baseline", "hanging")
+		.attr("dominant-baseline", "hanging")
+		.attr("text-anchor", "middle")
+		.style("font-weight", "bolder")
+		.text("Processes");
+		
+		var highlightTable = d3.select("#highlightDiv").style('overflow-y', 'scroll').style("height", bottomVisHeight + "px");
+		
+		var legendSVGProcess = highlightTable
+				.append("svg")
+				.attr("width", "100%")
+				.attr("height", (legendHeight * cpuSortedList.length * 2 + legendHeight) + "px");
+		
+		
+		
+		legendSVGProcess = legendSVGProcess.append("g");
+		
+		var legendTitleProcess = legendSVGProcess.append("text")
+				.attr("x", "50%")
+				.attr("y", .5 * legendHeight)
+				.attr("alignment-baseline", "central")
+				.attr("dominant-baseline", "middle")
+				.attr("text-anchor", "middle")
+				//.attr("font-weight", "bolder")
+				.text("Processes:");
+		
+		cpuSortedList = cpuSortedList.reverse();
+		var legendProcess = legendSVGProcess.append("g")
+				.selectAll("rect")
+				.data(cpuSortedList)
+				.enter()
+				.append("rect")
+				.attr("x", 0)
+				.attr("width", "100%")
+				//.attr("width", legendWidth)
+				.attr("y", function(d, i)
+						{
+							return legendHeight * (2 * i + 1);
+						})
+				.attr("height", 2 * legendHeight)
+				.attr("stroke", "black")
+				.attr("stroke-width", 0)
+				.attr("initStrokeWidth", 0)
+				.attr("fill", function(d, i)
+						{
+							return colorScale(d[0]["Process Order"] % 20);
+						})
+				.attr("initFill", function(d, i)
+						{
+							return colorScale(d[0]["Process Order"] % 20);
+						})
+				.attr("id", function(d, i)
+						{
+							return "process_legend_" + d[0]["Hash"];
+						})
+				.on("click", function(d, i)
+				{
+					for(selection in curSelElements)
+					{
+						if(curSelElements[selection] && !(curSelElements[selection].empty()) && curSelElements[selection].attr("initFill"))
+						{
+							//curSelElements[selection].attr("fill", curSelElements[selection].attr("initFill"));
+							curSelElements[selection].attr("fill", function(){ return this.getAttribute("initFill"); });
+							curSelElements[selection].attr("r", function()
+								{
+									if(this.getAttribute("initR"))
+									{
+										return this.getAttribute("initR");
+									}
+									return 0;
+								});
+						}
+					}
+					curSelElements = [];
+					
+					if(curSelectProcess)
+					{
+						curLabel = d3.select("#process_legend_" + curSelectProcess[0]["Hash"])
+						curLabel.attr("fill", curLabel.attr("initFill"));
+					}
+					
+					curHash = d[0]["Hash"];
+					
+					windowBars = d3.selectAll(".window_process_" + d[0]["Hash"])
+					legendBars = d3.selectAll(".legend_" + d[0]["Hash"]);
+					processCircles = d3.selectAll(".process_" + d[0]["Hash"])
+					curLabel = d3.select("#process_legend_" + d[0]["Hash"])
+					
+					highlightColor = "#ffff00";
+					
+					windowBars.attr("fill", highlightColor);
+					legendBars.attr("fill", highlightColor);
+					processCircles.attr("fill", highlightColor).attr("r", bottomVisHeight / 25);
+					curLabel.attr("fill", highlightColor);
+					
+					curSelElements.push(windowBars);
+					curSelElements.push(legendBars);
+					curSelElements.push(processCircles);
+					
+					curSelectProcess = d;
+				})
+				.attr("class", "clickableBar")
+				.attr("initStrokeWidth", 0);
+		
+		var legendTextProcess = legendSVGProcess.append("g")
+		.selectAll("text")
+		.data(cpuSortedList)
+		.enter()
+		.append("text")
+		//.attr("font-size", 11)
+		.attr("x", 0)
+		.attr("y", function(d, i)
+				{
+					//return legendHeight * (i + 1);
+					//return legendHeight * (i) + legendHeight;
+					return legendHeight * (2 * i + 1) + legendHeight * .5;
+				})
+		.attr("height", legendHeight * .75)
+		.text(function(d, i)
+				{
+					return d[0]["User"] + ":" + d[0]["Start"] + ":" + d[0]["PID"];
+				})
+		.attr("fill", function(d, i)
+				{
+					if(i % 2 == 0)
+					{
+						return "#FFF";
+					}
+					else
+					{
+						return "#000";
+					}
+				})
+		.attr("font-weight", "bolder")
+		.attr("dominant-baseline", "middle")
+		.attr("stroke", function(d, i)
+				{
+					if(i % 2 == 0)
+					{
+						return "none";
+					}
+					else
+					{
+						return "none";
+					}
+				});
+		
+		var legendTextProcessCmd = legendSVGProcess.append("g")
+		.selectAll("text")
+		.data(cpuSortedList)
+		.enter()
+		.append("text")
+		//.attr("font-size", 11)
+		.attr("x", 0)
+		.attr("y", function(d, i)
+				{
+					//return legendHeight * (i + 1);
+					//return legendHeight * (i) + legendHeight;
+					return legendHeight * (2 * i + 2) + legendHeight * .5;
+				})
+		.attr("height", legendHeight * .75)
+		.text(function(d, i)
+				{
+					return d[0]["Command"];
+				})
+		.attr("fill", function(d, i)
+				{
+					if(i % 2 == 0)
+					{
+						return "#FFF";
+					}
+					else
+					{
+						return "#000";
+					}
+				})
+		.attr("font-weight", "bolder")
+		.attr("dominant-baseline", "middle")
+		.attr("stroke", function(d, i)
+				{
+					if(i % 2 == 0)
+					{
+						return "none";
+					}
+					else
+					{
+						return "none";
+					}
+				});
+		
+	}
+	
+	var curSelectProcess;
+	var curSelElements = [];
+	
 	function showWindow(username, session, type, timestamp)
 	{
+		clearWindow();
 		var curSlot = lookupTable[username][session][type][timestamp];
 		//console.log(curSlot);
 		var formattedSlot = [];
 		var finalFormattedSlot = [];
+		
+		var highlights = [];
 		
 		var count = 0;
 		for(key in curSlot)
@@ -1722,6 +2473,14 @@ function fadeOutLightbox()
 		
 		for(x=0; x<formattedSlot.length; x+=2)
 		{
+			if(formattedSlot[x]["key"] in highlightMap)
+			{
+				highlights.push({"key1":formattedSlot[x]["key"], "value1":formattedSlot[x]["value"]});
+				
+				var toHighlight = d3.select("#legend_" + SHA256(formattedSlot[x]["value"]));
+				toHighlight.attr("stroke", "#ffff00").attr("stroke-width", xAxisPadding / 50);
+				curHighlight.push(toHighlight);
+			}
 			if(x+1 >= formattedSlot.length)
 			{
 				finalFormattedSlot[x/2] = {"key1":formattedSlot[x]["key"], "value1":formattedSlot[x]["value"], "key2":"", "value2":""};
@@ -1729,10 +2488,18 @@ function fadeOutLightbox()
 			else
 			{
 				finalFormattedSlot[x/2] = {"key1":formattedSlot[x]["key"], "value1":formattedSlot[x]["value"], "key2":formattedSlot[x+1]["key"], "value2":formattedSlot[x+1]["value"]};
+				if(formattedSlot[x + 1]["key"] in highlightMap)
+				{
+					highlights.push({"key1":formattedSlot[x + 1]["key"], "value1":formattedSlot[x + 1]["value"]});
+					
+					var toHighlight = d3.select("#legend_" + SHA256(formattedSlot[x + 1]["value"]));
+					toHighlight.attr("stroke", "#ffff00").attr("stroke-width", xAxisPadding / 50);
+					curHighlight.push(toHighlight);
+				}
 			}
 		}
 		
-		finalFormattedSlot.unshift("<td colspan=4><div align=\"center\">Details</div></td>");
+		//finalFormattedSlot.unshift("<td colspan=4><div align=\"center\">Details</div></td>");
 		//console.log(finalFormattedSlot);
 		d3.select("#infoTable")
 				.selectAll("tr")
@@ -1766,12 +2533,27 @@ function fadeOutLightbox()
 		d3.select("#screenshotDiv")
 				.append("img")
 				.attr("width", "100%")
-				.attr("src", "getClosestScreenshot.jpg?username=" + curSlot["Username"] + "&timestamp=" + curSlot["Start Time"])
+				.attr("src", "./getClosestScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + curSlot["Index"] + "&session=" + curSlot["Owning Session"] + "&event=" + eventName)
 				.attr("style", "cursor:pointer;")
 				.on("click", function()
 						{
-							showLightbox("<tr><td><div width=\"100%\"><img src=\"getClosestScreenshot.jpg?username=" + curSlot["Username"] + "&timestamp=" + curSlot["Start Time"] + "\" style=\"width: 100%;\"></div></td></tr>");
+							showLightbox("<tr><td><div width=\"100%\"><img src=\"./getClosestScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + curSlot["Index"] + "&session=" + curSlot["Owning Session"] + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
 						});
+		
+		d3.select("#highlightDiv")
+			.selectAll("*")
+			.remove();
+
+		highlightTable = d3.select("#highlightDiv")
+			.selectAll("p")
+			.data(highlights)
+			.enter()
+			.append("p")
+			.html(function(d, i)
+					{
+						return "<b>" + d["key1"] + ":</b><br />" + d["value1"];
+					});
+		
 	}
 	
 	//var curFocus;
