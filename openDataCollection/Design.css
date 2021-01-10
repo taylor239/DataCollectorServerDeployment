@@ -39,6 +39,12 @@ body
 	transition: all .5s linear;
 }
 
+.clickableBarPreise
+{
+	cursor:crosshair;
+	transition: all .5s linear;
+}
+
 .clickable
 {
 	cursor:pointer;
