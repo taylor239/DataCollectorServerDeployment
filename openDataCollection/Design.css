@@ -33,6 +33,17 @@ body
 	transition: all .5s linear;
 }
 
+.clickableHover
+{
+	cursor: pointer;
+	transition: all .5s linear;
+}
+
+.clickableHover:hover
+{
+	background-color: grey;
+}
+
 .clickableBarHelp
 {
 	cursor:help;
