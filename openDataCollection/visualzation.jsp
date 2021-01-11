@@ -84,6 +84,37 @@ if(request.getParameter("email") != null)
 							</div>
 						</td>
 					</tr>
+					<tr>
+						<td colspan="2">
+						<div align="center">
+						<button type="button">Save</button>
+						</div>
+						</td>
+						<td colspan="2">
+						<div align="center">
+						<input type="text" size="15" id="saveFilter" name="saveFilter" value="Name">
+						</div>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="1">
+						<div align="center">
+						<button type="button">Load</button>
+						</div>
+						</td>
+						<td colspan="1">
+						<div align="center">
+						<button type="button">Append</button>
+						</div>
+						</td>
+						<td colspan="2">
+						<div align="center">
+						<select name="savedFilters" id="savedFilters">
+							<option value="default">Default</option>
+						</select>
+						</div>
+						</td>
+					</tr>
 					<tr id="filterTitle2">
 						<td width="20%">
 						Level
@@ -351,6 +382,58 @@ function fadeOutLightbox()
 	
 	
 	
+	
+	
+	var containingTableRow = document.getElementById("mainVisContainer");
+	
+	var windowWidth = window.innerWidth;
+	var windowHeight = window.innerHeight;
+	
+	console.log(windowHeight + ", " + windowWidth);
+	
+	var visPadding = 20;
+	
+	var visWidth = containingTableRow.offsetWidth - visPadding;
+	var visHeight = windowHeight * .6;
+	var bottomVisHeight = windowHeight * .25;
+	var sidePadding = 24;
+	
+	var barHeight = visHeight / 10;
+	var xAxisPadding = 3 * barHeight;
+	//var xAxisPadding = .2 * visWidth;
+	
+	var eventName = "<%=eventName %>";
+	
+	var svg;
+	var userOrdering;
+	
+	var keySlots = 200;
+	var keyMap;
+	
+	var overlayText = true;
+	
+	var lookupTable;
+	
+	var processMap;
+	
+	var curStroke;
+	var sessionStroke;
+	var curHighlight = [];
+	
+	var curPlayButton;
+	var curPlayLabel;
+	
+	var tickWidth = 4;
+	
+	var legendWidth = 25;
+	var legendHeight = visHeight / 25;
+	
+	var timeMode = "Session";
+	
+	var highlightMap = {};
+	highlightMap["TaskName"] = true;
+	highlightMap["SecondClass"] = true;
+	
 	function rebuildFilters()
 	{
 		var tableData = filtersTitle.concat(filters);
@@ -365,6 +448,14 @@ function fadeOutLightbox()
 			.data(tableData)
 			.enter()
 			.append("tr")
+			.style("height", function(d, i)
+					{
+						if(i <= startFilters)
+						{
+							return legendHeight + "px";
+						}
+						return 3 * legendHeight + "px";
+					})
 			.html(function(d, i)
 					{
 						if(i <= startFilters)
@@ -378,7 +469,7 @@ function fadeOutLightbox()
 						+"<td id = \"filter_" + (i - startFilters) + "_field\">"
 						+d["Field"]
 						+"</td>"
-						+"<td id = \"filter_" + (i - startFilters) + "_value\">"
+						+"<td style=\"overflow-x:auto; overflow-y:auto; word-break:break-all; display:block; height:100%;\" id = \"filter_" + (i - startFilters) + "_value\">"
 						+d["Value"]
 						+"</td>"
 						+"<td class=\"clickableHover\" id = \"filter_" + (i - startFilters) + "_remove\">"
@@ -428,30 +519,6 @@ function fadeOutLightbox()
 		rebuildFilters();
 		start(true);
 	}
-	
-	var containingTableRow = document.getElementById("mainVisContainer");
-	
-	var windowWidth = window.innerWidth;
-	var windowHeight = window.innerHeight;
-	
-	console.log(windowHeight + ", " + windowWidth);
-	
-	var visPadding = 20;
-	
-	var visWidth = containingTableRow.offsetWidth - visPadding;
-	var visHeight = windowHeight * .6;
-	var bottomVisHeight = windowHeight * .25;
-	var sidePadding = 24;
-	
-	var barHeight = visHeight / 10;
-	var xAxisPadding = 3 * barHeight;
-	//var xAxisPadding = .2 * visWidth;
-	
-	var eventName = "<%=eventName %>";
-	
-	var highlightMap = {};
-	highlightMap["TaskName"] = true;
-	highlightMap["SecondClass"] = true;
 	
 	function preprocess(dataToModify)
 	{
@@ -634,31 +701,7 @@ function fadeOutLightbox()
 		while(new Date().getTime() < e) {}
 	}
 	
-	var svg;
-	var userOrdering;
 	
-	var keySlots = 200;
-	var keyMap;
-	
-	var overlayText = true;
-	
-	var lookupTable;
-	
-	var processMap;
-	
-	var curStroke;
-	var sessionStroke;
-	var curHighlight = [];
-	
-	var curPlayButton;
-	var curPlayLabel;
-	
-	var tickWidth = 4;
-	
-	var legendWidth = 25;
-	var legendHeight = visHeight / 25;
-	
-	var timeMode = "Session";
 	
 	function setTimeScale(type)
 	{
@@ -2530,7 +2573,7 @@ function fadeOutLightbox()
 		.selectAll("*")
 		.remove();
 		
-		screenshotIndex = theNormData[owningUser][owningSession]["screenshots"][0]["Index"];
+		screenshotIndex = theNormData[owningUser][owningSession]["screenshots"][0]["Index MS"];
 		screenshotSession = theNormData[owningUser][owningSession]["screenshots"][0]["Original Session"];
 		
 		
@@ -2541,7 +2584,7 @@ function fadeOutLightbox()
 		.attr("style", "cursor:pointer;")
 		.on("click", function()
 				{
-					showLightbox("<tr><td><div width=\"100%\"><img src=\"./getClosestScreenshot.jpg?username=" + owningUser + "&timestamp=" + curSessionMap["Index MS User Min Date"] + "&session=" + screenshotSession + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
+					showLightbox("<tr><td><div width=\"100%\"><img src=\"./getClosestScreenshot.jpg?username=" + owningUser + "&timestamp=" + screenshotIndex + "&session=" + screenshotSession + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
 				});
 		
 		
@@ -3291,11 +3334,11 @@ function fadeOutLightbox()
 		d3.select("#screenshotDiv")
 				.append("img")
 				.attr("width", "100%")
-				.attr("src", "./getClosestScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + curSlot["Index"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName)
+				.attr("src", "./getClosestScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + curSlot["Index MS"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName)
 				.attr("style", "cursor:pointer;")
 				.on("click", function()
 						{
-							showLightbox("<tr><td><div width=\"100%\"><img src=\"./getClosestScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + curSlot["Index"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
+							showLightbox("<tr><td><div width=\"100%\"><img src=\"./getClosestScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + curSlot["Index MS"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
 						});
 		
 		d3.select("#extraHighlightDiv")

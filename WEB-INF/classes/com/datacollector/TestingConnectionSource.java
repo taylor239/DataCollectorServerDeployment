@@ -86,6 +86,7 @@ public class TestingConnectionSource implements Runnable
 		try
 		{
 			Class.forName("com.mysql.jdbc.Driver");
+			//System.out.println(address);
 			if(singletonDataSource == null)
 			{
 				singletonDataSource = setupDataSource(address, userName, password);

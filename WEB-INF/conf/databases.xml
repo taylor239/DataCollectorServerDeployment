@@ -1,7 +1,7 @@
 <databaselist>
-<database id="jdbc:mysql://localhost:3306/openDataCollectionServer?autoReconnect=true&amp;serverTimezone=UTC">
-	<address>jdbc:mysql://localhost:3306/openDataCollectionServer?autoReconnect=true&amp;serverTimezone=UTC</address>
-	<username>superuser</username>
+<database id="jdbc:mysql://localhost:3306/openDataCollectionServer?autoReconnect=true&amp;serverTimezone=UTC&amp;useLegacyDatetimeCode=false">
+	<address>jdbc:mysql://localhost:3306/openDataCollectionServer?autoReconnect=true&amp;serverTimezone=UTC&amp;useLegacyDatetimeCode=false</address>
+	<username>root</username>
 	<password>toor</password>
 	<driver>com.mysql.jdbc.Driver</driver>
 	<maxconnections>100</maxconnections>

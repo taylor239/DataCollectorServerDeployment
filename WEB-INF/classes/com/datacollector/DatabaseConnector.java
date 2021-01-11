@@ -10,11 +10,13 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.imageio.ImageIO;
@@ -28,6 +30,8 @@ import com.google.gson.GsonBuilder;
 
 public class DatabaseConnector
 {
+	private java.util.Calendar cal = Calendar.getInstance();
+	
 	private String totalQuery = "SELECT *, 'keyboard' AS `fromInput`, `MouseInput`.`xLoc` AS `xLoc`, `MouseInput`.`yLoc` AS `yLoc`, `KeyboardInput`.`type` AS `type`, `KeyboardInput`.`button` AS `button`, `KeyboardInput`.`inputTime` AS `overallTime`, `KeyboardInput`.`timeChanged` AS `overallTimeChanged`, `Window`.`username` AS `overallUser`, `Window`.`session`  AS `overallSession`, `Window`.`pid` AS `overallPid`, `Window`.`xid` AS `overallXid` FROM `openDataCollectionServer`.`KeyboardInput`\n" + 
 			"LEFT JOIN\n" + 
 			"`openDataCollectionServer`.`MouseInput` ON `KeyboardInput`.`username` = `MouseInput`.`username` AND `KeyboardInput`.`session` = `MouseInput`.`session` AND `KeyboardInput`.`event` = `MouseInput`.`event` AND `KeyboardInput`.`adminEmail` = `MouseInput`.`adminEmail` AND `KeyboardInput`.`inputTime` = `MouseInput`.`inputTime`\n" + 
@@ -57,7 +61,7 @@ public class DatabaseConnector
 	
 	private String taskQuery = "SELECT * FROM `openDataCollectionServer`.`Task` LEFT JOIN `TaskEvent` ON `Task`.`username` = `TaskEvent`.`username` AND `Task`.`event` = `TaskEvent`.`event` AND `Task`.`adminEmail` = `TaskEvent`.`adminEmail` AND `Task`.`taskName` = `TaskEvent`.`taskName` WHERE `Task`.`event` = ? AND `Task`.`adminEmail` = ? ORDER BY `TaskEvent`.`eventTime`, `TaskEvent`.`insertTimestamp` ASC";
 	
-	private String imageQuery = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `username` = ? AND `session` = ? AND `event` = ? AND `adminEmail` = ? ORDER BY abs(UNIX_TIMESTAMP(?) - UNIX_TIMESTAMP(`taken`)) LIMIT 1";
+	private String imageQuery = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `username` = ? AND `session` = ? AND `event` = ? AND `adminEmail` = ? ORDER BY abs(? - (UNIX_TIMESTAMP(`taken`) * 1000)) LIMIT 1";
 	
 	private String allImageQuery = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `event` = ? AND `adminEmail` = ? ORDER BY `taken`, `insertTimestamp` ASC";
 	
@@ -94,6 +98,7 @@ public class DatabaseConnector
 	
 	public DatabaseConnector(ServletContext sc)
 	{
+		cal.setTimeZone(TimeZone.getDefault());
 		setupDBManager(sc);
 		setupConnectionSource();
 		
@@ -101,6 +106,7 @@ public class DatabaseConnector
 	
 	public DatabaseConnector(ServletContext sc, String dbname)
 	{
+		cal.setTimeZone(TimeZone.getDefault());
 		setupDBManager(sc);
 		databaseName = dbname;
 		setupConnectionSource();
@@ -108,6 +114,7 @@ public class DatabaseConnector
 	
 	public void setupConnectionSource()
 	{
+		cal.setTimeZone(TimeZone.getDefault());
 		ConcurrentHashMap tmp=DatabaseInformationManager.getInstance().getNext(databaseName);
 		//(String)tmp.get("address"), (String)tmp.get("driver"), (String)tmp.get("username"), (Integer)tmp.get("maxconnections"), (String)tmp.get("password")
 		mySource = new TestingConnectionSource((String)tmp.get("username"), (String)tmp.get("password"), (String)tmp.get("address"));
@@ -115,11 +122,14 @@ public class DatabaseConnector
 	
 	public TestingConnectionSource getConnectionSource()
 	{
+		cal.setTimeZone(TimeZone.getDefault());
+
 		return mySource;
 	}
 	
 	public void setupDBManager(ServletContext sc)
 	{
+		cal.setTimeZone(TimeZone.getDefault());
 		DatabaseInformationManager manager=DatabaseInformationManager.getInstance();
 		//ServletContext sc=getServletContext();
 		String reportPath=sc.getRealPath("/WEB-INF/conf");
@@ -674,7 +684,7 @@ public class DatabaseConnector
 				nextRow.put("Session", myResults.getString("session"));
 				nextRow.put("Task Name", myResults.getString("taskName"));
 				nextRow.put("Completion", myResults.getString("completion"));
-				nextRow.put("Event Time", myResults.getTimestamp("eventTime"));
+				nextRow.put("Event Time", myResults.getTimestamp("eventTime", cal));
 				nextRow.put("Event", myResults.getString("event"));
 				
 				myReturn.add(nextRow);
@@ -748,10 +758,10 @@ public class DatabaseConnector
 				String sessionName = myResults.getString("session");
 				nextRow.put("TaskName", myResults.getString("taskName"));
 				nextRow.put("Completion", myResults.getString("completion"));
-				nextRow.put("EventTime", myResults.getTimestamp("eventTime"));
-				nextRow.put("StartTime", myResults.getTimestamp("startTimestamp"));
+				nextRow.put("EventTime", myResults.getTimestamp("eventTime", cal));
+				nextRow.put("StartTime", myResults.getTimestamp("startTimestamp", cal));
 				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
-				nextRow.put("Index", myResults.getTimestamp("eventTime"));
+				nextRow.put("Index", myResults.getTimestamp("eventTime", cal));
 				//nextRow.put("Event", myResults.getString("event"));
 				
 				nextRow.put("Description", myResults.getString("eventDescription"));
@@ -843,8 +853,8 @@ public class DatabaseConnector
 				//nextRow.put("Session", myResults.getString("session"));
 				String sessionName = myResults.getString("session");
 				
-				nextRow.put("Taken", myResults.getTimestamp("taken"));
-				nextRow.put("Index", myResults.getTimestamp("taken"));
+				nextRow.put("Taken", myResults.getTimestamp("taken", cal));
+				nextRow.put("Index", myResults.getTimestamp("taken", cal));
 				
 				if(!onlyIndex)
 				{
@@ -949,13 +959,13 @@ public class DatabaseConnector
 				//nextRow.put("Session", myResults.getString("session"));
 				String sessionName = myResults.getString("session");
 				
-				nextRow.put("Taken", myResults.getTimestamp("taken"));
-				nextRow.put("Index", myResults.getTimestamp("taken"));
+				nextRow.put("Taken", myResults.getTimestamp("taken", cal));
+				nextRow.put("Index", myResults.getTimestamp("taken", cal));
 				
-				nextRow.put("Path", "./" + userName + "/" + sessionName + "/screenshots/" + ((String)myResults.getTimestamp("taken").toString()).replaceAll(" ", "_") + ".jpg");
+				nextRow.put("Path", "./" + userName + "/" + sessionName + "/screenshots/" + ((String)myResults.getTimestamp("taken", cal).toString()).replaceAll(" ", "_") + ".jpg");
 				
 				ConcurrentHashMap nextRowBinary = new ConcurrentHashMap();
-				nextRowBinary.put("Index", ((String)myResults.getTimestamp("taken").toString()).replaceAll(" ", "_") + ".jpg");
+				nextRowBinary.put("Index", ((String)myResults.getTimestamp("taken", cal).toString()).replaceAll(" ", "_") + ".jpg");
 				//if(!onlyIndex)
 				{
 					byte[] image = myResults.getBytes("screenshot");
@@ -1062,15 +1072,15 @@ public class DatabaseConnector
 				//nextRow.put("Session", myResults.getString("session"));
 				String sessionName = myResults.getString("session");
 				
-				String timeString = myResults.getString("timestamp");
+				Timestamp timeString = myResults.getTimestamp("timestamp", cal);
 				//System.out.println(timeString);
-				if(timeString.contains("0000-00-00"))
+				if(timeString.toString().contains("0000-00-00"))
 				{
 					nextRow.put("SnapTime", new Timestamp(0));
 				}
 				else
 				{
-					nextRow.put("SnapTime", myResults.getTimestamp("timestamp"));
+					nextRow.put("SnapTime", myResults.getTimestamp("timestamp", cal));
 				}
 				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
 				nextRow.put("Index", nextRow.get("SnapTime"));
@@ -1181,15 +1191,15 @@ public class DatabaseConnector
 				//nextRow.put("Session", myResults.getString("session"));
 				String sessionName = myResults.getString("session");
 				
-				String timeString = myResults.getString("timestamp");
+				Timestamp timeString = myResults.getTimestamp("timestamp", cal);
 				//System.out.println(timeString);
-				if(timeString.contains("0000-00-00"))
+				if(timeString.toString().contains("0000-00-00"))
 				{
 					nextRow.put("SnapTime", new Timestamp(0));
 				}
 				else
 				{
-					nextRow.put("SnapTime", myResults.getTimestamp("timestamp"));
+					nextRow.put("SnapTime", myResults.getTimestamp("timestamp", cal));
 				}
 				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
 				nextRow.put("Index", nextRow.get("SnapTime"));
@@ -1204,7 +1214,7 @@ public class DatabaseConnector
 				nextRow.put("RSS", myResults.getString("rss"));
 				nextRow.put("TTY", myResults.getString("tty"));
 				nextRow.put("Stat", myResults.getString("stat"));
-				nextRow.put("Time", myResults.getString("time"));
+				nextRow.put("Time", myResults.getTimestamp("time", cal));
 				
 				if(myResults.getObject("arguments") != null)
 				{
@@ -1313,14 +1323,14 @@ public class DatabaseConnector
 				//nextRow.put("Session", myResults.getString("session"));
 				String sessionName = myResults.getString("session");
 				
-				nextRow.put("InputTime", myResults.getTimestamp("inputTime"));
-				nextRow.put("Index", myResults.getTimestamp("inputTime"));
+				nextRow.put("InputTime", myResults.getTimestamp("inputTime", cal));
+				nextRow.put("Index", myResults.getTimestamp("inputTime", cal));
 				
 				nextRow.put("User", myResults.getString("user"));
 				nextRow.put("PID", myResults.getString("pid"));
 				nextRow.put("Start", myResults.getString("start"));
 				nextRow.put("XID", myResults.getString("xid"));
-				nextRow.put("TimeChanged", myResults.getString("timeChanged"));
+				nextRow.put("TimeChanged", myResults.getTimestamp("timeChanged", cal));
 				
 				nextRow.put("Button", myResults.getString("button"));
 				nextRow.put("Type", myResults.getString("type"));
@@ -1413,14 +1423,14 @@ public class DatabaseConnector
 				//nextRow.put("Session", myResults.getString("session"));
 				String sessionName = myResults.getString("session");
 				
-				nextRow.put("InputTime", myResults.getTimestamp("inputTime"));
-				nextRow.put("Index", myResults.getTimestamp("inputTime"));
+				nextRow.put("InputTime", myResults.getTimestamp("inputTime", cal));
+				nextRow.put("Index", myResults.getTimestamp("inputTime", cal));
 				
 				nextRow.put("User", myResults.getString("user"));
 				nextRow.put("PID", myResults.getString("pid"));
 				nextRow.put("Start", myResults.getString("start"));
 				nextRow.put("XID", myResults.getString("xid"));
-				nextRow.put("TimeChanged", myResults.getString("timeChanged"));
+				nextRow.put("TimeChanged", myResults.getTimestamp("timeChanged", cal));
 				
 				nextRow.put("XLoc", myResults.getString("xLoc"));
 				nextRow.put("YLoc", myResults.getString("yLoc"));
@@ -1515,8 +1525,8 @@ public class DatabaseConnector
 				//nextRow.put("Session", myResults.getString("session"));
 				String sessionName = myResults.getString("session");
 				
-				nextRow.put("ChangeTime", myResults.getTimestamp("timeChanged"));
-				nextRow.put("Index", myResults.getTimestamp("timeChanged"));
+				nextRow.put("ChangeTime", myResults.getTimestamp("timeChanged", cal));
+				nextRow.put("Index", myResults.getTimestamp("timeChanged", cal));
 				
 				nextRow.put("User", myResults.getString("user"));
 				nextRow.put("PID", myResults.getString("pid"));
@@ -1637,7 +1647,7 @@ public class DatabaseConnector
 				nextRow.put("Command", command);
 				
 				
-				Date timeChanged = myResults.getTimestamp("timeChanged");
+				Date timeChanged = myResults.getTimestamp("timeChanged", cal);
 				nextRow.put("SnapTime", timeChanged);
 				
 				double cpu = myResults.getDouble("cpu");
@@ -1652,7 +1662,7 @@ public class DatabaseConnector
 				nextRow.put("TTY", tty);
 				String stat = myResults.getString("stat");
 				nextRow.put("Stat", stat);
-				String time = myResults.getString("time");
+				Timestamp time = myResults.getTimestamp("time", cal);
 				nextRow.put("Time", time);
 				
 				
@@ -1676,7 +1686,7 @@ public class DatabaseConnector
 					nextRow.put("IX", xLoc);
 					int yLoc = myResults.getInt("yLoc");
 					nextRow.put("IY", yLoc);
-					Date inputTime = myResults.getTimestamp("overallTime");
+					Date inputTime = myResults.getTimestamp("overallTime", cal);
 					nextRow.put("Time", inputTime);
 					nextRow.put("Index", inputTime);
 				}
@@ -1688,7 +1698,7 @@ public class DatabaseConnector
 					nextRow.put("Type", type);
 					String button = myResults.getString("button");
 					nextRow.put("Button", type);
-					Date inputTime = myResults.getTimestamp("overallTime");
+					Date inputTime = myResults.getTimestamp("overallTime", cal);
 					nextRow.put("Time", inputTime);
 					nextRow.put("Index", inputTime);
 				}
@@ -1852,7 +1862,7 @@ public class DatabaseConnector
 				nextRow.put("Command", command);
 				
 				
-				Date timeChanged = myResults.getTimestamp("timeChanged");
+				Date timeChanged = myResults.getTimestamp("timeChanged", cal);
 				nextRow.put("SnapTime", timeChanged);
 				
 				double cpu = myResults.getDouble("cpu");
@@ -1867,7 +1877,7 @@ public class DatabaseConnector
 				nextRow.put("TTY", tty);
 				String stat = myResults.getString("stat");
 				nextRow.put("Stat", stat);
-				String time = myResults.getString("time");
+				Timestamp time = myResults.getTimestamp("time", cal);
 				nextRow.put("Time", time);
 				
 				
@@ -1891,7 +1901,7 @@ public class DatabaseConnector
 					nextRow.put("IX", xLoc);
 					int yLoc = myResults.getInt("yLoc");
 					nextRow.put("IY", yLoc);
-					Date inputTime = myResults.getTimestamp("overallTime");
+					Date inputTime = myResults.getTimestamp("overallTime", cal);
 					nextRow.put("Time", inputTime);
 					nextRow.put("Index", inputTime);
 				}
@@ -1903,7 +1913,7 @@ public class DatabaseConnector
 					nextRow.put("Type", type);
 					String button = myResults.getString("button");
 					nextRow.put("Button", type);
-					Date inputTime = myResults.getTimestamp("overallTime");
+					Date inputTime = myResults.getTimestamp("overallTime", cal);
 					nextRow.put("Time", inputTime);
 					nextRow.put("Index", inputTime);
 				}
@@ -1994,6 +2004,7 @@ public class DatabaseConnector
 			myStatement.setString(3, event);
 			myStatement.setString(4, admin);
 			myStatement.setString(5, myTimestamp);
+			//System.out.println(myTimestamp);
 			//myStatement.setString(3, myTimestamp);
 			//System.err.println(myStatement.toString());
 			ResultSet myResults = myStatement.executeQuery();

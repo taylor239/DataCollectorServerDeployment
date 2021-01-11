@@ -191,7 +191,7 @@ public class DataExportLog extends HttpServlet {
 					headMap = myConnector.mergeMaps(headMap, screenshotMap);
 				}
 			}
-			if(toSelect.contains("video"))
+			if(false || toSelect.contains("video"))
 			{
 				dataTypes.add("video");
 				ConcurrentHashMap screenshotMap = myConnector.getScreenshotsHierarchy(eventName, admin, userSelectList, false, false);
