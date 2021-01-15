@@ -65,6 +65,9 @@ public class DatabaseConnector
 	
 	private String allImageQuery = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `event` = ? AND `adminEmail` = ? ORDER BY `taken`, `insertTimestamp` ASC";
 	
+	
+	private String filterQuery = "SELECT * FROM `openDataCollectionServer`.`VisualizationFilters` WHERE `VisualizationFilters`.`event` = ? AND `VisualizationFilters`.`adminEmail` = ? ORDER BY `VisualizationFilters`.`saveName`, `VisualizationFilters`.`filterNum` ASC";
+	
 	//private String allProcessQueryOld = "SELECT * FROM `Process` LEFT JOIN `ProcessAttributes` ON `Process`.`event` = `ProcessAttributes`.`event` AND `Process`.`adminEmail` = `ProcessAttributes`.`adminEmail` AND `Process`.`username` = `ProcessAttributes`.`username` AND `Process`.`session` = `ProcessAttributes`.`session` AND `Process`.`user` = `ProcessAttributes`.`user` AND `Process`.`pid` = `ProcessAttributes`.`pid` AND `Process`.`start` = `ProcessAttributes`.`start` WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? ORDER BY `ProcessAttributes`.`insertTimestamp` ASC";
 	
 	private String allProcessQuery = "SELECT * FROM `Process` LEFT JOIN \n" + 
@@ -84,6 +87,9 @@ public class DatabaseConnector
 			"WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? ORDER BY `ProcessAttributes`.`insertTimestamp`, `ProcessAttributes`.`timestamp` ASC";
 	
 	private String allWindowQuery = "SELECT * FROM `Window` LEFT JOIN `WindowDetails`ON `Window`.`event` = `WindowDetails`.`event` AND `Window`.`adminEmail` = `WindowDetails`.`adminEmail` AND `Window`.`username` = `WindowDetails`.`username` AND `Window`.`session` = `WindowDetails`.`session` AND `Window`.`user` = `WindowDetails`.`user` AND `Window`.`pid` = `WindowDetails`.`pid` AND `Window`.`start` = `WindowDetails`.`start` AND `Window`.`xid` = `WindowDetails`.`xid` WHERE `WindowDetails`.`event` = ? AND `WindowDetails`.`adminEmail` = ? ORDER BY `WindowDetails`.`timeChanged`, `WindowDetails`.`insertTimestamp` ASC";
+	
+	private String insertFilter = "INSERT INTO `VisualizationFilters`(`event`, `adminEmail`, `level`, `field`, `value`, `server`, `saveName`, `filterNum`) VALUES ";
+	private String insertFilterValues = "(?,?,?,?,?,?,?,?)";
 	
 	private TestingConnectionSource mySource;
 	
@@ -660,6 +666,112 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
+	public ArrayList getFilters(String event, String admin)
+	{
+		ArrayList myReturn = new ArrayList();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		conn = myConnector;
+		try
+		{
+			PreparedStatement myStatement = myConnector.prepareStatement(filterQuery);
+			myStatement.setString(1, event);
+			myStatement.setString(2, admin);
+			ResultSet myResults = myStatement.executeQuery();
+			while(myResults.next())
+			{
+				ConcurrentHashMap nextRow = new ConcurrentHashMap();
+				nextRow.put("Level", myResults.getString("level"));
+				nextRow.put("Field", myResults.getString("field"));
+				nextRow.put("Value", myResults.getString("value"));
+				nextRow.put("Server", myResults.getString("server"));
+				nextRow.put("SaveName", myResults.getString("saveName"));
+				myReturn.add(nextRow);
+			}
+			stmt = myStatement;
+			rset = myResults;
+			
+			rset.close();
+			stmt.close();
+			conn.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (rset != null) rset.close(); } catch(Exception e) { }
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		return myReturn;
+	}
+	
+	public ConcurrentHashMap addFilters(String event, String admin, ArrayList toAdd, String saveAs)
+	{
+		ConcurrentHashMap myReturn = new ConcurrentHashMap();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		conn = myConnector;
+		try
+		{
+			String curStatement = insertFilter;
+			for(int x=0; x<toAdd.size(); x++)
+			{
+				if(x > 0)
+				{
+					curStatement += ",";
+				}
+				curStatement += insertFilterValues;
+			}
+			PreparedStatement myStatement = myConnector.prepareStatement(curStatement);
+			//(`event`, `adminEmail`, `level`, `field`, `value`, `server`, `saveName`, `filterNum`)
+			for(int x=0; x<toAdd.size(); x++)
+			{
+				int curStart = 8 * x + 1;
+				ConcurrentHashMap curMap = (ConcurrentHashMap) toAdd.get(x);
+				
+				myStatement.setString(curStart, event);
+				myStatement.setString(curStart + 1, admin);
+				myStatement.setString(curStart + 2, (String) curMap.get("level"));
+				myStatement.setString(curStart + 3, (String) curMap.get("field"));
+				myStatement.setString(curStart + 4, (String) curMap.get("value"));
+				myStatement.setString(curStart + 5, "0");
+				myStatement.setString(curStart + 6, saveAs);
+				myStatement.setInt(curStart + 7, x);
+			}
+			myStatement.execute();
+			
+			stmt = myStatement;
+			
+			stmt.close();
+			conn.close();
+			myReturn.put("result", "okay");
+		}
+		catch(Exception e)
+		{
+			myReturn.put("result", "nokay");
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		return myReturn;
+	}
+	
 	public ArrayList getTasks(String event, String admin)
 	{
 		ArrayList myReturn = new ArrayList();
@@ -1027,6 +1139,7 @@ public class DatabaseConnector
 	
 	public ConcurrentHashMap getProcessDataHierarchy(String event, String admin, ArrayList usersToSelect)
 	{
+		ConcurrentHashMap lastMap = new ConcurrentHashMap();
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
 		Connection conn = null;
@@ -1074,6 +1187,29 @@ public class DatabaseConnector
 				
 				Timestamp timeString = myResults.getTimestamp("timestamp", cal);
 				//System.out.println(timeString);
+				
+				nextRow.put("User", myResults.getString("user"));
+				nextRow.put("PID", myResults.getString("pid"));
+				nextRow.put("Start", myResults.getString("start"));
+				nextRow.put("Command", myResults.getString("command"));
+				
+				
+				if(myResults.getObject("arguments") != null)
+				{
+					nextRow.put("Arguments", myResults.getString("arguments"));
+				}
+				
+				ConcurrentHashMap rowKey = new ConcurrentHashMap(nextRow);
+				
+				rowKey.put("Username", userName);
+				rowKey.put("Session", sessionName);
+				if(lastMap.containsKey(rowKey))
+				{
+					nextRow.put("Prev", lastMap.get(rowKey));
+					((ConcurrentHashMap)lastMap.get(rowKey)).put("Next", nextRow);
+				}
+				lastMap.put(rowKey, nextRow);
+				
 				if(timeString.toString().contains("0000-00-00"))
 				{
 					nextRow.put("SnapTime", new Timestamp(0));
@@ -1085,10 +1221,7 @@ public class DatabaseConnector
 				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
 				nextRow.put("Index", nextRow.get("SnapTime"));
 				
-				nextRow.put("User", myResults.getString("user"));
-				nextRow.put("PID", myResults.getString("pid"));
-				nextRow.put("Start", myResults.getString("start"));
-				nextRow.put("Command", myResults.getString("command"));
+				
 				nextRow.put("CPU", myResults.getString("cpu"));
 				nextRow.put("Mem", myResults.getString("mem"));
 				nextRow.put("VSZ", myResults.getString("vsz"));
@@ -1097,10 +1230,6 @@ public class DatabaseConnector
 				nextRow.put("Stat", myResults.getString("stat"));
 				nextRow.put("Time", myResults.getString("time"));
 				
-				if(myResults.getObject("arguments") != null)
-				{
-					nextRow.put("Arguments", myResults.getString("arguments"));
-				}
 				
 				if(!myReturn.containsKey(userName))
 				{
@@ -1140,6 +1269,100 @@ public class DatabaseConnector
             try { if (stmt != null) stmt.close(); } catch(Exception e) { }
             try { if (conn != null) conn.close(); } catch(Exception e) { }
         }
+		
+		//if(true)
+		//{
+		//	return myReturn;
+		//}
+		
+		Iterator userIterator = myReturn.entrySet().iterator();
+		while(userIterator.hasNext())
+		{
+			Entry userEntry = (Entry) userIterator.next();
+			System.out.println(userEntry.getKey());
+			ConcurrentHashMap sessionMap = (ConcurrentHashMap) userEntry.getValue();
+			Iterator sessionIterator = sessionMap.entrySet().iterator();
+			while(sessionIterator.hasNext())
+			{
+				Entry sessionEntry = (Entry) sessionIterator.next();
+				//System.out.println(sessionEntry.getKey());
+				ConcurrentHashMap dataMap = (ConcurrentHashMap) sessionEntry.getValue();
+				ArrayList processList = (ArrayList) dataMap.get("processes");
+				//System.out.println(processList);
+				ArrayList newProcessList = new ArrayList();
+				for(int x=0; x<processList.size(); x++)
+				{
+					//System.out.println("Got here 1");
+					ConcurrentHashMap curProcess = (ConcurrentHashMap) processList.get(x);
+					if(curProcess.containsKey("Next"))
+					{
+						//System.out.println("Got here 2");
+						if(curProcess.containsKey("Prev"))
+						{
+							//System.out.println("Got here 3");
+							
+							ConcurrentHashMap prevMap = (ConcurrentHashMap) curProcess.get("Prev");
+							ConcurrentHashMap nextMap = (ConcurrentHashMap) curProcess.get("Next");
+							curProcess.remove("Next");
+							curProcess.remove("Prev");
+							//System.out.println(curProcess);
+							//System.out.println(prevMap);
+							//System.out.println(nextMap);
+							if(prevMap.get("CPU").equals(nextMap.get("CPU")) && prevMap.get("Mem").equals(nextMap.get("Mem")) && prevMap.get("RSS").equals(nextMap.get("RSS")) && prevMap.get("VSZ").equals(nextMap.get("VSZ")))
+							{
+								//System.out.println("Got here 4");
+								if(curProcess.get("CPU").equals(nextMap.get("CPU")) && curProcess.get("Mem").equals(nextMap.get("Mem")) && curProcess.get("RSS").equals(nextMap.get("RSS")) && curProcess.get("VSZ").equals(nextMap.get("VSZ")))
+								{
+									//System.out.println("Identical:");
+									//System.out.println(nextMap);
+									//System.out.println(prevMap);
+									//System.out.println(curProcess);
+									//prevMap.put("Next", nextMap);
+									nextMap.put("Prev", prevMap);
+									
+								}
+								else
+								{
+									//System.out.println("Not Identical:");
+									//System.out.println(nextMap);
+									//System.out.println(prevMap);
+									//System.out.println(curProcess);
+									
+									newProcessList.add(curProcess);
+								}
+							}
+							else
+							{
+								newProcessList.add(curProcess);
+							}
+						}
+						else
+						{
+							newProcessList.add(curProcess);
+						}
+					}
+					else
+					{
+						newProcessList.add(curProcess);
+					}
+					if(curProcess.containsKey("Prev"))
+					{
+						//System.out.println(curProcess);
+						//System.out.println(curProcess.get("Prev"));
+						curProcess.remove("Prev");
+					}
+					if(curProcess.containsKey("Next"))
+					{
+						//System.out.println(curProcess);
+						//System.out.println(curProcess.get("Prev"));
+						curProcess.remove("Next");
+					}
+					//System.out.println();
+				}
+				dataMap.put("processes", newProcessList);
+			}
+		}
+		
 		
 		return myReturn;
 	}

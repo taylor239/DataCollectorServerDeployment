@@ -61,24 +61,24 @@ if(request.getParameter("email") != null)
 		<td class="layoutTableSide">
 			<table id="optionFilterTable" width="100%" height="100%">
 					<tr>
-						<td colspan="4">
+						<td colspan="5">
 								<div align="center">
 									Options
 								</div>
 						</td>
 					</tr>
 					<tr>
-						<td colspan="4">
+						<td colspan="5">
 									Playback Speed
 						</td>
 					</tr>
 					<tr>
-						<td colspan="4">
+						<td colspan="5">
 									<input type="text" size="4" id="playbackSpeed" name="playbackSpeed" value="10">x
 						</td>
 					</tr>
 					<tr id="filterTitle1">
-						<td colspan="4">
+						<td colspan="5">
 							<div align="center">
 									Filters
 							</div>
@@ -87,10 +87,10 @@ if(request.getParameter("email") != null)
 					<tr>
 						<td colspan="2">
 						<div align="center">
-						<button type="button">Save</button>
+						<button type="button" onclick="saveFilters()">Save</button>
 						</div>
 						</td>
-						<td colspan="2">
+						<td colspan="3">
 						<div align="center">
 						<input type="text" size="15" id="saveFilter" name="saveFilter" value="Name">
 						</div>
@@ -99,15 +99,15 @@ if(request.getParameter("email") != null)
 					<tr>
 						<td colspan="1">
 						<div align="center">
-						<button type="button">Load</button>
+						<button type="button" onclick="loadFilter(true)">Load</button>
 						</div>
 						</td>
 						<td colspan="1">
 						<div align="center">
-						<button type="button">Append</button>
+						<button type="button" onclick="loadFilter(false)">Append</button>
 						</div>
 						</td>
-						<td colspan="2">
+						<td colspan="3">
 						<div align="center">
 						<select name="savedFilters" id="savedFilters">
 							<option value="default">Default</option>
@@ -119,11 +119,14 @@ if(request.getParameter("email") != null)
 						<td width="20%">
 						Level
 						</td>
-						<td width="30%">
+						<td width="20%">
 						Field
 						</td>
-						<td width="50%">
+						<td width="40%">
 						Value
+						</td>
+						<td width="20%">
+						Server
 						</td>
 						<td>
 						
@@ -138,6 +141,9 @@ if(request.getParameter("email") != null)
 						</td>
 						<td id = "filter_add_value">
 						<input type="text" size="11" id="filter_add_value_field" name="filter_add_value_field" value="!= 'com-datacollectorloc'">
+						</td>
+						<td>
+						
 						</td>
 						<td id = "filter_add_add" class="clickableHover" onclick="addFilter()">
 						<div align="center">
@@ -364,15 +370,7 @@ function fadeOutLightbox()
 	var filters = [];
 	var filtersTitle = [];
 	var startFilters = 0;
-	d3.select("#optionFilterTable")
-	.selectAll("tr")
-	.each(function(d, i)
-			{
-				//console.log(d);
-				//console.log(this);
-				filtersTitle.push(this);
-				startFilters = i;
-			});
+	
 	var firstFilter = {}
 	firstFilter["Level"] = 1;
 	firstFilter["Field"] = "";
@@ -434,6 +432,47 @@ function fadeOutLightbox()
 	highlightMap["TaskName"] = true;
 	highlightMap["SecondClass"] = true;
 	
+	function loadFilter(removeOld)
+	{
+		if(removeOld)
+		{
+			filters = [];
+		}
+		var toLoad = document.getElementById("savedFilters").value;
+		var filtersToLoad = savedFilters[toLoad];
+		for(toAdd in filtersToLoad)
+		{
+			var filterToAdd = {}
+			filterToAdd["Level"] = filtersToLoad[toAdd]["Level"];
+			filterToAdd["Field"] = filtersToLoad[toAdd]["Field"];
+			filterToAdd["Value"] = filtersToLoad[toAdd]["Value"];
+			//firstFilter["id"] = "filter_0"
+			filters.push(filterToAdd);
+		}
+		rebuildFilters();
+		start(true);
+	}
+	
+	function saveFilters()
+	{
+		
+		var saveAs = document.getElementById("saveFilter").value;
+		var urlToPost = "addFilters.json?event=" + eventName + "&saveName=" + saveAs;
+		var x=0;
+		for(entry in filters)
+		{
+			//console.log(filters[entry]);
+			urlToPost += "&filterLevel" + x + "=" + filters[entry]["Level"];
+			urlToPost += "&filterValue" + x + "=" + filters[entry]["Value"];
+			urlToPost += "&filterField" + x + "=" + filters[entry]["Field"];
+			x++;
+		}
+		d3.json(urlToPost, function(error, data)
+				{
+					console.log(data);
+				});
+	}
+	
 	function rebuildFilters()
 	{
 		var tableData = filtersTitle.concat(filters);
@@ -473,6 +512,11 @@ function fadeOutLightbox()
 						+d["Value"]
 						+"</td>"
 						+"<td class=\"clickableHover\" id = \"filter_" + (i - startFilters) + "_remove\">"
+						+"<div align=\"center\">"
+						+"<input type=\"checkbox\" id=\"filter_server_" + (i - startFilters) + "\" name=\"filter_server_" + (i - startFilters) + "\" value=\"filter_server_" + (i - startFilters) + "\">"
+						+"</div>"
+						+"</td>"
+						+"<td class=\"clickableHover\" id = \"filter_" + (i - startFilters) + "_remove\">"
 						+"<div align=\"center\" onclick=\"removeFilter(" + (i - startFilters) + ")\">"
 						+"X"
 						+"</div>"
@@ -480,7 +524,7 @@ function fadeOutLightbox()
 					});
 	}
 	
-	rebuildFilters();
+	//rebuildFilters();
 	
 	
 	function removeFilter(filterNum)
@@ -679,20 +723,75 @@ function fadeOutLightbox()
 	var theNormDataClone;
 	var theNormDataDone = false;
 	var origTitle = d3.select("#title").text();
-	d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes,mouse,processes,windows,events,screenshotindices&normalize=none", function(error, data)
-			{
-				theNormData = preprocess(data);
-				theNormDataClone = JSON.parse(JSON.stringify(theNormData));
-				theNormDataDone = true;
-				start(true);
-			})
-			.on("progress", function(d, i)
-					{
-						d3.select("#title")
-								.html(origTitle + "<br />Data Size: <b>" + d["loaded"] + "</b> bytes")
-						//console.log(d);
-					});
 	
+	var savedFilters = {};
+	d3.json("Filters.json?event=" + eventName, function(error, data)
+			{
+				saveNames = [];
+				
+				for(entry in data)
+				{
+					curEntry = {};
+					if(!(data[entry]["SaveName"] in savedFilters))
+					{
+						savedFilters[data[entry]["SaveName"]] = [];
+						saveNames.push(data[entry]["SaveName"]);
+					}
+					curEntry["Level"] = data[entry]["Level"];
+					curEntry["Field"] = data[entry]["Field"];
+					curEntry["Value"] = data[entry]["Value"];
+					curEntry["Server"] = data[entry]["Server"];
+					savedFilters[data[entry]["SaveName"]].push(curEntry);
+				}
+				
+				
+				d3.select("#savedFilters")
+					.selectAll("option")
+					.remove();
+				d3.select("#savedFilters")
+					.selectAll("option")
+					.data(saveNames)
+					.enter()
+					.append("option")
+					.attr("value", function(d, i)
+							{
+								console.log(d);
+								return d;
+							})
+					.html(function(d, i)
+							{
+								return d;
+							});
+					
+				d3.select("#optionFilterTable")
+				.selectAll("tr")
+				.each(function(d, i)
+						{
+							//console.log(d);
+							//console.log(this);
+							filtersTitle.push(this);
+							startFilters = i;
+						});
+				rebuildFilters();
+				downloadData();
+			})
+	
+	function downloadData()
+	{
+		d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes,mouse,processes,windows,events,screenshotindices&normalize=none", function(error, data)
+				{
+					theNormData = preprocess(data);
+					theNormDataClone = JSON.parse(JSON.stringify(theNormData));
+					theNormDataDone = true;
+					start(true);
+				})
+				.on("progress", function(d, i)
+						{
+							d3.select("#title")
+									.html(origTitle + "<br />Data Size: <b>" + d["loaded"] + "</b> bytes")
+							//console.log(d);
+						});
+	}
 	
 	
 	function sleep(seconds)
