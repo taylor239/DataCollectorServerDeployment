@@ -392,7 +392,7 @@ function fadeOutLightbox()
 	var visPadding = 20;
 	
 	var visWidth = containingTableRow.offsetWidth - visPadding;
-	var visHeight = windowHeight * .6;
+	var visHeight = windowHeight * .5;
 	var bottomVisHeight = windowHeight * .25;
 	var sidePadding = 24;
 	
@@ -401,6 +401,7 @@ function fadeOutLightbox()
 	//var xAxisPadding = .2 * visWidth;
 	
 	var eventName = "<%=eventName %>";
+	var adminName = "<%=request.getParameter("email") %>";
 	
 	var svg;
 	var userOrdering;
@@ -846,6 +847,7 @@ function fadeOutLightbox()
 				sessionOrderMap = {};
 				maxTimeUser = 0;
 				minTimeUser = Number.POSITIVE_INFINITY;
+				minTimeUserAbsolute = Number.POSITIVE_INFINITY;
 				maxTimeUserDate = "";
 				minTimeUserDate = "";
 				minTimeUserUniversal = Number.POSITIVE_INFINITY;
@@ -950,6 +952,7 @@ function fadeOutLightbox()
 							lastTimeDate = thisData[thisData.length - 1]["Index"];
 							firstTimeSession = thisData[0]["Index MS Session"];
 							firstTimeUser = thisData[0]["Index MS User"];
+							firstTimeUserAbsolute = thisData[0]["Index MS"];
 							firstTimeDate = thisData[0]["Index"];
 							
 							if(lastTimeSession > maxTimeSession)
@@ -974,7 +977,9 @@ function fadeOutLightbox()
 							if(firstTimeUser < minTimeUser)
 							{
 								minTimeUser = firstTimeUser;
+								minTimeUserAbsolute = firstTimeUserAbsolute;
 								minTimeUserDate = firstTimeDate;
+								
 							}
 							firstTimeUniversal = thisData[0]["Index MS Universal"];
 							if(firstTimeUniversal < minTimeUserUniversal)
@@ -1037,6 +1042,7 @@ function fadeOutLightbox()
 				theNormData[user]["Index MS User Min"] = minTimeUser;
 				theNormData[user]["Index MS User Max Date"] = maxTimeUserDate;
 				theNormData[user]["Index MS User Min Date"] = minTimeUserDate;
+				theNormData[user]["Index MS User Min Absolute"] = minTimeUserAbsolute;
 				
 				timeScale = d3.scaleLinear();
 				timeScale.domain
@@ -1471,6 +1477,26 @@ function fadeOutLightbox()
 		.selectAll("rect")
 		.data(function()
 				{
+					function binarySearchArray(items, value){
+					    var firstIndex  = 0,
+					        lastIndex   = items.length - 1,
+					        middleIndex = Math.floor((lastIndex + firstIndex)/2);
+		
+					    while(items[middleIndex] != value && firstIndex < lastIndex)
+					    {
+					       if (value < items[middleIndex])
+					        {
+					            lastIndex = middleIndex - 1;
+					        } 
+					      else if (value > items[middleIndex])
+					        {
+					            firstIndex = middleIndex + 1;
+					        }
+					        middleIndex = Math.floor((lastIndex + firstIndex)/2);
+					    }
+		
+					 return middleIndex;
+					}
 					var toReturn = [];
 					var userNum = 0;
 					var sessionNum = 0;
@@ -1481,7 +1507,11 @@ function fadeOutLightbox()
 						var userSessionList = userSessionOrdering["Order List"];
 						for(var y in userSessionList)
 						{
-							var maxNumActive = 0;
+							var openSpots = [];
+							openSpots.push(0);
+							
+							//console.log("New session");
+							var maxNumActive = 1;
 							var curSession = userSessionOrdering[userSessionList[y]];
 							var userSession = {}
 							userSession["User"] = theUser;
@@ -1523,11 +1553,37 @@ function fadeOutLightbox()
 								
 								if(eventsList[z]["Description"] == "start" || !(eventsList[z]["TaskName"] in curActiveMap))
 								{
-									eventsList[z]["Active Row"] = Object.keys(curActiveMap).length;
+									//var placeholder = {};
+									//placeholder["Index MS Session"] = theNormData[theUser][curSession]["Index MS Session Max"];
+									//placeholder["Index MS User"] = theNormData[theUser]["Index MS User Max"];
+									
+									//eventsList[z]["Next"] = placeholder;
+									//if(openSpots.length == 0)
+									//{
+									//	eventsList[z]["Active Row"] = Object.keys(curActiveMap).length;
+									//}
+									//else
+									//{
+									if(eventsList[z]["Description"] == "start")
+									{
+										//console.log("Got new start");
+										//console.log(openSpots);
+										//console.log("Cur active " + Object.keys(curActiveMap).length);
+									}
+									if(openSpots.length == 0)
+									{
+										openSpots.push(Object.keys(curActiveMap).length)
+										if(Object.keys(curActiveMap).length + 1 > maxNumActive)
+										{
+											maxNumActive = Object.keys(curActiveMap).length + 1;
+										}
+									}
+									eventsList[z]["Active Row"] = openSpots.shift();
+									//}
 									if(!(eventsList[z]["Description"] == "start"))
 									{
-										maxNumActive++;
-										eventsList[z]["Active Row"] = maxNumActive;
+										//maxNumActive++;
+										//eventsList[z]["Active Row"] = maxNumActive;
 										var cloned = JSON.parse(JSON.stringify(eventsList[z]));
 										cloned["Time Scale Session"] = eventsList[z]["Time Scale Session"];
 										cloned["Description"] = "Default";
@@ -1565,10 +1621,10 @@ function fadeOutLightbox()
 									{
 										curActiveMap[eventsList[z]["TaskName"]] = eventsList[z];
 									}
-									if(Object.keys(curActiveMap).length > maxNumActive)
-									{
-										maxNumActive = Object.keys(curActiveMap).length;
-									}
+									//if(Object.keys(curActiveMap).length > maxNumActive)
+									//{
+									//	maxNumActive = Object.keys(curActiveMap).length;
+									//}
 								}
 								else
 								{
@@ -1578,6 +1634,24 @@ function fadeOutLightbox()
 									if(eventsList[z]["Description"] == "end")
 									{
 										delete curActiveMap[eventsList[z]["TaskName"]];
+										openRow = eventsList[z]["Active Row"];
+										//console.log("Returning " + openRow)
+										if(openSpots.length == 0)
+										{
+											openSpots.push(openRow);
+										}
+										else
+										{
+											closestVal = binarySearchArray(openSpots, openRow)
+											if(openSpots[closestVal] > openRow)
+											{
+												openSpots.splice(closestVal - 1, 0, openRow);
+											}
+											else
+											{
+												openSpots.splice(closestVal, 0, openRow);
+											}
+										}
 									}
 								}
 								
@@ -2575,6 +2649,9 @@ function fadeOutLightbox()
 	
 	function clearWindow()
 	{
+		//d3.select("#mainVisualization").select("svg")
+		//.attr("height", (visHeight) + "px")
+		//.style("height", (visHeight) + "px");
 		if(curPlayButton)
 		{
 			curPlayButton.attr("fill", curPlayButton.attr("initFill"));
@@ -2659,8 +2736,114 @@ function fadeOutLightbox()
 	var curSelectUser = "";
 	var curSelectSession = "";
 	
+	function addTask(userName, sessionName)
+	{
+		var startTask = Number(document.getElementById("addTaskStart").value) + theNormData[userName]["Index MS User Min Absolute"] + theNormData[userName][sessionName]["Index MS User Session Min"];
+		var endTask = Number(document.getElementById("addTaskEnd").value) + theNormData[userName]["Index MS User Min Absolute"] + theNormData[userName][sessionName]["Index MS User Session Min"];
+		var taskName = document.getElementById("addTaskName").value;
+		
+		var taskUrl = "addTask.json?event=" + eventName + "&userName=" + userName + "&sessionName=" + sessionName + "&start=" + startTask + "&end=" + endTask + "&taskName=" + taskName;
+		
+		d3.json(taskUrl, function(error, data)
+					{
+						//console.log(data);
+						if(data["result"] == "okay")
+						{
+							
+							var sessEvents = theNormDataClone[userName][sessionName]["events"];
+							var aggEvents = theNormDataClone[userName]["Aggregated"]["events"];
+							
+							var userSessDiff = theNormData[userName][sessionName]["Index MS User Session Min"];
+							var absUserDiff = theNormData[userName]["Index MS User Min Absolute"];
+							
+							var newEvents = data["newEvents"][userName][sessionName]["events"];
+							
+							function binarySearchEvents(items, value){
+							    var firstIndex  = 0,
+							        lastIndex   = items.length - 1,
+							        middleIndex = Math.floor((lastIndex + firstIndex)/2);
+
+							    while(items[middleIndex]["Index MS"] != value && firstIndex < lastIndex)
+							    {
+							       if (value < items[middleIndex]["Index MS"])
+							        {
+							            lastIndex = middleIndex - 1;
+							        } 
+							      else if (value > items[middleIndex]["Index MS"])
+							        {
+							            firstIndex = middleIndex + 1;
+							        }
+							        middleIndex = Math.floor((lastIndex + firstIndex)/2);
+							    }
+
+							 return middleIndex;
+							}
+							
+							//newEvents = theNormDataClone[userName][sessionName]["events"];
+							
+							var aggEventList = theNormDataClone[userName]["Aggregated"]["events"];
+							
+							for(entry in newEvents)
+							{
+								newEvents[entry]["Original Session"] = sessionName;
+								newEvents[entry]["Index MS Session"] = newEvents[entry]["Index MS"] - absUserDiff - userSessDiff;
+								newEvents[entry]["Index MS User"] = newEvents[entry]["Index MS"] - absUserDiff;
+								if(newEvents[entry]["TaskName"] == taskName)
+								{
+									aggEntry = binarySearchEvents(aggEventList, newEvents[entry]["Index MS"]);
+									newEntryClone = JSON.parse(JSON.stringify(newEvents[entry]));
+									newEntryClone["Owning Session"] = "Aggregated";
+									if(aggEventList[aggEntry]["Index MS"] < newEvents[entry]["Index MS"])
+									{
+										aggEventList.splice(aggEntry, 0, newEntryClone);
+									}
+									else
+									{
+										aggEventList.splice(aggEntry - 1, 0, newEntryClone);
+									}
+								}
+							}
+							//console.log(newEvents);
+							theNormDataClone[userName][sessionName]["events"] = newEvents;
+							
+							
+							
+							//var lastAggIndex = 0;
+							//for(newEntry in newEvents)
+							//{
+							//	var curEntry = newEvents[newEntry];
+							//	var curIndex = newEntry["Index MS"];
+							//	if(curEntry["TaskName"] != taskName)
+							//	{
+							//		continue;
+							//	}
+							//	if(lastAggIndex >= aggEventList.length)
+							//	{
+							//		aggEventList.push(curEntry);
+							//		lastAggIndex++;
+							//		continue;
+							//	}
+							//	while(lastAggIndex < aggEventList.length)
+							//	{
+							//		if(aggEventList[lastAggIndex]["Index MS"] <= curIndex)
+							//		{
+							//			aggEventList.splice(lastAggIndex - 1, 0, curEntry);
+							//			break;
+							//		}
+							//		lastAggIndex++;
+							//	}
+							//}
+							//preprocess();
+							start(true);
+						}
+						
+					});
+	}
+	
 	function showSession(owningUser, owningSession)
 	{
+		//console.log(d3.select("#mainVisContainer").style("height",  "300px").attr("height",  "300px"));
+		
 		curSelectUser = owningUser;
 		curSelectSession = owningSession;
 		bottomVizFontSize = bottomVisHeight / 25;
@@ -2688,6 +2871,110 @@ function fadeOutLightbox()
 		
 		
 		curProcessMap = processMap[owningUser][owningSession];
+		
+		var timeScale;
+		if(timeMode == "Universal")
+		{
+			timeScale = theNormData["Time Scale"];
+		}
+		else if(timeMode == "User")
+		{
+			timeScale = theNormData[owningUser]["Time Scale"];
+		}
+		else
+		{
+			timeScale = theNormData[owningUser][owningSession]["Time Scale"];
+		}
+		
+		var addTaskRow = d3.select("#infoTable").append("tr").append("td")
+			.attr("width", visWidth + "px")
+			.html("<td><div align=\"center\">Add Task</div></td>");
+		
+		var addTaskRow = d3.select("#infoTable").append("tr").append("td")
+		.attr("width", visWidth + "px")
+				.append("table").attr("width", visWidth + "px").append("tr").attr("width", visWidth + "px")
+					.html("<td width=\"25%\"><div align=\"center\"><input type=\"text\" id=\"addTaskStart\" name=\"addTaskStart\" value=\"Start (MS Session Time)\"></div></td>" +
+							"<td width=\"25%\"><div align=\"center\"><input type=\"text\" id=\"addTaskEnd\" name=\"addTaskEnd\" value=\"End (MS Session Time)\"></div></td>" +
+							"<td width=\"25%\"><div align=\"center\"><input type=\"text\" id=\"addTaskName\" name=\"addTaskName\" value=\"Task Name\"></div></td>" +
+							"<td width=\"25%\"><div align=\"center\"><button type=\"button\" onclick=\"addTask('" + owningUser + "', '" + owningSession + "')\">Submit</button></div></td>");
+		
+		var newAxis = d3.axisTop(timeScale);
+		
+		var initX = 0;
+		
+		var dragAddTask = d3.drag()
+			.on("drag", dragmoveAddTask)
+			.on("start", function(d)
+					{
+						initX = d3.event.x;
+						if(initX < xAxisPadding)
+						{
+							initX = xAxisPadding;
+						}
+						selectRect.attr("x", initX);
+						selectRect.attr("width", 0);
+						document.getElementById("addTaskStart").value = "Start (MS Session Time)";
+						document.getElementById("addTaskEnd").value = "End (MS Session Time)";
+					});
+		
+		function dragmoveAddTask(d)
+		{
+			var x = d3.event.x;
+			var y = d3.event.y;
+			var startPoint = 0;
+			var endPoint = 0;
+			if(x < initX)
+			{
+				selectRect.attr("x", x);
+				selectRect.attr("width", initX - x);
+				startPoint = timeScale.invert(x - xAxisPadding);
+				endPoint = timeScale.invert(initX - xAxisPadding);
+			}
+			else
+			{
+				selectRect.attr("x", initX);
+				selectRect.attr("width", x - initX);
+				startPoint = timeScale.invert(initX - xAxisPadding);
+				endPoint = timeScale.invert(x - xAxisPadding);
+			}
+			document.getElementById("addTaskStart").value = startPoint;
+			document.getElementById("addTaskEnd").value = endPoint;
+		}
+		
+		var addTaskAxisSVG = d3.select("#infoTable").append("tr").append("td").append("svg")
+				.attr("class", "clickableBar")
+				.attr("width", visWidth + "px")
+				.attr("height", (barHeight / 1.75) + "px")
+				//.on("mousedown", function(d)
+				//		{
+				//			console.log(d);
+				//		})
+				.call(dragAddTask);
+		
+		var selectRect = addTaskAxisSVG.append("g")
+				.append("rect")
+				.attr("x", 0)
+				.attr("y", 0)
+				.attr("width", 0)
+				.attr("height", barHeight / 1.75)
+				.attr("fill", "cyan")
+				.attr("pointer-events", "none");
+		
+		var addTableAxis = addTaskAxisSVG.append("g")
+				.attr("transform", "translate(" + xAxisPadding + "," + (barHeight / 2) + ")")
+				.attr("pointer-events", "none")
+				.call(newAxis);
+		var addTableAxisLabel = addTaskAxisSVG.append("g")
+				.append("text")
+				.attr("x", xAxisPadding / 2)
+				.attr("y", barHeight / 3.5)
+				.attr("text-anchor", "middle")
+				.attr("dominant-baseline", "middle")
+				.attr("font-size", bottomVizFontSize * 2)
+				.text("Select Time:")
+				.attr("pointer-events", "none");
+		
+		
 		
 		var newSVG = d3.select("#infoTable").append("tr").append("td").append("svg")
 			.attr("width", visWidth + "px")
@@ -2732,19 +3019,7 @@ function fadeOutLightbox()
 		cpuScale.domain([0, maxCPU]);
 		cpuScale.range([bottomVisHeight, 0]);
 		
-		var timeScale;
-		if(timeMode == "Universal")
-		{
-			timeScale = theNormData["Time Scale"];
-		}
-		else if(timeMode == "User")
-		{
-			timeScale = theNormData[owningUser]["Time Scale"];
-		}
-		else
-		{
-			timeScale = theNormData[owningUser][owningSession]["Time Scale"];
-		}
+		
 		
 		var finalProcList = [];
 		
@@ -3327,6 +3602,85 @@ function fadeOutLightbox()
 		
 	}
 	
+	function deleteTask(userName, sessionName, taskName, startTime)
+	{
+		var taskUrl = "deleteTask.json?event=" + eventName + "&userName=" + userName + "&sessionName=" + sessionName + "&taskName=" + taskName + "&startTime=" + startTime;
+		d3.json(taskUrl, function(error, data)
+				{
+					//console.log(data);
+					if(data["result"] == "okay")
+					{
+						var sessEvents = theNormDataClone[userName][sessionName]["events"];
+						var aggEvents = theNormDataClone[userName]["Aggregated"]["events"];
+						
+						var userSessDiff = theNormData[userName][sessionName]["Index MS User Session Min"];
+						var absUserDiff = theNormData[userName]["Index MS User Min Absolute"];
+						
+						var newEvents = data["newEvents"][userName][sessionName]["events"];
+						
+						function binarySearchEvents(items, value){
+						    var firstIndex  = 0,
+						        lastIndex   = items.length - 1,
+						        middleIndex = Math.floor((lastIndex + firstIndex)/2);
+
+						    while(items[middleIndex]["Index MS"] != value && firstIndex < lastIndex)
+						    {
+						       if (value < items[middleIndex]["Index MS"])
+						        {
+						            lastIndex = middleIndex - 1;
+						        } 
+						      else if (value > items[middleIndex]["Index MS"])
+						        {
+						            firstIndex = middleIndex + 1;
+						        }
+						        middleIndex = Math.floor((lastIndex + firstIndex)/2);
+						    }
+
+						 return middleIndex;
+						}
+						
+						//newEvents = theNormDataClone[userName][sessionName]["events"];
+						
+						var aggEventList = theNormDataClone[userName]["Aggregated"]["events"];
+						
+						for(entry in newEvents)
+						{
+							newEvents[entry]["Original Session"] = sessionName;
+							newEvents[entry]["Index MS Session"] = newEvents[entry]["Index MS"] - absUserDiff - userSessDiff;
+							newEvents[entry]["Index MS User"] = newEvents[entry]["Index MS"] - absUserDiff;
+							if(newEvents[entry]["TaskName"] == taskName)
+							{
+								aggEntry = binarySearchEvents(aggEventList, newEvents[entry]["Index MS"]);
+								newEntryClone = JSON.parse(JSON.stringify(newEvents[entry]));
+								newEntryClone["Owning Session"] = "Aggregated";
+								if(aggEventList[aggEntry]["Index MS"] < newEvents[entry]["Index MS"])
+								{
+									aggEventList.splice(aggEntry, 0, newEntryClone);
+								}
+								else
+								{
+									aggEventList.splice(aggEntry - 1, 0, newEntryClone);
+								}
+							}
+						}
+						//console.log(newEvents);
+						theNormDataClone[userName][sessionName]["events"] = newEvents;
+						
+						
+						start(true);
+						//curEvents = theNormDataClone[userName][sessionName]["events"];
+						//for(element in curEvents)
+						//{
+						//	if(curEvents[element]["TaskName"] == taskName && curEvents[element]["Source"] == adminName)
+						//	{
+						//		curEvents.splice(element, 1);
+						//		element--;
+						//	}
+						//}
+					}
+				});
+	}
+	
 	var curSelectProcess;
 	var curSelElements = [];
 	
@@ -3407,6 +3761,15 @@ function fadeOutLightbox()
 		
 		//d3.select("#infoTable").append("tr").html("<td colspan=4><div align=\"center\">Details</div></td>")
 		
+		if(type == "Events")
+		{
+			if(curSlot["Original Session"] != "User")
+			{
+				d3.select("#extraInfoTable")
+					.append("tr")
+					.html("<td colspan=\"4\"><button type=\"button\" onclick=\"deleteTask('cgtboy1988', '" + curSlot["Original Session"] + "', '" + curSlot["TaskName"] + "', '" + curSlot["Index MS"] + "')\">Delete</button></td>");
+			}
+		}
 		
 		d3.select("#extraInfoTable")
 				.selectAll("tr")
