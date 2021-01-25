@@ -97,17 +97,16 @@ if(request.getParameter("email") != null)
 						</td>
 					</tr>
 					<tr>
-						<td colspan="1">
+						<td colspan="5">
 						<div align="center">
 						<button type="button" onclick="loadFilter(true)">Load</button>
-						</div>
-						</td>
-						<td colspan="1">
-						<div align="center">
 						<button type="button" onclick="loadFilter(false)">Append</button>
+						<button type="button" onclick="deleteFilter()">Delete</button>
 						</div>
 						</td>
-						<td colspan="3">
+					</tr>
+					<tr>
+						<td colspan="5">
 						<div align="center">
 						<select name="savedFilters" id="savedFilters">
 							<option value="default">Default</option>
@@ -433,6 +432,24 @@ function fadeOutLightbox()
 	highlightMap["TaskName"] = true;
 	highlightMap["SecondClass"] = true;
 	
+	function deleteFilter()
+	{
+		var toDelete = document.getElementById("savedFilters").value;
+		var urlToPost = "deleteFilter.json?event=" + eventName + "&deleteName=" + toDelete;
+		d3.json(urlToPost, function(error, data)
+				{
+					if(data["result"] == "okay")
+					{
+						savedFilters = document.getElementById("savedFilters");
+						savedFilters.remove(savedFilters.selectedIndex);
+					}
+					else
+					{
+						showLightbox("<tr><td><div width=\"100%\">Error deleting filter set.</div></td></tr>");
+					}
+				});
+	}
+	
 	function loadFilter(removeOld)
 	{
 		if(removeOld)
@@ -470,7 +487,16 @@ function fadeOutLightbox()
 		}
 		d3.json(urlToPost, function(error, data)
 				{
-					console.log(data);
+					if(data["result"] == "okay")
+					{
+						newOption = new Option(saveAs, saveAs);
+						document.getElementById("savedFilters").add(newOption,undefined);
+					}
+					else
+					{
+						showLightbox("<tr><td><div width=\"100%\">Error saving filter set.</div></td></tr>");
+					}
+					//console.log(data);
 				});
 	}
 	
@@ -1301,6 +1327,78 @@ function fadeOutLightbox()
 				})
 		.style("font-size", barHeight/4 + "px");
 		
+		var filterButtonsUser = svg.append("g")
+		.selectAll("rect")
+		.data(userOrderArray)
+		.enter()
+		.append("rect")
+		.attr("x", visWidth - (xAxisPadding / 2 - xAxisPadding / 20))
+		.attr("width", xAxisPadding / 2 - xAxisPadding / 20)
+		.attr("height", barHeight - (xAxisPadding / 25))
+		.attr("y", function(d, i)
+				{
+					if(i == 0)
+					{
+						curSessionCount = 0;
+					}
+					numSessions = Object.keys(theNormData[userOrderMap[d]]["Session Ordering"]["Order List"]).length;
+					toReturn = barHeight * i + barHeight * 2 * curSessionCount;
+					curSessionCount += numSessions;
+					return toReturn;
+				})
+		.attr("fill", "Crimson")
+		.attr("initFill", "Crimson")
+		.attr("stroke", "black")
+		.attr("initStroke", "black")
+		.attr("stroke-width", "0")
+		.attr("initStrokeWidth", "0")
+		.attr("z", 2)
+		.classed("clickableBar", true)
+		.attr("id", function(d, i)
+				{
+					return("filterbuttonuser_" + SHA256(userOrderMap[d]));
+				})
+		.on("click", function(d, i)
+				{
+					addFilterDirect(0, "", "!= '" + userOrderMap[d] + "'");
+				});
+		
+		
+		var filterLabelsUser = svg.append("g")
+		.selectAll("text")
+		.data(userOrderArray)
+		.enter()
+		.append("text")
+		.attr("x", visWidth - (xAxisPadding / 2 - xAxisPadding / 20) + xAxisPadding / 4 - xAxisPadding / 40)
+		.attr("width", xAxisPadding / 2)
+		.attr("height", barHeight - 2 * (xAxisPadding / 25))
+		.attr("y", function(d, i)
+				{
+					if(i == 0)
+					{
+						curSessionCount = 0;
+					}
+					numSessions = Object.keys(theNormData[userOrderMap[d]]["Session Ordering"]["Order List"]).length;
+					toReturn = barHeight * i + barHeight * 2 * curSessionCount + barHeight / 2 - (xAxisPadding / 50);
+					curSessionCount += numSessions;
+					return toReturn;
+				})
+		.attr("fill", "#000")
+		.attr("z", 2)
+		.attr("font-weight", "bolder")
+		.attr("font-family", "monospace")
+		.attr("alignment-baseline", "central")
+		.attr("dominant-baseline", "middle")
+		.attr("text-anchor", "middle")
+		.text("Filter")
+		.attr("initText", "Filter")
+		.style("pointer-events", "none")
+		.attr("id", function(d, i)
+				{
+					return("filterbuttonuser_label_" + SHA256(userOrderMap[d]));
+				})
+		.classed("clickableBar", true);
+		
 		var windowTimeline;
 		var sessionList = [];
 		var foregroundRects = svg.append("g")
@@ -1752,6 +1850,14 @@ function fadeOutLightbox()
 		.attr("opacity", 1)
 		.on("click", function(d, i)
 				{
+					var backgroundRect = d3.select("#background_rect_" + SHA256(d["Owning User"] + d["Owning Session"]));
+					if(!sessionStroke || sessionStroke.node() != backgroundRect.node())
+					{
+						var e = document.createEvent('UIEvents');
+						e.initUIEvent('click', true, true, /* ... */);
+						backgroundRect.node().dispatchEvent(e);
+					}
+					
 					if(curStroke)
 					{
 						d3.select(curStroke).attr("stroke", "black").attr("stroke-width", d3.select(curStroke).attr("initStrokeWidth"));d3.select(curStroke).attr("stroke", "black").attr("stroke", d3.select(curStroke).attr("initStroke"));
@@ -1769,9 +1875,68 @@ function fadeOutLightbox()
 		.classed("clickableBar", true)
 		.attr("z", 3);
 		
+		var taskText = svg.append("g")
+		.selectAll("text")
+		.data(eventTimeline)
+		.enter()
+		.append("text")
+		.attr("x", function(d, i)
+				{
+					if(timeMode == "Session")
+					{
+						return d["Time Scale Session"](d["Index MS Session"]) + xAxisPadding;
+					}
+					else if(timeMode == "User")
+					{
+						return d["Time Scale User"](d["Index MS User"]) + xAxisPadding;
+					}
+					else if(timeMode == "Universal")
+					{
+						return d["Time Scale Universal"](d["Index MS Universal"]) + xAxisPadding;
+					}
+					return 0;
+				})
+		.attr("y", function(d, i)
+				{
+					var totalHeight =  (barHeight - xAxisPadding / 25) / d["Max Active"];
+					//totalHeight = totalHeight * 2;
+					return d["Session Order"] * barHeight * 2 + d["User Order"] * barHeight + barHeight * 2 + d["Active Row"] * totalHeight + (totalHeight * .5) + xAxisPadding / 100;
+				})
+		.attr("dominant-baseline", "middle")
+		.style("font-size", function(d, i)
+				{
+					var totalWidth = 0;
+					if(timeMode == "Session")
+					{
+						totalWidth = .75 * (d["Time Scale Session"](d["Next"]["Index MS Session"] - d["Index MS Session"]));
+					}
+					else if(timeMode == "User")
+					{
+						totalWidth = .75 * (d["Time Scale User"](d["Next"]["Index MS User"] - d["Index MS User"]));
+					}
+					else if(timeMode == "Universal")
+					{
+						totalWidth = .75 * (d["Time Scale Universal"](d["Next"]["Index MS Universal"] - d["Index MS Universal"]));
+					}
+					else
+					{
+						totalWidth = .75 *  (timeScale(d["End Time MS"] - d["Start Time MS"]) -1);
+					}
+					var totalHeight =  (barHeight - xAxisPadding / 25) / d["Max Active"];
+					if(totalHeight < totalWidth)
+					{
+						return totalHeight;
+					}
+					return totalWidth;
+				})
+		.text(function(d, i)
+				{
+					return d["TaskName"];
+				});
+		
 		var sessionLabelFontSize = (barHeight - xAxisPadding / 25) / 5;
 		var sessionLabelFontWidth = sessionLabelFontSize *.6;
-		var sessionList;
+		//var sessionList;
 		var sessionBarG = svg.append("g")
 		var sessionBars = sessionBarG
 		.selectAll("rect")
@@ -1997,6 +2162,7 @@ function fadeOutLightbox()
 					toReturn = d["User Number"] * barHeight;
 					toReturn += barHeight * 2 * i;
 					toReturn -= barHeight / 4;
+					toReturn += barHeight * 2;
 					return toReturn;
 				})
 		.attr("fill", "#FFF")
@@ -2039,6 +2205,7 @@ function fadeOutLightbox()
 				{
 					toReturn = d["User Number"] * barHeight;
 					toReturn += barHeight * 2 * i;
+					//toReturn += barHeight;
 					toReturn -= (xAxisPadding / 25);
 					return toReturn;
 				})
@@ -2862,11 +3029,11 @@ function fadeOutLightbox()
 		d3.select("#screenshotDiv")
 		.append("img")
 		.attr("width", "100%")
-		.attr("src", "./getClosestScreenshot.jpg?username=" + owningUser + "&timestamp=" + screenshotIndex + "&session=" + screenshotSession + "&event=" + eventName)
+		.attr("src", "./getClosestScreenshot.jpg?username=" + owningUser + "&timestamp=" + getClosestScreenshot(owningUser, screenshotSession, screenshotIndex)["Index MS"] + "&session=" + screenshotSession + "&event=" + eventName)
 		.attr("style", "cursor:pointer;")
 		.on("click", function()
 				{
-					showLightbox("<tr><td><div width=\"100%\"><img src=\"./getClosestScreenshot.jpg?username=" + owningUser + "&timestamp=" + screenshotIndex + "&session=" + screenshotSession + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
+					showLightbox("<tr><td><div width=\"100%\"><img src=\"./getClosestScreenshot.jpg?username=" + owningUser + "&timestamp=" + getClosestScreenshot(owningUser, screenshotSession, screenshotIndex)["Index MS"] + "&session=" + screenshotSession + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
 				});
 		
 		
@@ -3602,6 +3769,35 @@ function fadeOutLightbox()
 		
 	}
 	
+	function closestIndexMSBinary(items, value){
+	    var firstIndex  = 0,
+	        lastIndex   = items.length - 1,
+	        middleIndex = Math.floor((lastIndex + firstIndex)/2);
+
+	    while(items[middleIndex]["Index MS"] != value && firstIndex < lastIndex)
+	    {
+	       if (value < items[middleIndex]["Index MS"])
+	        {
+	            lastIndex = middleIndex - 1;
+	        } 
+	      else if (value > items[middleIndex]["Index MS"])
+	        {
+	            firstIndex = middleIndex + 1;
+	        }
+	        middleIndex = Math.floor((lastIndex + firstIndex)/2);
+	    }
+
+	 return middleIndex;
+	}
+	
+	function getClosestScreenshot(userName, sessionName, indexMS)
+	{
+		var screenshotIndexArray = theNormDataClone[userName][sessionName]["screenshots"];
+		var finalScreenshot = screenshotIndexArray[closestIndexMSBinary(screenshotIndexArray, indexMS)];
+		console.log(finalScreenshot);
+		return finalScreenshot;
+	}
+	
 	function deleteTask(userName, sessionName, taskName, startTime)
 	{
 		var taskUrl = "deleteTask.json?event=" + eventName + "&userName=" + userName + "&sessionName=" + sessionName + "&taskName=" + taskName + "&startTime=" + startTime;
@@ -3796,11 +3992,11 @@ function fadeOutLightbox()
 		d3.select("#screenshotDiv")
 				.append("img")
 				.attr("width", "100%")
-				.attr("src", "./getClosestScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + curSlot["Index MS"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName)
+				.attr("src", "./getClosestScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + getClosestScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Index MS"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName)
 				.attr("style", "cursor:pointer;")
 				.on("click", function()
 						{
-							showLightbox("<tr><td><div width=\"100%\"><img src=\"./getClosestScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + curSlot["Index MS"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
+							showLightbox("<tr><td><div width=\"100%\"><img src=\"./getClosestScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + getClosestScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Index MS"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
 						});
 		
 		d3.select("#extraHighlightDiv")
