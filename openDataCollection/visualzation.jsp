@@ -640,8 +640,13 @@ function fadeOutLightbox()
 		return dataToModify;
 	}
 	
+	var summaryProcStats = {};
+	var summaryProcStatsArray = [];
+	var measureBy = "session";
 	function filter(dataToFilter, filters)
 	{
+		summaryProcStats = {};
+		summaryProcStatsArray = [];
 		var filterMap = {};
 		for(entry in filters)
 		{
@@ -656,12 +661,14 @@ function fadeOutLightbox()
 		
 		for(user in dataToFilter)
 		{
+			var userProcFound = {};
+			
 			toFilter = filterMap[0];
 			if(toFilter)
 			{
 				for(curFilter in toFilter)
 				{
-					if(!(eval(("'" + user + "' " + toFilter[curFilter]["Value"]))))
+					if(!(eval(("'" + user + "'" + toFilter[curFilter]["Value"]))))
 					{
 						delete dataToFilter[user];
 					}
@@ -669,13 +676,17 @@ function fadeOutLightbox()
 			}
 			for(session in dataToFilter[user])
 			{
+				if(measureBy = "session")
+				{
+					var userProcFound = {};
+				}
 				//console.log(session);
 				toFilter = filterMap[1];
 				if(toFilter)
 				{
 					for(curFilter in toFilter)
 					{
-						if(!(eval("'" + session + "' " + toFilter[curFilter]["Value"])))
+						if(!(eval("'" + session + "'" + toFilter[curFilter]["Value"])))
 						{
 							delete dataToFilter[user][session];
 						}
@@ -689,7 +700,7 @@ function fadeOutLightbox()
 					{
 						for(curFilter in toFilter)
 						{
-							if(!(eval("'" + data + "' " + toFilter[curFilter]["Value"])))
+							if(!(eval("'" + data + "'" + toFilter[curFilter]["Value"])))
 							{
 								dataToFilter[user][session][data] = [];
 							}
@@ -703,13 +714,14 @@ function fadeOutLightbox()
 					//for(entry in dataToFilter[user][session][data])
 					{
 						toFilter = filterMap[3];
+						var filteredOut = false;
 						if(toFilter)
 						{
 							for(curFilter in toFilter)
 							{
 								if(toFilter[curFilter]["Field"] in dataToFilter[user][session][data][entry])
 								{
-									if(!(eval("'" + dataToFilter[user][session][data][entry][toFilter[curFilter]["Field"]] + "' " + toFilter[curFilter]["Value"])))
+									if(!(eval("'" + dataToFilter[user][session][data][entry][toFilter[curFilter]["Field"]] + "'" + toFilter[curFilter]["Value"])))
 									{
 										//console.log(dataToFilter[user][session][data][entry]);
 										dataToFilter[user][session][data].splice(entry, 1);
@@ -717,8 +729,30 @@ function fadeOutLightbox()
 										curLength = dataToFilter[user][session][data].length;
 										//console.log(entry);
 										//toSplice.push(entry);
+										filteredOut = true;
 										break;
 									}
+								}
+							}
+						}
+						if(!filteredOut)
+						{
+							if(data == "processes")
+							{
+								if(!(dataToFilter[user][session][data][entry]["Command"] in userProcFound))
+								{
+									if(dataToFilter[user][session][data][entry]["Command"] in summaryProcStats)
+									{
+										summaryProcStats[dataToFilter[user][session][data][entry]["Command"]]["count"]++;
+									}
+									else
+									{
+										procStatMap = {};
+										procStatMap["Command"] = dataToFilter[user][session][data][entry]["Command"];
+										procStatMap["count"] = 1;
+										summaryProcStats[dataToFilter[user][session][data][entry]["Command"]] = procStatMap;
+									}
+									userProcFound[dataToFilter[user][session][data][entry]["Command"]] = 0
 								}
 							}
 						}
@@ -742,7 +776,31 @@ function fadeOutLightbox()
 			}
 			}
 			
-		
+		var minProc = Number.POSITIVE_INFINITY;
+		var maxProc = 0;
+		summaryProcStatsArray = Object.values(summaryProcStats).sort(function(a, b)
+				{
+					if(a["count"] > maxProc)
+					{
+						maxProc = a["count"];
+					}
+					if(a["count"] < minProc)
+					{
+						minProc = a["count"];
+					}
+					if(b["count"] > maxProc)
+					{
+						maxProc = b["count"];
+					}
+					if(b["count"] < minProc)
+					{
+						minProc = b["count"];
+					}
+					return b["count"] - a["count"];
+				});
+		summaryProcStats["Max"] = maxProc;
+		summaryProcStats["Min"] = minProc;
+		console.log(summaryProcStatsArray);
 		return dataToFilter;
 	}
 	
@@ -855,6 +913,7 @@ function fadeOutLightbox()
 			clearWindow();
 			theNormData = JSON.parse(JSON.stringify(theNormDataClone));
 			theNormData = filter(theNormData, filters);
+			showDefault();
 		}
 		lookupTable = {};
 		//Prepare data with sorting and finding mins, maxes
@@ -1144,6 +1203,7 @@ function fadeOutLightbox()
 					{
 						d3.select(curStroke).attr("stroke-width", 0)
 						clearWindow(); curStroke = null;
+						showDefault();
 						return;
 					}
 					d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));d3.select(this).attr("initStroke", d3.select(this).attr("stroke"));
@@ -1184,6 +1244,7 @@ function fadeOutLightbox()
 							}
 						})
 				.attr("font-weight", "bolder")
+				.style("pointer-events", "none")
 				.attr("dominant-baseline", "middle")
 				.attr("stroke", function(d, i)
 						{
@@ -1546,6 +1607,7 @@ function fadeOutLightbox()
 							sessionStroke.attr("stroke", "black").attr("stroke-width", sessionStroke.attr("initStrokeWidth"));sessionStroke.attr("stroke", "black").attr("stroke", sessionStroke.attr("initStroke"));
 						}
 						clearWindow(); curStroke = null; sessionStroke = null;
+						showDefault();
 						return;
 					}
 					
@@ -1865,6 +1927,7 @@ function fadeOutLightbox()
 					if(curStroke == this)
 					{
 						clearWindow(); curStroke = null;
+						showDefault();
 						return;
 					}
 					d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));d3.select(this).attr("initStroke", d3.select(this).attr("stroke"));
@@ -1880,6 +1943,7 @@ function fadeOutLightbox()
 		.data(eventTimeline)
 		.enter()
 		.append("text")
+		.style("pointer-events", "none")
 		.attr("x", function(d, i)
 				{
 					if(timeMode == "Session")
@@ -2002,6 +2066,7 @@ function fadeOutLightbox()
 					if(sessionStroke && sessionStroke.node() == d3.select(this).node())
 					{
 						clearWindow(); curStroke = null; sessionStroke = null;
+						showDefault();
 						return;
 					}
 					d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));d3.select(this).attr("initStroke", d3.select(this).attr("stroke"));
@@ -2045,6 +2110,7 @@ function fadeOutLightbox()
 					if(curStroke == this)
 					{
 						clearWindow(); curStroke = null;
+						showDefault();
 						return;
 					}
 					d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));d3.select(this).attr("initStroke", d3.select(this).attr("stroke"));
@@ -2330,6 +2396,7 @@ function fadeOutLightbox()
 		.attr("alignment-baseline", "central")
 		.attr("dominant-baseline", "middle")
 		.attr("text-anchor", "middle")
+		.style("pointer-events", "none")
 		//.attr("font-weight", "bolder")
 		.text("Task Events:");
 
@@ -2359,6 +2426,7 @@ function fadeOutLightbox()
 		.enter()
 		.append("text")
 		//.attr("font-size", 11)
+		.style("pointer-events", "none")
 		.attr("x", 0)
 		.attr("y", function(d, i)
 				{
@@ -2554,6 +2622,7 @@ function fadeOutLightbox()
 				.data(finalLegendArray)
 				.enter()
 				.append("text")
+				.style("pointer-events", "none")
 				.attr("font-size", 11)
 				.attr("x", legendWidth)
 				.attr("y", function(d, i)
@@ -2596,6 +2665,7 @@ function fadeOutLightbox()
 							if(curStroke == this)
 							{
 								clearWindow(); curStroke = null;
+								showDefault();
 								return;
 							}
 							d3.select(this).attr("stroke", "#ffff00");
@@ -2881,12 +2951,127 @@ function fadeOutLightbox()
 		
 		if(theNormDataDone)
 		{
-			showDefault();
+			//showDefault();
 		}
 	}
 	
 	function showDefault()
 	{
+		
+		var addTaskRow = d3.select("#infoTable").append("tr").append("td")
+		.attr("width", visWidth + "px")
+		.html("<td><div align=\"center\">Task Occurances in Sessions</div></td>");
+	
+		var newSVG = d3.select("#infoTable").append("tr").append("td").style("max-width", visWidth + "px").style("overflow-x", "scroll").append("svg")
+			.attr("width", ((visWidth / 15) * summaryProcStatsArray.length)  + "px")
+			.attr("height", bottomVisHeight  + "px")
+			.append("g");
+		
+		var processTooltip = newSVG.append("g")
+		.append("text")
+		.attr("y", "0px")
+		.attr("x", "0px")
+		.attr("font-size", xAxisPadding / 10)
+		//.attr("width", xAxisPadding + "px")
+		//.attr("height", bottomVisHeight + "px")
+		.attr("alignment-baseline", "auto")
+		.attr("dominant-baseline", "auto")
+		.attr("text-anchor", "left")
+		.style("font-weight", "bold")
+		.text("");
+		
+		var barRects = newSVG.append("g").selectAll("rect")
+			.data(summaryProcStatsArray)
+			.enter()
+			.append("rect")
+					.attr("x", function(d, i)
+							{
+								return i * (visWidth / 15) + (visWidth / 60);
+							})
+					.attr("width", function(d, i)
+							{
+								return (visWidth / 20);
+							})
+					.attr("y", function(d, i)
+							{
+								return bottomVisHeight - d["count"] / summaryProcStats["Max"] * bottomVisHeight + (xAxisPadding / 10);
+							})
+					.attr("height", function(d, i)
+							{
+								return d["count"] / summaryProcStats["Max"] * bottomVisHeight - (xAxisPadding / 10);
+							})
+					.attr("stroke", "none")
+					.attr("fill", function(d, i)
+							{
+								return colorScale(i % 20);
+							})
+					.on("mouseenter", function(d, i)
+					{
+						processTooltip.text(d["Command"] + ": " + d["count"])
+								.attr("y", (bottomVisHeight - d["count"] / summaryProcStats["Max"] * bottomVisHeight + (xAxisPadding / 10)) + "px")
+								.attr("x", i * (visWidth / 15) + (visWidth / 60) + "px");
+					});
+					
+		
+		var barLabels = newSVG.append("g").selectAll("text")
+		.data(summaryProcStatsArray)
+		.enter()
+		.append("text")
+				.attr("x", function(d, i)
+						{
+							return i * (visWidth / 15) + (visWidth / 60) + (visWidth / 40);
+						})
+				.attr("y", function(d, i)
+						{
+							return bottomVisHeight - d["count"] / summaryProcStats["Max"] * bottomVisHeight + (xAxisPadding / 10) + (bottomVisHeight / 40);
+						})
+				.text(function(d, i)
+						{
+							charsAllowed = ((d["count"] / summaryProcStats["Max"] * bottomVisHeight) - ((xAxisPadding / 10) + (bottomVisHeight / 40))) / ((bottomVisHeight) / 40);
+							return d["Command"].substring(0, Math.round(charsAllowed));
+						})
+				.style("font-size", bottomVisHeight / 20)
+				.attr("text-anchor", "start")
+				.attr("dominant-baseline", "auto")
+				.attr("stroke", "none")
+				.style("writing-mode", "vertical-lr")
+				.attr("fill", function(d, i)
+						{
+							if(i % 2 == 1)
+							{
+								return "black";
+							}
+							return "white";
+						});
+			
+		var barNames = newSVG.append("g").selectAll("text")
+		.data(summaryProcStatsArray)
+		.enter()
+		.append("text")
+				.attr("x", function(d, i)
+						{
+							return i * (visWidth / 15) + (visWidth / 60) + (visWidth / 40);
+						})
+				.attr("y", function(d, i)
+						{
+							return bottomVisHeight - (xAxisPadding / 25);
+						})
+				.text(function(d, i)
+						{
+							return d["count"];
+						})
+				.attr("text-anchor", "middle")
+				.attr("dominant-baseline", "auto")
+				.attr("stroke", "none")
+				.attr("fill", function(d, i)
+						{
+							if(i % 2 == 1)
+							{
+								return "black";
+							}
+							return "white";
+						});
+		
 		
 	}
 	
@@ -3686,6 +3871,7 @@ function fadeOutLightbox()
 		.append("text")
 		//.attr("font-size", 11)
 		.attr("x", 0)
+		.style("pointer-events", "none")
 		.attr("y", function(d, i)
 				{
 					//return legendHeight * (i + 1);
@@ -3728,6 +3914,7 @@ function fadeOutLightbox()
 		.data(cpuSortedList)
 		.enter()
 		.append("text")
+		.style("pointer-events", "none")
 		//.attr("font-size", 11)
 		.attr("x", 0)
 		.attr("y", function(d, i)
