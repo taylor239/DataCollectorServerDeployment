@@ -1994,6 +1994,7 @@ public class DatabaseConnector
 				nextRow.put("Width", myResults.getString("width"));
 				nextRow.put("Height", myResults.getString("height"));
 				nextRow.put("Name", myResults.getString("name"));
+				nextRow.put("Active", myResults.getString("active"));
 				
 				
 				if(!myReturn.containsKey(userName))

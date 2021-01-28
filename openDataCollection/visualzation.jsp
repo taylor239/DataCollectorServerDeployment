@@ -430,7 +430,7 @@ function fadeOutLightbox()
 	
 	var highlightMap = {};
 	highlightMap["TaskName"] = true;
-	highlightMap["SecondClass"] = true;
+	highlightMap["FirstClass"] = true;
 	
 	function deleteFilter()
 	{
@@ -595,11 +595,27 @@ function fadeOutLightbox()
 	{
 		for(user in dataToModify)
 		{
+			console.log(dataToModify);
 			aggregateSession = {}
 			listsToAdd = {}
 			newSession = {}
 			for(session in dataToModify[user])
 			{
+				if(dataToModify[user][session]["windows"])
+				{
+					var activeWindows = [];
+					for(curWindow in dataToModify[user][session]["windows"])
+					{
+						
+						if(dataToModify[user][session]["windows"][curWindow]["Active"] == "1")
+						{
+							activeWindows.push(dataToModify[user][session]["windows"][curWindow]);
+						}
+					}
+					dataToModify[user][session]["allWindows"] = dataToModify[user][session]["windows"];
+					dataToModify[user][session]["windows"] = activeWindows;
+				}
+				
 				for(data in dataToModify[user][session])
 				{
 					if(!(data in listsToAdd))
@@ -617,6 +633,10 @@ function fadeOutLightbox()
 			for(data in listsToAdd)
 			{
 				newDataList = [];
+				if(listsToAdd[data] == null)
+				{
+					listsToAdd[data] = [];
+				}
 				listsToAdd[data] = listsToAdd[data].sort(function(a, b)
 							{
 								return a[0]["Index MS User"] - b[0]["Index MS User"];
@@ -952,11 +972,11 @@ function fadeOutLightbox()
 						{
 							if(dataType == "windows")
 							{
-								if(!(thisData[x]["SecondClass"] in windowColorNumber))
+								if(!(thisData[x]["FirstClass"] in windowColorNumber))
 								{
-									windowColorNumber[thisData[x]["SecondClass"]] = curWindowNum % 20;
+									windowColorNumber[thisData[x]["FirstClass"]] = curWindowNum % 20;
 									curWindowNum++;
-									windowLegend.push(thisData[x]["SecondClass"])
+									windowLegend.push(thisData[x]["FirstClass"])
 								}
 							}
 							
@@ -1579,11 +1599,11 @@ function fadeOutLightbox()
 		.attr("stroke-width", xAxisPadding / 100)
 		.attr("fill", function(d, i)
 				{
-					return colorScale(windowColorNumber[d["SecondClass"]]);
+					return colorScale(windowColorNumber[d["FirstClass"]]);
 				})
 		.attr("initFill", function(d, i)
 				{
-					return colorScale(windowColorNumber[d["SecondClass"]]);
+					return colorScale(windowColorNumber[d["FirstClass"]]);
 				})
 		.attr("opacity", 1)
 		.on("click", function(d, i)
@@ -1618,13 +1638,13 @@ function fadeOutLightbox()
 				})
 		.attr("class", function(d)
 			{
-				processToWindow[SHA256(d["User"] + d["Start"] + d["PID"])] = SHA256(d["SecondClass"]);
-				if(!(SHA256(d["SecondClass"]) in windowToProcess))
+				processToWindow[SHA256(d["User"] + d["Start"] + d["PID"])] = SHA256(d["FirstClass"]);
+				if(!(SHA256(d["FirstClass"]) in windowToProcess))
 				{
-					windowToProcess[SHA256(d["SecondClass"])] = [];
+					windowToProcess[SHA256(d["FirstClass"])] = [];
 				}
-				windowToProcess[SHA256(d["SecondClass"])].push(SHA256(d["User"] + d["Start"] + d["PID"]));
-				return "clickableBar " + "select_" + SHA256(d["SecondClass"]) + " " + "window_process_" + SHA256(d["User"] + d["Start"] + d["PID"]);
+				windowToProcess[SHA256(d["FirstClass"])].push(SHA256(d["User"] + d["Start"] + d["PID"]));
+				return "clickableBar " + "select_" + SHA256(d["FirstClass"]) + " " + "window_process_" + SHA256(d["User"] + d["Start"] + d["PID"]);
 			})
 		
 		//.classed("clickableBar", true)
