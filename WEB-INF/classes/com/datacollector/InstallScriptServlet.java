@@ -21,7 +21,7 @@ import com.google.gson.Gson;
 /**
  * Servlet implementation class InstallScriptServlet
  */
-@WebServlet("/openDataCollection/installDataCollection.sh")
+@WebServlet(name="InstallScript", urlPatterns= {"/openDataCollection/installDataCollection.sh", "/openDataCollection/installDataCollection.bat"})
 public class InstallScriptServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
        
@@ -58,10 +58,15 @@ public class InstallScriptServlet extends HttpServlet {
 		{
 			screenshotTime = 240000;
 		}
-		if(curDevice.equals("fedvm"))
+		else if(curDevice.equals("fedvm"))
 		{
 			screenshotTime = 60000;
 			osPrefix = "yum install apt";
+		}
+		else if(curDevice.equals("winvm"))
+		{
+			screenshotTime = 15000;
+			osPrefix = "";
 		}
 		
 		String continuous = "";
@@ -482,6 +487,52 @@ public class InstallScriptServlet extends HttpServlet {
 					+ "\nservice tomcat9 start"
 					+ "\n"
 					+ "\n/opt/dataCollector/DataCollectorStart.sh & disown" ;
+		}
+		else if(curDevice.equals("winvm"))
+		{
+			output = "@ECHO OFF\n" + 
+					"echo You are about to install the data collection suite from the Catalyst Open Data Collection engine.  Please review the documentation for this software at the location you downloaded it.  Generalized documentation for this software and information about your particular event can also be found at the following locations:\n" + 
+					"\n" + 
+					"echo\n" + 
+					"\n" + 
+					"echo http://" + serverName + ":" + port + "/DataCollectorServer/openDataCollection/openDataCollection/index.jsp\n" + 
+					"echo http://" + serverName + ":" + port + "/DataCollectorServer/openDataCollection/openDataCollection/event.jsp?event=ReverseEngineeringStudy2\n" + 
+					"\n" + 
+					"echo\n" + 
+					"\n" + 
+					"echo When you downloaded this software, you were given and agreed to a consent document.  Do you agree to the appropriate consent document?  Please enter yes or no.  If you enter yes, you agree that you have read and agree to the appropriate consent agreement.  To confirm, do you agree to the appropriate consent terms located at the links above?  Entering yes will install the data collection software suite.\n" + 
+					"\n" + 
+					"set /p ans=Do you agree?: \n" + 
+					"if NOT \"%ans%\" == \"Yes\" (exit)\n" + 
+					"\n" + 
+					"mkdir C:\\mysql\\logs\n" + 
+					"mkdir C:\\mysql\\mydb\n" + 
+					"\n" + 
+					"\n" + 
+					"bitsadmin /transfer myDownloadJob /download /priority high https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.23-winx64.zip C:\\mysql\\mysql-8.0.23-winx64.zip\n" + 
+					"tar -xf C:\\mysql\\mysql-8.0.23-winx64.zip\n" + 
+					"\n" + 
+					"bitsadmin /transfer myDownloadJob /download /priority high http://" + serverName + ":" + port + "/DataCollectorServer/openDataCollection/endpointSoftware/config.ini C:\\mysql\\config.ini\n" + 
+					"\"C:\\mysql\\mysql-8.0.23-winx64\\bin\\mysqld.exe\" --defaults-file=\"C:\\\\mysql\\\\config.ini\" --initialize-insecure --console\n" + 
+					"\n" + 
+					"start /B C:\\mysql\\mysql-8.0.23-winx64\\bin\\mysqld.exe --defaults-file=\"C:\\\\mysql\\\\config.ini\"\n" + 
+					"bitsadmin /transfer myDownloadJob /download /priority high http://" + serverName + ":" + port + "/DataCollectorServer/openDataCollection/endpointSoftware/dataCollection.sql C:\\mysql\\dataCollection.sql\n" + 
+					":wait_for_mysql\n" + 
+					"	C:\\mysql\\mysql-8.0.23-winx64\\bin\\mysql.exe -uroot < C:\\mysql\\dataCollection.sql\n" + 
+					"	IF ERRORLEVEL 1 GOTO wait_for_mysql\n" + 
+					"C:\\mysql\\mysql-8.0.23-winx64\\bin\\mysql.exe -uroot -e \"CREATE USER 'dataCollector'@'localhost' IDENTIFIED BY 'LFgVMrQ8rqR41StN';\"\n" + 
+					"C:\\mysql\\mysql-8.0.23-winx64\\bin\\mysql.exe -uroot -e \"GRANT USAGE ON *.* TO 'dataCollector'@'localhost' REQUIRE NONE WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0 MAX_USER_CONNECTIONS 0;\"\n" + 
+					"C:\\mysql\\mysql-8.0.23-winx64\\bin\\mysql.exe -uroot -e \"GRANT ALL PRIVILEGES ON dataCollection.* TO 'dataCollector'@'localhost';\"\n" + 
+					"\n" + 
+					"\n" + 
+					"\n" + 
+					"mkdir C:\\datacollector\n" + 
+					"bitsadmin /transfer myDownloadJob /download /priority high http://" + serverName + ":" + port + "/DataCollectorServer/openDataCollection/endpointSoftware/DataCollector.jar C:\\datacollector\\DataCollector.jar\n" + 
+					"\n" + 
+					"echo start /B C:\\mysql\\mysql-8.0.23-winx64\\bin\\mysqld.exe --defaults-file=\"C:\\\\mysql\\\\config.ini\"> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
+					"echo start /B java -jar -XX:+IgnoreUnrecognizedVMOptions C:\\datacollector\\DataCollector.jar -user " + curEmail + " -server " + serverName + ":" + port + " -adminemail " + curAdmin + " -event " + curEvent + " " + continuous + " " + taskgui + " -screenshot " + screenshotTime + ">> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
+					"shutdown /R\n" + 
+					"";
 		}
 		response.getWriter().append(output);
 	}
