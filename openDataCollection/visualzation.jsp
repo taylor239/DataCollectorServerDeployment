@@ -3358,7 +3358,7 @@ function fadeOutLightbox()
 		.attr("width", visWidthParent + "px")
 		.html("<td><div align=\"center\">Process Occurances in Sessions</div></td>");
 	
-		var newSVG = d3.select("#infoTable").append("tr").append("td").style("max-width", visWidthParent + "px").style("overflow-x", "scroll").append("svg")
+		var newSVG = d3.select("#infoTable").append("tr").append("td").append("div").style("max-width", visWidthParent + "px").style("overflow-x", "scroll").append("svg")
 			.attr("width", ((visWidthParent / 15) * summaryProcStatsArray.length)  + "px")
 			.attr("height", bottomVisHeight  + "px")
 			.append("g");
@@ -3492,14 +3492,18 @@ function fadeOutLightbox()
 			.attr("width", divBounds["width"])
 			.attr("height", divBounds["height"]);
 		
+		var backgroundG = animationSvg.append("g");
+		
 		var animationG = animationSvg.append("g");
 		
-		var curScreenshot = animationG.append("image")
+		var curScreenshot = backgroundG.append("image")
 			.attr("width", divBounds["width"])
 			.attr("height", divBounds["height"])
 			//.attr("preserveAspectRatio", "xMidYMid meet");
 			.attr("preserveAspectRatio", "none");
 		
+		var lastScreenshot;
+			
 		var screenshots = theNormData[owningUser][owningSession]["screenshots"];
 		var keystrokes = theNormData[owningUser][owningSession]["keystrokes"];
 		var mouse = theNormData[owningUser][owningSession]["mouse"];
@@ -3617,6 +3621,13 @@ function fadeOutLightbox()
 			
 			if(curFrame && curFrame["Screenshot"])
 			{
+				
+				curScreenshot = backgroundG.append("image")
+				.attr("width", divBounds["width"])
+				.attr("height", divBounds["height"])
+				//.attr("preserveAspectRatio", "xMidYMid meet");
+				.attr("preserveAspectRatio", "none");
+				
 				lastImg.src = "data:image/jpg;base64," + curFrame["Screenshot"];
 				
 				var xRatio = divBounds["width"] / lastImg["width"];
@@ -3633,6 +3644,10 @@ function fadeOutLightbox()
 				curScreenshot.attr("href", "data:image/jpg;base64," + curFrame["Screenshot"])
 							.attr("width", finalWidth)
 							.attr("x", finalX)
+							.attr("onload", function()
+									{
+										
+									})
 							.attr("height", finalRatio * lastImg["height"]);
 				
 				textHeight = curScreenshot.attr("width") / 100;
@@ -3647,6 +3662,11 @@ function fadeOutLightbox()
 						.attr("font-size", textHeight);
 				}
 				
+				if(lastScreenshot)
+				{
+					//lastScreenshot.remove();
+				}
+				lastScreenshot = curScreenshot;
 			}
 			
 			if(curFrame && curFrame["XLoc"])
