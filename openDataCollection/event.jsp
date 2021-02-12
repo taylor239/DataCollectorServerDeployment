@@ -167,6 +167,10 @@ here</a>.</li>
 <li>Download and install a virtual machine.  This software has been tested on
 Ubuntu and Kali Linux, but may work on other versions of Linux.  We recommend Kali
 Linux for security competitions, as it has handy tools for these problems.</li>
+<li>If you are using a Windows virtual machine, download and install the latest version
+of Java.  We use the Oracle JDK but other virtual machines may also work.
+Windows support is currently in beta testing, so please keep in contact with
+the study admins when using it to ensure data is being uploaded correctly.</li>
 <li>On your virtual device, navigate back to this page and make sure your
 token is entered in the field above.  <b>If you have navigated back to this page and
 your token is already entered, please re-enter it to ensure your browser has updated

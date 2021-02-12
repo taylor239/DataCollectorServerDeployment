@@ -110,6 +110,7 @@ public class TestingConnectionSource implements Runnable
 	
 	public Connection getDatabaseConnectionNoTimeout()
 	{
+		
 		if(closeThread == null || !(closeThread.isAlive()))
 		{
 			closeThread = new Thread(this);
@@ -126,10 +127,15 @@ public class TestingConnectionSource implements Runnable
 		try
 		{
 			Class.forName("com.mysql.jdbc.Driver");
+			
+			
 			if(singletonDataSource == null)
 			{
+				
 				singletonDataSource = setupDataSource(address, userName, password);
 			}
+			
+			
 			Connection toReturn = singletonDataSource.getConnection();
 			//toReturn.set
 			//if(!nextClose.containsKey(toReturn))
@@ -179,7 +185,7 @@ public class TestingConnectionSource implements Runnable
         PoolableConnectionFactory poolableConnectionFactory =
             new PoolableConnectionFactory(connectionFactory, null);
         poolableConnectionFactory.setMaxConnLifetimeMillis(minTimeout * 2);
-
+        //poolableConnectionFactory.setMaxConnLifetimeMillis(1000);
         //
         // Now we'll need a ObjectPool that serves as the
         // actual pool of connections.
@@ -219,7 +225,6 @@ public class TestingConnectionSource implements Runnable
 						Connection curConnection = ((Connection)entry.getKey());
 						if(curConnection != null && !curConnection.isClosed())
 						{
-							System.out.println("Closing a connection");
 							((Connection)entry.getKey()).close();
 						}
 					}

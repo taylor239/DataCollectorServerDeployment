@@ -58,7 +58,7 @@ if(newEventName != null)
 	eventName = newEventName;
 }
 String newStartDate = request.getParameter("startdate");
-String newEndDate = request.getParameter("startdate");
+String newEndDate = request.getParameter("enddate");
 String newPassword = request.getParameter("eventpassword");
 String newDescription = request.getParameter("description");
 boolean newPublic = request.getParameter("public") != null && request.getParameter("public").equals("public");
@@ -458,6 +458,7 @@ catch(Exception e)
 		<li>
 		<b>"datasources"</b> will tell the server which pieces of data you would like.  Possible comma separated values include:
 			<ul>
+				<li><b>environment:</b> disabled in default link; adds per-session user environment data such as operating system version.</li>
 				<li><b>keystrokes:</b> enabled in default link; includes keyboard input and associated window information.</li>
 				<li><b>mouse:</b> enabled in default link; includes mouse input and associated window information.</li>
 				<li><b>processes:</b> enabled in default link; contains background process information.</li>
