@@ -56,9 +56,24 @@ if(request.getParameter("email") != null)
 
 %>
 <body>
+<table width="100%" style="border:0">
+	<tr>
+		<td class="layoutTableSide" style="border:0">
+		<div align="left">
+			<span style="cursor: pointer" onclick="toggleLeft();">⊟</span>
+		</div>
+		</td>
+		<td class="layoutTableCenter" style="border:0">
+		
+		</td>
+		<td class="layoutTableSide" style="border:0">
+		
+		</td>
+	</tr>
+</table>
 <table id="bodyTable">
 	<tr>
-		<td class="layoutTableSide">
+		<td class="layoutTableSide leftCol">
 			<table id="optionFilterTable" width="100%" height="100%">
 					<tr>
 						<td colspan="5">
@@ -168,7 +183,7 @@ if(request.getParameter("email") != null)
 					
 			</table>
 		</td>
-		<td class="layoutTableCenter" id="mainVisContainer">
+		<td class="layoutTableCenter centerCol" id="mainVisContainer">
 			<table style="overflow-x:auto" id="visTable">
 			<tr><td>
 			<div align="center" id="title">User Timelines for <%=eventName %></div>
@@ -179,7 +194,7 @@ if(request.getParameter("email") != null)
 			</td></tr>
 			</table>
 		</td>
-		<td class="layoutTableSide">
+		<td class="layoutTableSide rightCol">
 			<table width="100%" height="100%">
 					<tr>
 						<td>
@@ -197,7 +212,7 @@ if(request.getParameter("email") != null)
 		</td>
 	</tr>
 	<tr>
-		<td class="layoutTableSide">
+		<td class="layoutTableSide leftCol">
 			<table id="screenshotTable" width="100%" class="dataTable">
 				<tr>
 					<td colspan=1>
@@ -213,7 +228,7 @@ if(request.getParameter("email") != null)
 				</tr>
 			</table>
 		</td>
-		<td class="layoutTableCenter">
+		<td class="layoutTableCenter centerCol">
 			<table id="graphTable" width="100%" class="dataTable">
 				<tr>
 					<td>
@@ -230,7 +245,7 @@ if(request.getParameter("email") != null)
 		</td>
 			</div>	
 		</td>
-		<td class="layoutTableSide">
+		<td class="layoutTableSide rightCol">
 			<table id="highlightTable" width="100%" class="dataTable" style="overflow-y: scroll">
 				<tr>
 					<td colspan=1>
@@ -380,6 +395,24 @@ function fadeOutLightbox()
 
 
 <script>
+	var showLeft = true;
+	function toggleLeft()
+	{
+		showLeft = !(showLeft);
+		toDisplay = "none";
+		if(showLeft)
+		{
+			toDisplay = "";
+			d3.selectAll(".leftCol").style("display", toDisplay);
+			visWidthParent -= d3.select(".leftCol").node().offsetWidth;
+		}
+		else
+		{
+			visWidthParent += d3.select(".leftCol").node().offsetWidth;
+			d3.selectAll(".leftCol").style("display", toDisplay);
+		}
+		start(true);
+	}
 	
 	var filters = [];
 	var filtersTitle = [];
@@ -2243,9 +2276,9 @@ function fadeOutLightbox()
 						showDefault();
 						return;
 					}
-					d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));d3.select(this).attr("initStroke", d3.select(this).attr("stroke"));
-					d3.select(this).attr("stroke", "#ff0000").attr("stroke-width", xAxisPadding / 50);
-					curStroke = this;
+					//d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));d3.select(this).attr("initStroke", d3.select(this).attr("stroke"));
+					//d3.select(this).attr("stroke", "#ff0000").attr("stroke-width", xAxisPadding / 50);
+					//curStroke = this;
 					showSession(d["User"], d["Session"]);
 					
 					//curPlayButton = d3.select(("#playbutton_" + SHA256(d["User"] + d["Session"]))).attr("fill", "red");
@@ -3479,6 +3512,8 @@ function fadeOutLightbox()
 	{
 		showLightbox("<tr><td id=\"animationRow\"><div id=\"animationDiv\" width=\"100%\" height=\"100%\"></div></td></tr>");
 		
+		var playing = true;
+		
 		var playbackSpeedMultiplier = Number(document.getElementById("playbackSpeed").value);
 		
 		var aniRow = d3.select("#animationRow");
@@ -3486,13 +3521,25 @@ function fadeOutLightbox()
 		
 		var divBounds = aniRow.node().getBoundingClientRect();
 		
+		
+		var screenshots = theNormData[owningUser][owningSession]["screenshots"];
+		var keystrokes = theNormData[owningUser][owningSession]["keystrokes"];
+		var mouse = theNormData[owningUser][owningSession]["mouse"];
+		var windows = theNormData[owningUser][owningSession]["windows"];
+		
+		
 		//console.log(divBounds);
+		
+		var garbageToRemove = [];
 		
 		var animationSvg = aniDiv.append("svg")
 			.attr("width", divBounds["width"])
 			.attr("height", divBounds["height"]);
 		
 		var backgroundG = animationSvg.append("g");
+		
+		var animationAxisG = animationSvg.append("g");
+		
 		
 		var animationG = animationSvg.append("g");
 		
@@ -3502,57 +3549,214 @@ function fadeOutLightbox()
 			//.attr("preserveAspectRatio", "xMidYMid meet");
 			.attr("preserveAspectRatio", "none");
 		
-		var lastScreenshot;
 			
-		var screenshots = theNormData[owningUser][owningSession]["screenshots"];
-		var keystrokes = theNormData[owningUser][owningSession]["keystrokes"];
-		var mouse = theNormData[owningUser][owningSession]["mouse"];
+		var lastScreenshot;
+		
+		var maxSessionAnimation = theNormData[owningUser][owningSession]["Index MS Session Max"];
+		var timeScaleAnimation = d3.scaleLinear();
+		timeScaleAnimation.domain
+					(
+						[0, maxSessionAnimation]
+					)
+		timeScaleAnimation.range
+					(
+						[0, animationSvg.attr("width")]
+					);
+		
+		var timeScaleAnimationLookup = d3.scaleLinear();
+		timeScaleAnimationLookup.range
+					(
+						[0, maxSessionAnimation]
+					)
+		timeScaleAnimationLookup.domain
+					(
+						[0, animationSvg.attr("width")]
+					);
+		
+		
+		var animationAxis = d3.axisBottom().scale(timeScaleAnimation);
+		animationAxisG.call(animationAxis);
+		animationAxisG.attr("transform", "translate(" + 0 + "," + (divBounds["height"] * .8) + ")")
+		var textPadding = animationAxisG.node().getBBox()["height"];
 		
 		var curTimer = 0;
 		var screenshotIndex = 0;
 		var keystrokesIndex = 0;
 		var mouseIndex = 0;
+		var windowsIndex = 0;
+		
+		var seekBarG = animationSvg.append("g");
+		var seekBar = seekBarG.append("rect")
+				.attr("x", 0)
+				.attr("y", (divBounds["height"] * .8))
+				.attr("height", textPadding)
+				.attr("width", animationSvg.attr("width"))
+				.attr("style", "cursor:crosshair;")
+				.style("stroke", "Chartreuse")
+				.style("fill-opacity", ".1")
+				.style("fill", "Chartreuse");
+		
+		var axisLabelG = animationSvg.append("g");
+		var axisLabel = axisLabelG.append("text")
+				.attr("x", 0)
+				.attr("y", (divBounds["height"] * .8) + textPadding)
+				.style("pointer-events", "none")
+				.text("MS");
+		
+		var axisTickG = animationSvg.append("g");
+		var axisTick = axisTickG.append("rect")
+				.style("pointer-events", "none")
+				.attr("width", divBounds["width"]/400)
+				.attr("height", textPadding)
+				.attr("stroke", "crimson")
+				.attr("x", 0)
+				.attr("y", (divBounds["height"] * .8));
+		
+		var playPauseG = animationSvg.append("g");
+		var playPause = playPauseG.append("rect")
+				.attr("width", divBounds["width"] / 9)
+				.attr("height", (divBounds["height"] * .05))
+				.attr("fill", "Chartreuse")
+				.attr("stroke", "Black")
+				.attr("x", (4 * divBounds["width"]) / 9)
+				.attr("y", (divBounds["height"] * .8) + textPadding);
+		var playPauseLabel = playPauseG.append("text")
+				.style("pointer-events", "none")
+				.attr("text-anchor", "middle")
+				.attr("dominant-baseline", "middle")
+				.attr("font-weight", "bolder")
+				.attr("textLength", divBounds["width"] / 9)
+				.attr("fill", "Black")
+				.attr("stroke", "Black")
+				.attr("font-size", (divBounds["height"] * .05))
+				.text("⏸")
+				.attr("x", divBounds["width"] / 2)
+				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .025));
+		var activeWindowTitle = playPauseG.append("text")
+				.style("pointer-events", "none")
+				.attr("text-anchor", "middle")
+				.attr("dominant-baseline", "middle")
+				.attr("textLength", (divBounds["width"]) / 9)
+				.attr("fill", "Black")
+				.attr("stroke", "Black")
+				.attr("font-size", (divBounds["height"] * .025))
+				//.style("font-weight", "bold")
+				.text("Active Window:")
+				.attr("x", divBounds["width"] / 2)
+				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .075));
+		var activeWindowNameBg = playPauseG.append("rect")
+				.style("pointer-events", "none")
+				.attr("fill", "White")
+				.attr("opacity", ".8")
+				.attr("x", (divBounds["width"] / 2) - ((2 * divBounds["width"]) / 9))
+				.attr("width", (4 * divBounds["width"]) / 9)
+				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .125))
+				.attr("height", (divBounds["height"] * .025));
+		var activeWindow = playPauseG.append("text")
+				.style("pointer-events", "none")
+				.attr("text-anchor", "middle")
+				.attr("dominant-baseline", "middle")
+				.attr("textLength", (2 * divBounds["width"]) / 9)
+				.attr("fill", "Black")
+				.attr("stroke", "Black")
+				.attr("font-size", (divBounds["height"] * .025))
+				//.style("font-weight", "bold")
+				.text("...")
+				.attr("x", divBounds["width"] / 2)
+				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .1));
+		var activeWindowName = playPauseG.append("text")
+				.style("pointer-events", "none")
+				.attr("text-anchor", "middle")
+				.attr("dominant-baseline", "middle")
+				.attr("textLength", (4 * divBounds["width"]) / 9)
+				.attr("fill", "Black")
+				.attr("stroke", "Black")
+				.attr("font-size", (divBounds["height"] * .025))
+				//.style("font-weight", "bold")
+				.text("...")
+				.attr("x", divBounds["width"] / 2)
+				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .125));
+		
+		
+		
 		
 		function nextFrame()
 		{
 			var screenshotTime = Infinity;
-			if(screenshotIndex < screenshots.length)
+			if(screenshots && screenshotIndex < screenshots.length)
 			{
 				screenshotTime = Number(screenshots[screenshotIndex]["Index MS Session"]);
 			}
 			var keystrokesTime = Infinity;
-			if(keystrokesIndex < keystrokes.length)
+			if(keystrokes && keystrokesIndex < keystrokes.length)
 			{
 				keystrokesTime = Number(keystrokes[keystrokesIndex]["Index MS Session"]);
 			}
 			var mouseTime = Infinity;
-			if(mouseIndex < mouse.length)
+			if(mouse && mouseIndex < mouse.length)
 			{
 				mouseTime = Number(mouse[mouseIndex]["Index MS Session"]);
+			}
+			var windowsTime = Infinity;
+			if(windows && windowsIndex < windows.length)
+			{
+				windowsTime = Number(windows[windowsIndex]["Index MS Session"]);
 			}
 			
 			if(screenshotTime < keystrokesTime)
 			{
 				if(screenshotTime < mouseTime)
 				{
-					screenshotIndex++;
-					return screenshots[screenshotIndex - 1];
+					if(screenshotTime < windowsTime)
+					{
+						screenshotIndex++;
+						return screenshots[screenshotIndex - 1];
+					}
+					else
+					{
+						windowsIndex++;
+						return windows[windowsIndex - 1];
+					}
 				}
 				else
 				{
-					mouseIndex++;
-					return mouse[mouseIndex - 1];
+					if(mouseTime < windowsTime)
+					{
+						mouseIndex++;
+						return mouse[mouseIndex - 1];
+					}
+					else
+					{
+						windowsIndex++;
+						return windows[windowsIndex - 1];
+					}
 				}
 			}
 			else if(mouseTime < keystrokesTime)
 			{
-				mouseIndex++;
-				return mouse[mouseIndex - 1];
+				if(mouseTime < windowsTime)
+				{
+					mouseIndex++;
+					return mouse[mouseIndex - 1];
+				}
+				else
+				{
+					windowsIndex++;
+					return windows[windowsIndex - 1];
+				}
 			}
 			else
 			{
-				keystrokesIndex++;
-				return keystrokes[keystrokesIndex - 1];
+				if(keystrokesTime < windowsTime)
+				{
+					keystrokesIndex++;
+					return keystrokes[keystrokesIndex - 1];
+				}
+				else
+				{
+					windowsIndex++;
+					return windows[windowsIndex - 1];
+				}
 			}
 		}
 		
@@ -3581,6 +3785,8 @@ function fadeOutLightbox()
 		
 		var startY = 0;
 		
+		var prevLastScreenshot;
+		
 		function runAnimation()
 		{
 			var curFrame = nextFrame();
@@ -3588,6 +3794,8 @@ function fadeOutLightbox()
 			
 			if(curFrame)
 			{
+				axisTick .attr("x", timeScaleAnimation(curFrame["Index MS Session"]));
+				
 				for(entry in lastMouseClicks)
 				{
 					//if(entry != lastMouseClicks.length)
@@ -3621,7 +3829,6 @@ function fadeOutLightbox()
 			
 			if(curFrame && curFrame["Screenshot"])
 			{
-				
 				curScreenshot = backgroundG.append("image")
 				.attr("width", divBounds["width"])
 				.attr("height", divBounds["height"])
@@ -3650,23 +3857,42 @@ function fadeOutLightbox()
 									})
 							.attr("height", finalRatio * lastImg["height"]);
 				
-				textHeight = curScreenshot.attr("width") / 100;
+				textHeight = curScreenshot.attr("width") / 50;
 				
 				startY = finalRatio * lastImg["height"];
 				
 				if(!typedText)
 				{
 					typedText = animationG.append("text").attr("x", 0)
-						.attr("y", startY + textHeight)
+						.attr("y", startY + textHeight + textPadding)
 						.text("Input:")
 						.attr("font-size", textHeight);
 				}
 				
+				if(prevLastScreenshot)
+				{
+					//prevLastScreenshot.remove();
+					garbageToRemove.push(prevLastScreenshot);
+				}
 				if(lastScreenshot)
 				{
+					prevLastScreenshot = lastScreenshot;
 					//lastScreenshot.remove();
 				}
 				lastScreenshot = curScreenshot;
+				for(toRemove in garbageToRemove)
+				{
+					if(curFrame["Index MS Session"] - garbageToRemove[toRemove]["Index MS Session"] > 10000)
+					{
+						garbageToRemove[toRemove].remove();
+					}
+				}
+			}
+			
+			if(curFrame && curFrame["FirstClass"])
+			{
+				activeWindow.text(curFrame["FirstClass"]);
+				activeWindowName.text(curFrame["Name"]);
 			}
 			
 			if(curFrame && curFrame["XLoc"])
@@ -3735,12 +3961,24 @@ function fadeOutLightbox()
 				{
 					buttonToType = "⇯";
 				}
+				else if(buttonToType == "Minus")
+				{
+					buttonToType = "-";
+				}
+				else if(buttonToType == "Backslash")
+				{
+					buttonToType = "\\";
+				}
+				else if(buttonToType == "Forwardslash")
+				{
+					buttonToType = "/";
+				}
 				else if(buttonToType == "Enter")
 				{
 					//keyboardInputs.shift();
 					//keyboardInputs.unshift(curLine);
 					curKeyInput = animationG.append("text").attr("x", 0)
-					.attr("y", startY)
+					.attr("y", startY  + textPadding)
 					.text("⏎")
 					.attr("text", "⏎")
 					.attr("font-size", textHeight);
@@ -3754,6 +3992,18 @@ function fadeOutLightbox()
 				
 				if(buttonToType != "Enter")
 				{
+					if(curKeyInput.node().getBBox()["width"] + textHeight > (3.5 * divBounds["width"]) / 9)
+					{
+						//keyboardInputs.shift();
+						//keyboardInputs.unshift(curLine);
+						curKeyInput = animationG.append("text").attr("x", 0)
+						.attr("y", startY  + textPadding)
+						.text("⏎")
+						.attr("text", "")
+						.attr("font-size", textHeight);
+						
+						keyboardInputs.unshift(curKeyInput);
+					}
 					curKeyInput.attr("text", curKeyInput.attr("text") + buttonToType);
 					curKeyInput.text(curKeyInput.attr("text"));
 					//keyboardInputs.shift();
@@ -3769,23 +4019,157 @@ function fadeOutLightbox()
 			
 			for(entry in keyboardInputs)
 			{
-				keyboardInputs[entry].attr("y", startY + ((Number(entry) + 2) * textHeight))
+				keyboardInputs[entry].attr("y", startY  + textPadding + ((Number(entry) + 2) * textHeight))
 									.attr("font-size", textHeight);
 			}
 			
 			
-			if(curFrame && (!(lastFrame)))
+			if(playing && curFrame && (!(lastFrame)))
 			{
+				axisTick .style("transition", (Number(curFrame["Index MS Session"]) / playbackSpeedMultiplier) + "ms linear");
 				animationTimeout = setTimeout(runAnimation, Number(curFrame["Index MS Session"]) / playbackSpeedMultiplier);
 			}
-			else if(curFrame)
+			else if(playing && curFrame)
 			{
+				axisTick .style("transition", ((Number(curFrame["Index MS Session"]) - Number(lastFrame["Index MS Session"])) / playbackSpeedMultiplier) + "ms linear");
 				animationTimeout = setTimeout(runAnimation, (Number(curFrame["Index MS Session"]) - Number(lastFrame["Index MS Session"])) / playbackSpeedMultiplier);
 			}
 			lastFrame = curFrame;
 		}
 		
 		animationTimeout = setTimeout(runAnimation, 0);
+		
+		playPause.on("click", function(d, i)
+				{
+					d3.event.stopPropagation();
+					if(playing)
+					{
+						clearTimeout(animationTimeout);
+						playPause.attr("fill", "Crimson");
+						playPauseLabel.text("▶");
+						seekBar.style("fill", "Crimson").style("stroke", "Crimson");
+						playing = false;
+					}
+					else
+					{
+						playPause.attr("fill", "Chartreuse");
+						playPauseLabel.text("⏸");
+						seekBar.style("fill", "Chartreuse").style("stroke", "Chartreuse");
+						playing = true;
+						animationTimeout = setTimeout(runAnimation, 0);
+					}
+				})
+		
+		seekBar.on("click", function(d, i)
+				{
+					clearTimeout(animationTimeout);
+					var curX = d3.mouse(this)[0];
+					var curY = d3.mouse(this)[1];
+					var selectTime = timeScaleAnimationLookup(curX);
+					//console.log(selectTime);
+					var curDiff = Infinity;
+					if(screenshots)
+					{
+						screenshotIndex = closestIndexMSBinarySession(screenshots, selectTime);
+						var curScreenshot = screenshots[screenshotIndex];
+						//console.log(curScreenshot);
+					}
+					if(keystrokes)
+					{
+						keystrokesIndex = closestIndexMSBinarySession(keystrokes, selectTime);
+						var curKeystrokes = keystrokes[keystrokesIndex];
+						//console.log(curKeystrokes);
+					}
+					if(mouse)
+					{
+						mouseIndex = closestIndexMSBinarySession(mouse, selectTime);
+						var curMouse = mouse[mouseIndex];
+						//console.log(curMouse);
+					}
+					if(windows)
+					{
+						windowsIndex = closestIndexMSBinarySession(windows, selectTime);
+						var curWindows = windows[windowsIndex];
+						//console.log(curMouse);
+					}
+					
+					var selectedEntry;
+					if(screenshots && curScreenshot)
+					{
+						selectedEntry = curScreenshot;
+						curDiff = Math.abs(Number(curScreenshot["Index MS Session"]) - selectTime);
+					}
+					if(keystrokes && curKeystrokes && curDiff > Math.abs(Number(curKeystrokes["Index MS Session"]) - selectTime))
+					{
+						selectedEntry = curKeystrokes;
+						curDiff = Math.abs(Number(curKeystrokes["Index MS Session"]) - selectTime);
+					}
+					if(mouse && curMouse && curDiff > Math.abs(Number(curMouse["Index MS Session"]) - selectTime))
+					{
+						selectedEntry = curMouse;
+						curDiff = Math.abs(Number(curMouse["Index MS Session"]) - selectTime);
+					}
+					if(windows && curWindows && curDiff > Math.abs(Number(curWindows["Index MS Session"]) - selectTime))
+					{
+						selectedEntry = curWindows;
+						curDiff = Math.abs(Number(curWindows["Index MS Session"]) - selectTime);
+					}
+					
+					while(screenshots && screenshotIndex < screenshots.length && Number(screenshots[screenshotIndex]["Index MS Session"]) < Number(selectedEntry["Index MS Session"]))
+					{
+						screenshotIndex++;
+					}
+					while(keystrokes && keystrokesIndex < keystrokes.length && Number(keystrokes[keystrokesIndex]["Index MS Session"]) < Number(selectedEntry["Index MS Session"]))
+					{
+						keystrokesIndex++;
+					}
+					while(mouse && mouseIndex < mouse.length && Number(mouse[mouseIndex]["Index MS Session"]) < Number(selectedEntry["Index MS Session"]))
+					{
+						mouseIndex++;
+					}
+					while(windows && windowsIndex < windows.length && Number(windows[windowsIndex]["Index MS Session"]) < Number(selectedEntry["Index MS Session"]))
+					{
+						windowsIndex++;
+					}
+					//console.log(selectedEntry);
+					//console.log(nextFrame());
+					d3.event.stopPropagation();
+					lastFrame = selectedEntry;
+					axisTick.style("transition", "none");
+					axisTick .attr("x", timeScaleAnimation(selectedEntry["Index MS Session"]));
+					
+					curKeyInput = animationG.append("text").attr("x", 0)
+					.attr("y", startY  + textPadding)
+					.text("⏯")
+					.attr("text", "")
+					.attr("font-size", textHeight);
+					
+					keyboardInputs.unshift(curKeyInput);
+					
+					activeWindow.text("...");
+					activeWindowName.text("...");
+					
+					for(entry in lastMouseClicks)
+					{
+						
+							lastMouseClicks[entry].remove();
+							lastMouseClicks.splice(entry, 1);
+							entry--;
+							continue;
+						
+					}
+					if(playing)
+					{
+						seekBar.attr("fill", "Chartreuse").attr("stroke", "Chartreuse");
+						animationTimeout = setTimeout(runAnimation, 0);
+					}
+					else
+					{
+						seekBar.attr("fill", "Crimson").attr("stroke", "Crimson");
+						runAnimation();
+					}
+				})
+		
 		
 	}
 	
@@ -4695,6 +5079,51 @@ function fadeOutLightbox()
 	    if(items[middleIndex - 1])
 	    {
 	    	prevDiff = Math.abs(value - items[middleIndex - 1]["Index MS"]);
+	    }
+	    if(curDiff > nextDiff)
+	    {
+	    	if(nextDiff > prevDiff)
+	    	{
+	    		return middleIndex - 1;
+	    	}
+	    	return middleIndex + 1;
+	    }
+	    if(curDiff > prevDiff)
+	    {
+	    	return middleIndex - 1;
+	    }
+	    
+	 return middleIndex;
+	}
+	
+	function closestIndexMSBinarySession(items, value){
+	    var firstIndex  = 0,
+	        lastIndex   = items.length - 1,
+	        middleIndex = Math.floor((lastIndex + firstIndex)/2);
+
+	    while(items[middleIndex]["Index MS Session"] != value && firstIndex < lastIndex)
+	    {
+	       if (value < items[middleIndex]["Index MS Session"])
+	        {
+	            lastIndex = middleIndex - 1;
+	        } 
+	      else if (value > items[middleIndex]["Index MS Session"])
+	        {
+	            firstIndex = middleIndex + 1;
+	        }
+	        middleIndex = Math.floor((lastIndex + firstIndex)/2);
+	    }
+	    var curDiff = Math.abs(value - items[middleIndex]["Index MS Session"]);
+	    var nextDiff = Infinity;
+	    var prevDiff = Infinity;
+	    
+	    if(items[middleIndex + 1])
+	    {
+	    	nextDiff = Math.abs(value - items[middleIndex + 1]["Index MS Session"]);
+	    }
+	    if(items[middleIndex - 1])
+	    {
+	    	prevDiff = Math.abs(value - items[middleIndex - 1]["Index MS Session"]);
 	    }
 	    if(curDiff > nextDiff)
 	    {
