@@ -940,13 +940,173 @@ function fadeOutLightbox()
 				downloadData();
 			})
 	
-	function downloadData()
+			
+	var db;
+	var objectStore;
+	
+	async function persistData(key, value)
 	{
-		d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes,mouse,processes,windows,events,environment,screenshots&normalize=none", function(error, data)
+		// In the following line, you should include the prefixes of implementations you want to test.
+		window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+		// DON'T use "var indexedDB = ..." if you're not in a function.
+		// Moreover, you may need references to some window.IDB* objects:
+		window.IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction || window.msIDBTransaction || {READ_WRITE: "readwrite"}; // This line should only be needed if it is needed to support the object's constants for older browsers
+		window.IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange;
+		
+		return new Promise(async function (resolve, reject)
+		{
+			if(!db)
+			{
+				var request = window.indexedDB.open("LocalStore", 4);
+				request.onerror = function(event)
+				{
+					// Do something with request.errorCode!
+					console.log(request.errorCode);
+					return;
+				};
+				request.onupgradeneeded = function(event)
+				{
+					db = event.target.result;
+					if (!db.objectStoreNames.contains("objects"))
+					{
+						objectStore = db.createObjectStore("objects", { keyPath: "key" });
+					}
+				};
+				request.onsuccess = async function(event)
+				{
+					db = event.target.result;
+					try
+					{
+						var theReturn = await (nestedStoreData(key, value));
+						resolve(theReturn);
+					}
+					catch(err)
+					{
+						reject(err);
+					}
+				}
+			}
+			else
+			{
+				try
+				{
+					var theReturn = await (nestedStoreData(key, value));
+					resolve(theReturn);
+				}
+				catch(err)
+				{
+					reject(err);
+				}
+			}
+		})
+	}
+	async function nestedStoreData(key, value)
+	{
+		return new Promise(function (resolve, reject)
+		{
+			var transaction = db.transaction(["objects"], "readwrite");
+			transaction.oncomplete = function(event)
+			{
+				console.log("All done!");
+				resolve(true);
+			};
+	
+			transaction.onerror = function(event)
+			{
+				reject(event);
+			};
+			objectStore = transaction.objectStore("objects");
+			
+			var toPersist = {};
+			toPersist["key"] = key;
+			toPersist["value"] = value;
+			var request = objectStore.add(toPersist);
+		})
+	}
+	
+	async function retrieveData(key)
+	{
+		d3.select("body").style("cursor", "wait");
+		var toReturn = await retrieveDataWrapper(key);
+		d3.select("body").style("cursor", "");
+		return toReturn;
+	}
+	
+	async function retrieveDataWrapper(key)
+	{
+		try
+		{
+			var value = await nestedRetrieveData(key);
+			//console.log(value);
+			
+			return await value;
+		}
+		catch (err)
+		{
+			console.log(err);
+		}
+	}
+	async function nestedRetrieveData(key)
+	{
+		// In the following line, you should include the prefixes of implementations you want to test.
+		window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+		// DON'T use "var indexedDB = ..." if you're not in a function.
+		// Moreover, you may need references to some window.IDB* objects:
+		window.IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction || window.msIDBTransaction || {READ_WRITE: "readwrite"}; // This line should only be needed if it is needed to support the object's constants for older browsers
+		window.IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange;
+		
+		if(!db)
+		{
+			
+		}
+		else
+		{
+			return new Promise(function (resolve, reject)
+			{
+				var transaction = db.transaction(["objects"]);
+				var objectStore = transaction.objectStore("objects");
+				var request = objectStore.get(key);
+				request.onerror = function(event)
+				{
+					reject(event);
+				};
+				request.onsuccess = function(event)
+				{
+					resolve(event.target.result);
+				};
+			})
+			
+		}
+		
+		
+	}
+	
+	
+	async function downloadData()
+	{
+		d3.select("body").style("cursor", "wait");
+		d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes,mouse,processes,windows,events,environment,screenshots&normalize=none", async function(error, data)
 				{
 					theNormData = preprocess(data);
-					theNormDataClone = JSON.parse(JSON.stringify(theNormData));
+					try
+					{
+						await persistData("data", theNormData);
+					}
+					catch(err)
+					{
+						console.log(err);
+					}
+					//theNormDataClone = JSON.parse(JSON.stringify(theNormData));
+					//try
+					//{
+					//	theNormDataClone = (await retrieveData("data")).value;
+					//}
+					//catch(err)
+					//{
+					//	console.log(err);
+					//}
 					theNormDataDone = true;
+					d3.select("body").style("cursor", "");
 					start(true);
 				})
 				.on("progress", function(d, i)
@@ -983,7 +1143,7 @@ function fadeOutLightbox()
 	
 	
 	var visWidthParent = (containingTableRow.offsetWidth - visPadding);
-	function start(needsUpdate)
+	async function start(needsUpdate)
 	{
 		d3.select(visRow).style("max-width", (visWidthParent + visPadding) + "px");
 		d3.select(visTable).style("max-width", (visWidthParent + visPadding) + "px");
@@ -998,7 +1158,7 @@ function fadeOutLightbox()
 			d3.select("#legend").selectAll("*").remove();
 			//d3.select("#legend").html("");
 			clearWindow();
-			theNormData = JSON.parse(JSON.stringify(theNormDataClone));
+			theNormData = ((await retrieveData("data")).value);
 			theNormData = filter(theNormData, filters);
 			showDefault();
 		}
@@ -4195,8 +4355,8 @@ function fadeOutLightbox()
 						if(data["result"] == "okay")
 						{
 							
-							var sessEvents = theNormDataClone[userName][sessionName]["events"];
-							var aggEvents = theNormDataClone[userName]["Aggregated"]["events"];
+							var sessEvents = theNormData[userName][sessionName]["events"];
+							var aggEvents = theNormData[userName]["Aggregated"]["events"];
 							
 							var userSessDiff = theNormData[userName][sessionName]["Index MS User Session Min"];
 							var absUserDiff = theNormData[userName]["Index MS User Min Absolute"];
@@ -4226,7 +4386,7 @@ function fadeOutLightbox()
 							
 							//newEvents = theNormDataClone[userName][sessionName]["events"];
 							
-							var aggEventList = theNormDataClone[userName]["Aggregated"]["events"];
+							var aggEventList = theNormData[userName]["Aggregated"]["events"];
 							
 							for(entry in newEvents)
 							{
@@ -4249,7 +4409,7 @@ function fadeOutLightbox()
 								}
 							}
 							//console.log(newEvents);
-							theNormDataClone[userName][sessionName]["events"] = newEvents;
+							theNormData[userName][sessionName]["events"] = newEvents;
 							
 							
 							
@@ -5145,7 +5305,7 @@ function fadeOutLightbox()
 	
 	function getScreenshot(userName, sessionName, indexMS)
 	{
-		var screenshotIndexArray = theNormDataClone[userName][sessionName]["screenshots"];
+		var screenshotIndexArray = theNormData[userName][sessionName]["screenshots"];
 		var finalScreenshot = screenshotIndexArray[closestIndexMSBinary(screenshotIndexArray, indexMS)];
 		//console.log(finalScreenshot);
 		var curHash = SHA256(userName + sessionName + finalScreenshot["Index MS"])
@@ -5173,8 +5333,8 @@ function fadeOutLightbox()
 					//console.log(data);
 					if(data["result"] == "okay")
 					{
-						var sessEvents = theNormDataClone[userName][sessionName]["events"];
-						var aggEvents = theNormDataClone[userName]["Aggregated"]["events"];
+						var sessEvents = theNormData[userName][sessionName]["events"];
+						var aggEvents = theNormData[userName]["Aggregated"]["events"];
 						
 						var userSessDiff = theNormData[userName][sessionName]["Index MS User Session Min"];
 						var absUserDiff = theNormData[userName]["Index MS User Min Absolute"];
@@ -5204,7 +5364,7 @@ function fadeOutLightbox()
 						
 						//newEvents = theNormDataClone[userName][sessionName]["events"];
 						
-						var aggEventList = theNormDataClone[userName]["Aggregated"]["events"];
+						var aggEventList = theNormData[userName]["Aggregated"]["events"];
 						
 						for(entry in newEvents)
 						{
@@ -5227,7 +5387,7 @@ function fadeOutLightbox()
 							}
 						}
 						//console.log(newEvents);
-						theNormDataClone[userName][sessionName]["events"] = newEvents;
+						theNormData[userName][sessionName]["events"] = newEvents;
 						
 						
 						start(true);
