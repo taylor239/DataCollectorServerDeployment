@@ -661,6 +661,8 @@ function fadeOutLightbox()
 					continue;
 				}
 				
+				totalSessions++;
+				
 				for(entry in dataToModify[user][session]["screenshots"])
 				{
 					var hashVal = SHA256(user + session + dataToModify[user][session]["screenshots"][entry]["Index MS"]);
@@ -1208,7 +1210,7 @@ function fadeOutLightbox()
 					theNormDataDone = true;
 					
 					d3.select("#title")
-						.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes")
+						.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes, finished " + downloadedSessions + " of " + totalSessions + " sessions.")
 					
 					
 					d3.select("body").style("cursor", "");
@@ -1230,18 +1232,24 @@ function fadeOutLightbox()
 		}
 	}
 	
-	var chunkSize = 250;
+	var chunkSize = 50;
+	
+	var downloadedSessions = 0;
+	var totalSessions = 0;
 	
 	async function downloadImages(userName, sessionName, imageArray, nextCount)
 	{
 		var curCount = nextCount;
-		for(entry in imageArray)
+		
+		while(curCount < imageArray.length)
 		{
+			var entry = curCount;
 			var curScreenshot = (await hasScreenshot(imageArray[entry]));
-			console.log(entry + ": " + curScreenshot)
+			//console.log(entry + ": " + curScreenshot)
 			if(curScreenshot)
 			{
 				curCount = entry + 1;
+				//break;
 			}
 			else
 			{
@@ -1280,13 +1288,19 @@ function fadeOutLightbox()
 				}
 				
 				d3.select("#title")
-					.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes")
+					.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes, finished " + downloadedSessions + " of " + totalSessions + " sessions.")
 				
 				
 				if(curCount < imageArray.length)
 				{
 					console.log("Continuing screenshots from " + userName + ", " + sessionName + ": " + curCount + " : " + chunkSize + " of " + imageArray.length);
 					downloadImages(userName, sessionName, imageArray, curCount);
+				}
+				else
+				{
+					downloadedSessions++;
+					d3.select("#title")
+					.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes, finished " + downloadedSessions + " of " + totalSessions + " sessions.")
 				}
 				
 			})
@@ -1295,8 +1309,14 @@ function fadeOutLightbox()
 						//downloadedSize = d["loaded"];
 						downloadedImageSize += d["loaded"];
 						d3.select("#title")
-						.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; image data: <b>" + downloadedImageSize + "</b> bytes");
+						.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; image data: <b>" + downloadedImageSize + "</b> bytes, finished " + downloadedSessions + " of " + totalSessions + " sessions.");
 					});
+		}
+		else
+		{
+			downloadedSessions++;
+			d3.select("#title")
+			.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes, finished " + downloadedSessions + " of " + totalSessions + " sessions.")
 		}
 	}
 	
@@ -2892,7 +2912,7 @@ function fadeOutLightbox()
 		.attr("fill", "#FFF")
 		.attr("opacity", ".75")
 		.attr("z", 2)
-		.on("mousemove", function(d, i)
+		.on("mousemove", async function(d, i)
 				{
 					var curX = d3.mouse(this)[0];
 					var curY = d3.mouse(this)[1];
@@ -2911,7 +2931,7 @@ function fadeOutLightbox()
 							{
 								return userSessionAxisY[d["User"]][d["Session"]]["y"];
 							})
-							.text(async function()
+							.text(function()
 									{
 										userName = d["User"];
 										sessionName = d["Session"];
@@ -2924,7 +2944,9 @@ function fadeOutLightbox()
 										d3.select("#screenshotDiv")
 												.selectAll("*")
 												.remove();
-										d3.select("#screenshotDiv")
+										async function updateScreenshot()
+										{
+											d3.select("#screenshotDiv")
 												.append("img")
 												.attr("width", "100%")
 												.attr("src", "data:image/jpg;base64," + (await getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Screenshot"]()))
@@ -2935,6 +2957,8 @@ function fadeOutLightbox()
 															//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + userName + "&timestamp=" + getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Index MS"] + "&session=" + getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Original Session"] + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
 															showLightbox("<tr><td><div width=\"100%\"><img src=\""+ "data:image/jpg;base64," + (await getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Screenshot"]()) + "\" style=\"width: 100%;\"></div></td></tr>");
 														});
+										}
+										updateScreenshot();
 										//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + userName + "&timestamp=" + getScreenshot(userName, sessionName, screenshotIndex)["Index MS"] + "&session=" + sessionName + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
 										//console.log(minSession + (scale(curX) * 60000));
 										return scale(curX)
