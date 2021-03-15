@@ -660,6 +660,16 @@ function fadeOutLightbox()
 					delete dataToModify[user][session];
 					continue;
 				}
+				
+				for(entry in dataToModify[user][session]["screenshots"])
+				{
+					var hashVal = SHA256(user + session + dataToModify[user][session]["screenshots"][entry]["Index MS"]);
+					dataToModify[user][session]["screenshots"][entry]["ImageHash"] = hashVal;
+					//dataToModify[user][session]["screenshots"][entry]["Screenshot"] = getScreenshotData;
+					//dataToModify[user][session]["screenshots"][entry]["HasScreenshot"] = hasScreenshot;
+				}
+				downloadImages(user, session, dataToModify[user][session]["screenshots"], 0);
+				
 				if(dataToModify[user][session]["windows"])
 				{
 					var activeWindows = [];
@@ -1007,7 +1017,7 @@ function fadeOutLightbox()
 			var transaction = db.transaction(["objects"], "readwrite");
 			transaction.oncomplete = function(event)
 			{
-				console.log("All done!");
+				//console.log("All done!");
 				resolve(true);
 			};
 	
@@ -1032,6 +1042,19 @@ function fadeOutLightbox()
 		return toReturn;
 	}
 	
+	async function hasData(key)
+	{
+		d3.select("body").style("cursor", "wait");
+		var toReturn = await nestedCountData(key);
+		//console.log("Count " + toReturn);
+		d3.select("body").style("cursor", "");
+		if(toReturn > 0)
+		{
+			return true;
+		}
+		return false;
+	}
+	
 	async function retrieveDataWrapper(key)
 	{
 		try
@@ -1046,6 +1069,7 @@ function fadeOutLightbox()
 			console.log(err);
 		}
 	}
+	
 	async function nestedRetrieveData(key)
 	{
 		// In the following line, you should include the prefixes of implementations you want to test.
@@ -1081,11 +1105,87 @@ function fadeOutLightbox()
 		
 	}
 	
+	async function nestedCountData(key)
+	{
+		// In the following line, you should include the prefixes of implementations you want to test.
+		window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+		// DON'T use "var indexedDB = ..." if you're not in a function.
+		// Moreover, you may need references to some window.IDB* objects:
+		window.IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction || window.msIDBTransaction || {READ_WRITE: "readwrite"}; // This line should only be needed if it is needed to support the object's constants for older browsers
+		window.IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange;
+		
+		if(!db)
+		{
+			
+		}
+		else
+		{
+			return new Promise(function (resolve, reject)
+			{
+				var transaction = db.transaction(["objects"]);
+				var objectStore = transaction.objectStore("objects");
+				var request = objectStore.count(key);
+				request.onerror = function(event)
+				{
+					reject(event);
+				};
+				request.onsuccess = function(event)
+				{
+					resolve(event.target.result);
+				};
+			})
+			
+		}
+		
+		
+	}
+	
+	async function getScreenshotData()
+	{
+		//console.log("Getting screenshot:");
+		var hashVal = this["ImageHash"];
+		//console.log(hashVal);
+		var toReturn = (await retrieveData(hashVal));
+		//console.log(toReturn)
+		return toReturn.value;
+	}
+	
+	async function hasScreenshot(entry)
+	{
+		//console.log("Getting screenshot:");
+		var hashVal = entry["ImageHash"];
+		//console.log(hashVal);
+		var toReturn = (await hasData(hashVal));
+		return toReturn;
+	}
+	
+	var downloadedImageSize = 0;
+	var downloadedSize = 0;
 	
 	async function downloadData()
 	{
+		var needsUpdate = false;
 		d3.select("body").style("cursor", "wait");
-		d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes,mouse,processes,windows,events,environment,screenshots&normalize=none", async function(error, data)
+		lastEvent = (await retrieveData("event").value)
+		//if(eventName != lastEvent)
+		if(true)
+		{
+			persistData("event", eventName);
+			persistData("time", new Date());
+			needsUpdate = true;
+		}
+		lastTime = (await retrieveData("time").value)
+		origTitle += ", last visit on " + lastTime;
+		
+		d3.select("#title")
+			.html(origTitle);
+		
+		
+		if(needsUpdate)
+		{
+			d3.select("#title")
+				.html(origTitle + "<br />Starting download...");
+			d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes,mouse,processes,windows,events,environment,screenshotindices&normalize=none", async function(error, data)
 				{
 					theNormData = preprocess(data);
 					try
@@ -1106,17 +1206,99 @@ function fadeOutLightbox()
 					//	console.log(err);
 					//}
 					theNormDataDone = true;
+					
+					d3.select("#title")
+						.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes")
+					
+					
 					d3.select("body").style("cursor", "");
 					start(true);
 				})
 				.on("progress", function(d, i)
 						{
+							downloadedSize = d["loaded"];
 							d3.select("#title")
 									.html(origTitle + "<br />Data Size: <b>" + d["loaded"] + "</b> bytes")
 							//console.log(d);
 						});
+		}
+		else
+		{
+			theNormDataDone = true;
+			d3.select("body").style("cursor", "");
+			start(true);
+		}
 	}
 	
+	var chunkSize = 250;
+	
+	async function downloadImages(userName, sessionName, imageArray, nextCount)
+	{
+		var curCount = nextCount;
+		for(entry in imageArray)
+		{
+			var curScreenshot = (await hasScreenshot(imageArray[entry]));
+			console.log(entry + ": " + curScreenshot)
+			if(curScreenshot)
+			{
+				curCount = entry + 1;
+			}
+			else
+			{
+				break;
+			}
+		}
+		if(curCount < imageArray.length)
+		{
+			//console.log("Fetching screenshots from " + userName + ", " + sessionName + ": " + curCount + " : " + chunkSize);
+			//console.log(imageArray);
+			var curSelect = "&users=" + userName + "&sessions=" + sessionName + "&first=" + curCount + "&count=" + chunkSize;
+			await d3.json("logExport.json?event=" + eventName + "&datasources=screenshots&normalize=none" + curSelect, async function(error, data)
+			{
+				for(user in data)
+				{
+					for(session in data[user])
+					{
+						
+						var curScreenshotList = data[user][session]["screenshots"];
+						
+						for(screenshot in curScreenshotList)
+						{
+							var hashVal = SHA256(user + session + curScreenshotList[screenshot]["Index MS"]);
+							//console.log(imageArray[screenshot]);
+							try
+							{
+								await persistData(hashVal, curScreenshotList[screenshot]["Screenshot"]);
+							}
+							catch(err)
+							{
+								console.log(err);
+							}
+							curCount++;
+						}
+					}
+				}
+				
+				d3.select("#title")
+					.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes")
+				
+				
+				if(curCount < imageArray.length)
+				{
+					console.log("Continuing screenshots from " + userName + ", " + sessionName + ": " + curCount + " : " + chunkSize + " of " + imageArray.length);
+					downloadImages(userName, sessionName, imageArray, curCount);
+				}
+				
+			})
+			.on("progress", async function(d, i)
+					{
+						//downloadedSize = d["loaded"];
+						downloadedImageSize += d["loaded"];
+						d3.select("#title")
+						.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; image data: <b>" + downloadedImageSize + "</b> bytes");
+					});
+		}
+	}
 	
 	function sleep(seconds)
 	{
@@ -1202,6 +1384,7 @@ function fadeOutLightbox()
 							if(dataType == "screenshots")
 							{
 								thisData[x]["Hash"] = SHA256(user + session + thisData[x]["Index MS"]);
+								thisData[x]["Screenshot"] = getScreenshotData;
 							}
 							
 							if(dataType == "windows")
@@ -2728,7 +2911,7 @@ function fadeOutLightbox()
 							{
 								return userSessionAxisY[d["User"]][d["Session"]]["y"];
 							})
-							.text(function()
+							.text(async function()
 									{
 										userName = d["User"];
 										sessionName = d["Session"];
@@ -2744,13 +2927,13 @@ function fadeOutLightbox()
 										d3.select("#screenshotDiv")
 												.append("img")
 												.attr("width", "100%")
-												.attr("src", "data:image/jpg;base64," + getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Screenshot"])
+												.attr("src", "data:image/jpg;base64," + (await getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Screenshot"]()))
 												//.attr("src", "./getScreenshot.jpg?username=" + userName + "&timestamp=" + getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Index MS"] + "&session=" + getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Original Session"] + "&event=" + eventName)
 												.attr("style", "cursor:pointer;")
-												.on("click", function()
+												.on("click", async function()
 														{
 															//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + userName + "&timestamp=" + getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Index MS"] + "&session=" + getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Original Session"] + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
-															showLightbox("<tr><td><div width=\"100%\"><img src=\""+ "data:image/jpg;base64," + getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Screenshot"] + "\" style=\"width: 100%;\"></div></td></tr>");
+															showLightbox("<tr><td><div width=\"100%\"><img src=\""+ "data:image/jpg;base64," + (await getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Screenshot"]()) + "\" style=\"width: 100%;\"></div></td></tr>");
 														});
 										//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + userName + "&timestamp=" + getScreenshot(userName, sessionName, screenshotIndex)["Index MS"] + "&session=" + sessionName + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
 										//console.log(minSession + (scale(curX) * 60000));
@@ -3544,7 +3727,7 @@ function fadeOutLightbox()
 		}
 	}
 	
-	function showDefault()
+	async function showDefault()
 	{
 		
 		var addTaskRow = d3.select("#infoTable").append("tr").append("td")
@@ -3947,7 +4130,7 @@ function fadeOutLightbox()
 		
 		var prevLastScreenshot;
 		
-		function runAnimation()
+		async function runAnimation()
 		{
 			var curFrame = nextFrame();
 			//console.log(curFrame);
@@ -3995,7 +4178,7 @@ function fadeOutLightbox()
 				//.attr("preserveAspectRatio", "xMidYMid meet");
 				.attr("preserveAspectRatio", "none");
 				
-				lastImg.src = "data:image/jpg;base64," + curFrame["Screenshot"];
+				lastImg.src = "data:image/jpg;base64," + (await curFrame["Screenshot"]());
 				
 				var xRatio = divBounds["width"] / lastImg["width"];
 				var yRatio = (divBounds["height"] * .8) / lastImg["height"];
@@ -4008,7 +4191,7 @@ function fadeOutLightbox()
 				var finalWidth = finalRatio * lastImg["width"];
 				var finalX = (divBounds["width"] - finalWidth) / 2;
 				
-				curScreenshot.attr("href", "data:image/jpg;base64," + curFrame["Screenshot"])
+				curScreenshot.attr("href", "data:image/jpg;base64," + (await curFrame["Screenshot"]()))
 							.attr("width", finalWidth)
 							.attr("x", finalX)
 							.attr("onload", function()
@@ -4445,7 +4628,7 @@ function fadeOutLightbox()
 					});
 	}
 	
-	function showSession(owningUser, owningSession)
+	async function showSession(owningUser, owningSession)
 	{
 		//console.log(d3.select("#mainVisContainer").style("height",  "300px").attr("height",  "300px"));
 		
@@ -4467,13 +4650,13 @@ function fadeOutLightbox()
 		d3.select("#screenshotDiv")
 		.append("img")
 		.attr("width", "100%")
-		.attr("src", "data:image/jpg;base64," + theNormData[owningUser][owningSession]["screenshots"][0]["Screenshot"])
+		.attr("src", "data:image/jpg;base64," + (await (theNormData[owningUser][owningSession]["screenshots"][0]["Screenshot"]())))
 		//.attr("src", "./getScreenshot.jpg?username=" + owningUser + "&timestamp=" + getScreenshot(owningUser, screenshotSession, screenshotIndex)["Index MS"] + "&session=" + screenshotSession + "&event=" + eventName)
 		.attr("style", "cursor:pointer;")
 		.on("click", function()
 				{
 					//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + owningUser + "&timestamp=" + getScreenshot(owningUser, screenshotSession, screenshotIndex)["Index MS"] + "&session=" + screenshotSession + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
-					showLightbox("<tr><td><div width=\"100%\"><img src=\"data:image/jpg;base64," + theNormData[owningUser][owningSession]["screenshots"][0]["Screenshot"] + "\" style=\"width: 100%;\"></div></td></tr>");
+					showLightbox("<tr><td><div width=\"100%\"><img src=\"data:image/jpg;base64," + (await (theNormData[owningUser][owningSession]["screenshots"][0]["Screenshot"]())) + "\" style=\"width: 100%;\"></div></td></tr>");
 				});
 		
 		
@@ -5407,7 +5590,7 @@ function fadeOutLightbox()
 	var curSelectProcess;
 	var curSelElements = [];
 	
-	function showWindow(username, session, type, timestamp)
+	async function showWindow(username, session, type, timestamp)
 	{
 		if(username != curSelectUser || session != curSelectSession)
 		{
@@ -5519,12 +5702,12 @@ function fadeOutLightbox()
 		d3.select("#screenshotDiv")
 				.append("img")
 				.attr("width", "100%")
-				.attr("src", "data:image/jpg;base64," + getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Screenshot"])
+				.attr("src", "data:image/jpg;base64," + (await (getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Screenshot"]())))
 				//.attr("src", "./getScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Index MS"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName)
 				.attr("style", "cursor:pointer;")
 				.on("click", function()
 						{
-							showLightbox("<tr><td><div width=\"100%\"><img src=\"data:image/jpg;base64," + getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Screenshot"] + "\" style=\"width: 100%;\"></div></td></tr>");
+							showLightbox("<tr><td><div width=\"100%\"><img src=\"data:image/jpg;base64," + (await (getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Screenshot"]())) + "\" style=\"width: 100%;\"></div></td></tr>");
 							//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Index MS"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
 						});
 		

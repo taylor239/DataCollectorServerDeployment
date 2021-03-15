@@ -63,7 +63,8 @@ public class DatabaseConnector
 	
 	private String imageQuery = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `username` = ? AND `session` = ? AND `event` = ? AND `adminEmail` = ? ORDER BY abs(? - (UNIX_TIMESTAMP(`taken`) * 1000)) LIMIT 1";
 	private String imageQueryExact = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `username` = ? AND `session` = ? AND `event` = ? AND `adminEmail` = ? AND (UNIX_TIMESTAMP(`taken`) * 1000) = ?";
-	
+	//" AND (UNIX_TIMESTAMP(`taken`) * 1000) > ?" - after time
+	//" AND (UNIX_TIMESTAMP(`taken`) * 1000) < ?" - before time
 	private String allImageQuery = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `event` = ? AND `adminEmail` = ? ORDER BY `taken`, `insertTimestamp` ASC";
 	
 	
@@ -102,6 +103,8 @@ public class DatabaseConnector
 	private String deleteTask = "DELETE FROM `Task` WHERE `event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ? AND `taskName` = ? AND `startTimestamp` = FROM_UNIXTIME(? / 1000)";
 	
 	private String sessionDetailsQuery = "SELECT * FROM `openDataCollectionServer`.`User` WHERE `event` = ? AND `adminEmail` = ? ORDER BY `insertTimestamp` ASC";
+	
+	private String limiter = " LIMIT ?, ?";
 	
 	private TestingConnectionSource mySource;
 	
@@ -895,8 +898,10 @@ public class DatabaseConnector
 			
 			ArrayList thisUser = new ArrayList();
 			thisUser.add(user);
+			ArrayList thisSession = new ArrayList();
+			thisUser.add(session);
 			
-			myReturn.put("newEvents", normalizeAllTime(getTasksHierarchy(event, admin, thisUser)));
+			myReturn.put("newEvents", normalizeAllTime(getTasksHierarchy(event, admin, thisUser, thisSession, "", "")));
 			
 		}
 		catch(Exception e)
@@ -987,7 +992,10 @@ public class DatabaseConnector
 			ArrayList thisUser = new ArrayList();
 			thisUser.add(user);
 			
-			myReturn.put("newEvents", normalizeAllTime(getTasksHierarchy(event, admin, thisUser)));
+			ArrayList thisSession = new ArrayList();
+			thisUser.add(session);
+			
+			myReturn.put("newEvents", normalizeAllTime(getTasksHierarchy(event, admin, thisUser, thisSession, "", "")));
 			
 			
 		}
@@ -1055,7 +1063,7 @@ public class DatabaseConnector
 		return convertTimeTask(myReturn);
 	}
 	
-	public ConcurrentHashMap getTasksHierarchy(String event, String admin, ArrayList usersToSelect)
+	public ConcurrentHashMap getTasksHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -1070,7 +1078,7 @@ public class DatabaseConnector
 		String userSelectString = "";
 		if(!usersToSelect.isEmpty())
 		{
-			userSelectString = "AND `Task`.`username` IN (";
+			userSelectString = " AND `Task`.`username` IN (";
 			for(int x=0; x<usersToSelect.size(); x++)
 			{
 				userSelectString += "?";
@@ -1081,17 +1089,56 @@ public class DatabaseConnector
 			}
 			userSelectString += ")";
 			taskQuery = taskQuery.replace("`Task`.`adminEmail` = ?", "`Task`.`adminEmail` = ? " + userSelectString);
-		}		
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `Task`.`session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			taskQuery = taskQuery.replace("`Task`.`adminEmail` = ?", "`Task`.`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			taskQuery = taskQuery + limiter;
+		}
+		
 		try
 		{
 			System.out.println(taskQuery);
 			PreparedStatement myStatement = myConnector.prepareStatement(taskQuery);
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
 			for(int x=0; x < usersToSelect.size(); x++)
 			{
-				myStatement.setString(3 + x, (String) usersToSelect.get(x));
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
 			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
+			
 			ResultSet myResults = myStatement.executeQuery();
 			while(myResults.next())
 			{
@@ -1154,7 +1201,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getSessionDetailsHierarchy(String event, String admin, ArrayList usersToSelect)
+	public ConcurrentHashMap getSessionDetailsHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -1169,7 +1216,7 @@ public class DatabaseConnector
 		String userSelectString = "";
 		if(!usersToSelect.isEmpty())
 		{
-			userSelectString = "AND `User`.`username` IN (";
+			userSelectString = "AND `username` IN (";
 			for(int x=0; x<usersToSelect.size(); x++)
 			{
 				userSelectString += "?";
@@ -1179,18 +1226,58 @@ public class DatabaseConnector
 				}
 			}
 			userSelectString += ")";
-			taskQuery = taskQuery.replace("`User`.`adminEmail` = ?", "`User`.`adminEmail` = ? " + userSelectString);
-		}		
+			taskQuery = taskQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + userSelectString);
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			taskQuery = taskQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			taskQuery = taskQuery + limiter;
+		}
+		
 		try
 		{
 			System.out.println(taskQuery);
 			PreparedStatement myStatement = myConnector.prepareStatement(taskQuery);
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
 			for(int x=0; x < usersToSelect.size(); x++)
 			{
-				myStatement.setString(3 + x, (String) usersToSelect.get(x));
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
 			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
+			
 			ResultSet myResults = myStatement.executeQuery();
 			while(myResults.next())
 			{
@@ -1247,7 +1334,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getScreenshotsHierarchy(String event, String admin, ArrayList usersToSelect, boolean onlyIndex, boolean base64)
+	public ConcurrentHashMap getScreenshotsHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, boolean onlyIndex, boolean base64, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -1272,16 +1359,55 @@ public class DatabaseConnector
 			}
 			userSelectString += ")";
 			allImageQuery = allImageQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + userSelectString);
-		}		
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			allImageQuery = allImageQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			allImageQuery = allImageQuery + limiter;
+		}
+		
 		try
 		{
 			PreparedStatement myStatement = myConnector.prepareStatement(allImageQuery);
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
 			for(int x=0; x < usersToSelect.size(); x++)
 			{
-				myStatement.setString(3 + x, (String) usersToSelect.get(x));
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
 			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
 			ResultSet myResults = myStatement.executeQuery();
 			while(myResults.next())
 			{
@@ -1295,9 +1421,12 @@ public class DatabaseConnector
 				nextRow.put("Taken", myResults.getTimestamp("taken", cal));
 				nextRow.put("Index", myResults.getTimestamp("taken", cal));
 				
+				byte[] image = myResults.getBytes("screenshot");
+				nextRow.put("Size", image.length);
+				
 				if(!onlyIndex)
 				{
-					byte[] image = myResults.getBytes("screenshot");
+					//byte[] image = myResults.getBytes("screenshot");
 					if(base64)
 					{
 						String imageEncoded = Base64.getEncoder().encodeToString(image);
@@ -1351,7 +1480,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getScreenshotsHierarchyBinary(String event, String admin, ArrayList usersToSelect)
+	public ConcurrentHashMap getScreenshotsHierarchyBinary(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap toReturn = new ConcurrentHashMap();
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
@@ -1378,16 +1507,56 @@ public class DatabaseConnector
 			}
 			userSelectString += ")";
 			allImageQuery = allImageQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + userSelectString);
-		}		
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			allImageQuery = allImageQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			allImageQuery = allImageQuery + limiter;
+		}
+		
 		try
 		{
 			PreparedStatement myStatement = myConnector.prepareStatement(allImageQuery);
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
 			for(int x=0; x < usersToSelect.size(); x++)
 			{
-				myStatement.setString(3 + x, (String) usersToSelect.get(x));
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
 			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
+			
 			ResultSet myResults = myStatement.executeQuery();
 			while(myResults.next())
 			{
@@ -1410,6 +1579,7 @@ public class DatabaseConnector
 					byte[] image = myResults.getBytes("screenshot");
 					//String imageEncoded = Base64.getEncoder().encodeToString(image);
 					nextRowBinary.put("Screenshot", image);
+					nextRowBinary.put("Size", image.length);
 				}
 				
 				if(!myReturn.containsKey(userName))
@@ -1464,7 +1634,7 @@ public class DatabaseConnector
 		return toReturn;
 	}
 	
-	public ConcurrentHashMap getProcessDataHierarchy(String event, String admin, ArrayList usersToSelect)
+	public ConcurrentHashMap getProcessDataHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap lastMap = new ConcurrentHashMap();
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
@@ -1492,16 +1662,56 @@ public class DatabaseConnector
 			userSelectString += ")";
 			allProcessQuery = allProcessQuery.replace("`ProcessAttributes`.`adminEmail` = ?", "`ProcessAttributes`.`adminEmail` = ? " + userSelectString);
 
-		}		
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `ProcessAttributes`.`session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			allProcessQuery = allProcessQuery.replace("`ProcessAttributes`.`adminEmail` = ?", "`ProcessAttributes`.`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			allProcessQuery = allProcessQuery + limiter;
+		}
+		
 		try
 		{
 			PreparedStatement myStatement = myConnector.prepareStatement(allProcessQuery);
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
 			for(int x=0; x < usersToSelect.size(); x++)
 			{
-				myStatement.setString(3 + x, (String) usersToSelect.get(x));
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
 			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
+			
 			ResultSet myResults = myStatement.executeQuery();
 			while(myResults.next())
 			{
@@ -1694,7 +1904,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getProcessDataHierarchyFix(String event, String admin, ArrayList usersToSelect)
+	public ConcurrentHashMap getProcessDataHierarchyFix(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -1721,16 +1931,56 @@ public class DatabaseConnector
 			userSelectString += ")";
 			allProcessQuery = allProcessQuery.replace("`ProcessAttributes`.`adminEmail` = ?", "`ProcessAttributes`.`adminEmail` = ? " + userSelectString);
 
-		}		
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `ProcessAttributes`.`session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			allProcessQuery = allProcessQuery.replace("`ProcessAttributes`.`adminEmail` = ?", "`ProcessAttributes`.`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			allProcessQuery = allProcessQuery + limiter;
+		}
+		
 		try
 		{
 			PreparedStatement myStatement = myConnector.prepareStatement(allProcessQuery);
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
 			for(int x=0; x < usersToSelect.size(); x++)
 			{
-				myStatement.setString(3 + x, (String) usersToSelect.get(x));
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
 			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
+			
 			ResultSet myResults = myStatement.executeQuery();
 			while(myResults.next())
 			{
@@ -1827,7 +2077,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getKeystrokesHierarchy(String event, String admin, ArrayList usersToSelect)
+	public ConcurrentHashMap getKeystrokesHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -1853,16 +2103,56 @@ public class DatabaseConnector
 			}
 			userSelectString += ")";
 			keyboardQuery = keyboardQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + userSelectString);
-		}		
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			keyboardQuery = keyboardQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			keyboardQuery = keyboardQuery + limiter;
+		}
+		
 		try
 		{
 			PreparedStatement myStatement = myConnector.prepareStatement(keyboardQuery);
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
 			for(int x=0; x < usersToSelect.size(); x++)
 			{
-				myStatement.setString(3 + x, (String) usersToSelect.get(x));
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
 			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
+			
 			ResultSet myResults = myStatement.executeQuery();
 			while(myResults.next())
 			{
@@ -1927,7 +2217,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getMouseHierarchy(String event, String admin, ArrayList usersToSelect)
+	public ConcurrentHashMap getMouseHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -1953,16 +2243,56 @@ public class DatabaseConnector
 			}
 			userSelectString += ")";
 			mouseQuery = mouseQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + userSelectString);
-		}		
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			mouseQuery = mouseQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			mouseQuery = mouseQuery + limiter;
+		}
+		
 		try
 		{
 			PreparedStatement myStatement = myConnector.prepareStatement(mouseQuery);
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
 			for(int x=0; x < usersToSelect.size(); x++)
 			{
-				myStatement.setString(3 + x, (String) usersToSelect.get(x));
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
 			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
+			
 			ResultSet myResults = myStatement.executeQuery();
 			while(myResults.next())
 			{
@@ -2028,7 +2358,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getWindowDataHierarchy(String event, String admin, ArrayList usersToSelect)
+	public ConcurrentHashMap getWindowDataHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -2054,17 +2384,56 @@ public class DatabaseConnector
 			}
 			userSelectString += ")";
 			allWindowQuery = allWindowQuery.replace("`WindowDetails`.`adminEmail` = ?", "`WindowDetails`.`adminEmail` = ? " + userSelectString);
-		}		
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `WindowDetails`.`session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			allWindowQuery = allWindowQuery.replace("`WindowDetails`.`adminEmail` = ?", "`WindowDetails`.`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			allWindowQuery = allWindowQuery + limiter;
+		}
+		
 		try
 		{
 			System.out.println(allWindowQuery);
 			PreparedStatement myStatement = myConnector.prepareStatement(allWindowQuery);
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			int secondSessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
 			for(int x=0; x < usersToSelect.size(); x++)
 			{
-				myStatement.setString(3 + x, (String) usersToSelect.get(x));
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
 			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
+			
 			ResultSet myResults = myStatement.executeQuery();
 			while(myResults.next())
 			{
@@ -2134,7 +2503,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ArrayList getCollectedData(String event, String admin, ArrayList usersToSelect)
+	public ArrayList getCollectedData(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ArrayList myReturn = new ArrayList();
 		
@@ -2161,15 +2530,55 @@ public class DatabaseConnector
 			userSelectString += ")";
 			totalQuery = totalQuery.replace("`Window`.`adminEmail` = ?", "`Window`.`adminEmail` = ? " + userSelectString);
 		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `Window`.`session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			totalQuery = totalQuery.replace("`Window`.`adminEmail` = ?", "`Window`.`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			totalQuery = totalQuery + limiter;
+		}
+		
 		try
 		{
 			PreparedStatement myStatement = myConnector.prepareStatement(totalQuery);
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
 			for(int x=0; x < usersToSelect.size(); x++)
 			{
-				myStatement.setString(3 + x, (String) usersToSelect.get(x));
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
 			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
+			
 			ResultSet myResults = myStatement.executeQuery();
 			while(myResults.next())
 			{
@@ -2187,8 +2596,8 @@ public class DatabaseConnector
 				nextRow.put("User", user);
 				String pid = myResults.getString("pid");
 				nextRow.put("PID", pid);
-				String start = myResults.getString("start");
-				nextRow.put("Start", start);
+				String startData = myResults.getString("start");
+				nextRow.put("Start", startData);
 				//ArrayList processKey = new ArrayList();
 				//processKey.add(user);
 				//processKey.add(pid);
@@ -2322,7 +2731,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getCollectedDataHierarchy(String event, String admin, ArrayList usersToSelect)
+	public ConcurrentHashMap getCollectedDataHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -2350,16 +2759,56 @@ public class DatabaseConnector
 			userSelectString += ")";
 			totalQuery = totalQuery.replace("`Window`.`adminEmail` = ?", "`Window`.`adminEmail` = ? " + userSelectString);
 		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `Window`.`session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			totalQuery = totalQuery.replace("`Window`.`adminEmail` = ?", "`Task`.`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			totalQuery = totalQuery + limiter;
+		}
+		
 		try
 		{
 			System.out.println(totalQuery);
 			PreparedStatement myStatement = myConnector.prepareStatement(totalQuery);
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
 			for(int x=0; x < usersToSelect.size(); x++)
 			{
-				myStatement.setString(3 + x, (String) usersToSelect.get(x));
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
 			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
+			
 			ResultSet myResults = myStatement.executeQuery();
 			while(myResults.next())
 			{
@@ -2402,8 +2851,8 @@ public class DatabaseConnector
 				nextRow.put("User", user);
 				String pid = myResults.getString("pid");
 				nextRow.put("PID", pid);
-				String start = myResults.getString("start");
-				nextRow.put("Start", start);
+				String startData = myResults.getString("start");
+				nextRow.put("Start", startData);
 				//ArrayList processKey = new ArrayList();
 				//processKey.add(user);
 				//processKey.add(pid);
