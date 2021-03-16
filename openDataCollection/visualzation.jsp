@@ -60,7 +60,7 @@ if(request.getParameter("email") != null)
 	<tr>
 		<td class="layoutTableSide" style="border:0">
 		<div align="left">
-			<span style="cursor: pointer" onclick="toggleLeft();">⊟</span>
+			<span id="leftHide" style="cursor: pointer" onclick="toggleLeft();">⊟</span>
 		</div>
 		</td>
 		<td class="layoutTableCenter" style="border:0">
@@ -402,12 +402,15 @@ function fadeOutLightbox()
 		toDisplay = "none";
 		if(showLeft)
 		{
+			document.getElementById("leftHide").innerHTML = "⊟";
 			toDisplay = "";
 			d3.selectAll(".leftCol").style("display", toDisplay);
 			visWidthParent -= d3.select(".leftCol").node().offsetWidth;
 		}
 		else
 		{
+			
+			document.getElementById("leftHide").innerHTML = "⊞";
 			visWidthParent += d3.select(".leftCol").node().offsetWidth;
 			d3.selectAll(".leftCol").style("display", toDisplay);
 		}
@@ -1237,8 +1240,16 @@ function fadeOutLightbox()
 	var downloadedSessions = 0;
 	var totalSessions = 0;
 	
-	async function downloadImages(userName, sessionName, imageArray, nextCount)
+	async function downloadImages(userName, sessionName, imageArray, nextCount, sheet)
 	{
+		if(!sheet)
+		{
+			var sheet = document.createElement('style')
+		}
+		sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Yellow;}";
+		document.body.appendChild(sheet);
+		
+		
 		var curCount = nextCount;
 		
 		while(curCount < imageArray.length)
@@ -1294,13 +1305,14 @@ function fadeOutLightbox()
 				if(curCount < imageArray.length)
 				{
 					console.log("Continuing screenshots from " + userName + ", " + sessionName + ": " + curCount + " : " + chunkSize + " of " + imageArray.length);
-					downloadImages(userName, sessionName, imageArray, curCount);
+					downloadImages(userName, sessionName, imageArray, curCount, sheet);
 				}
 				else
 				{
 					downloadedSessions++;
 					d3.select("#title")
 					.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes, finished " + downloadedSessions + " of " + totalSessions + " sessions.")
+					sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
 				}
 				
 			})
@@ -1317,6 +1329,7 @@ function fadeOutLightbox()
 			downloadedSessions++;
 			d3.select("#title")
 			.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes, finished " + downloadedSessions + " of " + totalSessions + " sessions.")
+			sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
 		}
 	}
 	
@@ -3985,7 +3998,7 @@ function fadeOutLightbox()
 				.attr("height", (divBounds["height"] * .05))
 				.attr("fill", "Chartreuse")
 				.attr("stroke", "Black")
-				.attr("x", (4 * divBounds["width"]) / 9)
+				.attr("x", (8 * divBounds["width"]) / 9)
 				.attr("y", (divBounds["height"] * .8) + textPadding);
 		var playPauseLabel = playPauseG.append("text")
 				.style("pointer-events", "none")
@@ -3997,51 +4010,51 @@ function fadeOutLightbox()
 				.attr("stroke", "Black")
 				.attr("font-size", (divBounds["height"] * .05))
 				.text("⏸")
-				.attr("x", divBounds["width"] / 2)
+				.attr("x", (8.5 * divBounds["width"]) / 9)
 				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .025));
 		var activeWindowTitle = playPauseG.append("text")
 				.style("pointer-events", "none")
-				.attr("text-anchor", "middle")
+				.attr("text-anchor", "end")
 				.attr("dominant-baseline", "middle")
 				.attr("textLength", (divBounds["width"]) / 9)
 				.attr("fill", "Black")
 				.attr("stroke", "Black")
 				.attr("font-size", (divBounds["height"] * .025))
 				//.style("font-weight", "bold")
-				.text("Active Window:")
-				.attr("x", divBounds["width"] / 2)
+				.text("Active Window and Tasks")
+				.attr("x", divBounds["width"])
 				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .075));
-		var activeWindowNameBg = playPauseG.append("rect")
-				.style("pointer-events", "none")
-				.attr("fill", "White")
-				.attr("opacity", ".8")
-				.attr("x", (divBounds["width"] / 2) - ((2 * divBounds["width"]) / 9))
-				.attr("width", (4 * divBounds["width"]) / 9)
-				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .125))
-				.attr("height", (divBounds["height"] * .025));
+		//var activeWindowNameBg = playPauseG.append("rect")
+		//		.style("pointer-events", "none")
+		//		.attr("fill", "White")
+		//		.attr("opacity", ".8")
+		//		.attr("x", (divBounds["width"]) - ((2 * divBounds["width"]) / 9))
+		//		.attr("width", (4 * divBounds["width"]) / 9)
+		//		.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .125))
+		//		.attr("height", (divBounds["height"] * .025));
 		var activeWindow = playPauseG.append("text")
 				.style("pointer-events", "none")
-				.attr("text-anchor", "middle")
+				.attr("text-anchor", "end")
 				.attr("dominant-baseline", "middle")
-				.attr("textLength", (2 * divBounds["width"]) / 9)
+				//.attr("textLength", (2 * divBounds["width"]) / 9)
 				.attr("fill", "Black")
 				.attr("stroke", "Black")
 				.attr("font-size", (divBounds["height"] * .025))
 				//.style("font-weight", "bold")
 				.text("...")
-				.attr("x", divBounds["width"] / 2)
+				.attr("x", divBounds["width"])
 				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .1));
 		var activeWindowName = playPauseG.append("text")
 				.style("pointer-events", "none")
-				.attr("text-anchor", "middle")
+				.attr("text-anchor", "end")
 				.attr("dominant-baseline", "middle")
-				.attr("textLength", (4 * divBounds["width"]) / 9)
+				//.attr("textLength", (4 * divBounds["width"]) / 9)
 				.attr("fill", "Black")
 				.attr("stroke", "Black")
 				.attr("font-size", (divBounds["height"] * .025))
 				//.style("font-weight", "bold")
 				.text("...")
-				.attr("x", divBounds["width"] / 2)
+				.attr("x", divBounds["width"])
 				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .125));
 		
 		
@@ -4259,7 +4272,25 @@ function fadeOutLightbox()
 			if(curFrame && curFrame["FirstClass"])
 			{
 				activeWindow.text(curFrame["FirstClass"]);
+				activeWindow.attr("textLength", "default")
+				if(activeWindow.node().getBBox()["width"] + textHeight > (divBounds["width"]) / 2)
+				{
+					activeWindow.attr("textLength", (divBounds["width"]) / 2)
+				}
+				else
+				{
+					activeWindow.attr("textLength", "default")
+				}
 				activeWindowName.text(curFrame["Name"]);
+				activeWindowName.attr("textLength", "default")
+				if(activeWindowName.node().getBBox()["width"] + textHeight > (divBounds["width"]) / 2)
+				{
+					activeWindowName.attr("textLength", (divBounds["width"]) / 2)
+				}
+				else
+				{
+					activeWindowName.attr("textLength", "default")
+				}
 			}
 			
 			if(curFrame && curFrame["XLoc"])
@@ -4359,7 +4390,7 @@ function fadeOutLightbox()
 				
 				if(buttonToType != "Enter")
 				{
-					if(curKeyInput.node().getBBox()["width"] + textHeight > (3.5 * divBounds["width"]) / 9)
+					if(curKeyInput.node().getBBox()["width"] + textHeight > (divBounds["width"]) / 2)
 					{
 						//keyboardInputs.shift();
 						//keyboardInputs.unshift(curLine);
