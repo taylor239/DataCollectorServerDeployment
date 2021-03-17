@@ -309,7 +309,7 @@ public class DatabaseConnector
 		return input;
 	}
 	
-	public synchronized ConcurrentHashMap mergeMaps(ConcurrentHashMap a, ConcurrentHashMap b)
+	public ConcurrentHashMap mergeMaps(ConcurrentHashMap a, ConcurrentHashMap b)
 	{
 		Iterator bIterator = b.entrySet().iterator();
 		while(bIterator.hasNext())
@@ -363,7 +363,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public synchronized ConcurrentHashMap normalizeAllTime(ConcurrentHashMap userMap)
+	public ConcurrentHashMap normalizeAllTime(ConcurrentHashMap userMap)
 	{
 		long universalMin = Long.MAX_VALUE;
 		long universalMax = Long.MIN_VALUE;
@@ -728,7 +728,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public synchronized ConcurrentHashMap addFilters(String event, String admin, ArrayList toAdd, String saveAs)
+	public ConcurrentHashMap addFilters(String event, String admin, ArrayList toAdd, String saveAs)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -787,7 +787,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public synchronized ConcurrentHashMap deleteFilters(String event, String admin, String saveAs)
+	public ConcurrentHashMap deleteFilters(String event, String admin, String saveAs)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -830,7 +830,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public synchronized ConcurrentHashMap addTask(String event, String user, String session, String admin, long start, long end, String taskName)
+	public ConcurrentHashMap addTask(String event, String user, String session, String admin, long start, long end, String taskName)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -918,7 +918,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public synchronized ConcurrentHashMap deleteTask(String event, String admin, String user, String session, String source, String taskName, long startTime)
+	public ConcurrentHashMap deleteTask(String event, String admin, String user, String session, String source, String taskName, long startTime)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -1063,7 +1063,7 @@ public class DatabaseConnector
 		return convertTimeTask(myReturn);
 	}
 	
-	public synchronized ConcurrentHashMap getTasksHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getTasksHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -1201,7 +1201,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public synchronized ConcurrentHashMap getSessionDetailsHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getSessionDetailsHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -1334,7 +1334,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public synchronized ConcurrentHashMap getScreenshotsHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, boolean onlyIndex, boolean base64, String start, String end)
+	public ConcurrentHashMap getScreenshotsHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, boolean onlyIndex, boolean base64, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -1480,7 +1480,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public synchronized ConcurrentHashMap getScreenshotsHierarchyBinary(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getScreenshotsHierarchyBinary(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap toReturn = new ConcurrentHashMap();
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
@@ -1634,7 +1634,7 @@ public class DatabaseConnector
 		return toReturn;
 	}
 	
-	public synchronized ConcurrentHashMap getProcessDataHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getProcessDataHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap lastMap = new ConcurrentHashMap();
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
@@ -1904,7 +1904,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public synchronized ConcurrentHashMap getProcessDataHierarchyFix(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getProcessDataHierarchyFix(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -2077,7 +2077,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public synchronized ConcurrentHashMap getKeystrokesHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getKeystrokesHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -2217,7 +2217,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public synchronized ConcurrentHashMap getMouseHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getMouseHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -2358,7 +2358,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public synchronized ConcurrentHashMap getWindowDataHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getWindowDataHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -2731,7 +2731,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public synchronized ConcurrentHashMap getCollectedDataHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getCollectedDataHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		

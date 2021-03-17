@@ -68,7 +68,7 @@ public class TestingConnectionSource implements Runnable
 		*/
 	}
 	
-	public Connection getDatabaseConnection()
+	public synchronized Connection getDatabaseConnection()
 	{
 		if(closeThread == null || !(closeThread.isAlive()))
 		{
@@ -108,7 +108,7 @@ public class TestingConnectionSource implements Runnable
 		return null;
 	}
 	
-	public Connection getDatabaseConnectionNoTimeout()
+	public synchronized Connection getDatabaseConnectionNoTimeout()
 	{
 		
 		if(closeThread == null || !(closeThread.isAlive()))
