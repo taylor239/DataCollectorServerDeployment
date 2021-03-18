@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -136,7 +137,20 @@ public class TestingConnectionSource implements Runnable
 			}
 			
 			
-			Connection toReturn = singletonDataSource.getConnection();
+			Connection toReturn = null; // = singletonDataSource.getConnection();
+			while(toReturn == null || toReturn.isClosed() == true)
+			{
+				if(toReturn != null)
+				{
+					//toReturn.
+				}
+				
+				toReturn = singletonDataSource.getConnection();
+				if(toReturn == null || toReturn.isClosed() == true)
+				{
+					System.out.println("Problem getting connection: " + toReturn);
+				}
+			}
 			//toReturn.set
 			//if(!nextClose.containsKey(toReturn))
 			//{
@@ -174,9 +188,13 @@ public class TestingConnectionSource implements Runnable
         // using the connect string passed in the command line
         // arguments.
         //
+		Properties properties = new Properties();
+		properties.setProperty("user", myUsername);
+		properties.setProperty("password", myPassword);
+		properties.setProperty("maxTotal", "50");
         ConnectionFactory connectionFactory =
-            new DriverManagerConnectionFactory(connectURI, myUsername, myPassword);
-
+            new DriverManagerConnectionFactory(connectURI, properties);
+        
         //
         // Next we'll create the PoolableConnectionFactory, which wraps
         // the "real" Connections created by the ConnectionFactory with
@@ -185,6 +203,7 @@ public class TestingConnectionSource implements Runnable
         PoolableConnectionFactory poolableConnectionFactory =
             new PoolableConnectionFactory(connectionFactory, null);
         poolableConnectionFactory.setMaxConnLifetimeMillis(minTimeout * 2);
+        
         //poolableConnectionFactory.setMaxConnLifetimeMillis(1000);
         //
         // Now we'll need a ObjectPool that serves as the
@@ -198,7 +217,7 @@ public class TestingConnectionSource implements Runnable
         
         // Set the factory's pool property to the owning pool
         poolableConnectionFactory.setPool(connectionPool);
-
+        
         //
         // Finally, we create the PoolingDriver itself,
         // passing in the object pool we created.

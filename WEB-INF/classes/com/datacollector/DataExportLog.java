@@ -46,6 +46,7 @@ public class DataExportLog extends HttpServlet {
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
+		System.out.println("Got an export query");
 		try
 		{
 			Class.forName("com.mysql.jdbc.Driver");
@@ -59,7 +60,7 @@ public class DataExportLog extends HttpServlet {
 			TestingConnectionSource myConnectionSource = myConnector.getConnectionSource();
 			
 			
-			Connection dbConn = myConnectionSource.getDatabaseConnection();
+			
 			
 			String eventName = request.getParameter("event");
 
@@ -75,7 +76,7 @@ public class DataExportLog extends HttpServlet {
 					
 					PreparedStatement outerStmt = null;
 					ResultSet outerSet = null;
-					
+					Connection dbConn = myConnectionSource.getDatabaseConnection();
 					try
 					{
 						PreparedStatement queryStmt = dbConn.prepareStatement(loginQuery);

@@ -21,8 +21,6 @@ if(myConnector==null)
 }
 TestingConnectionSource myConnectionSource = myConnector.getConnectionSource();
 
-Connection dbConn = myConnectionSource.getDatabaseConnection();
-
 String eventName = request.getParameter("event");
 
 if(request.getParameter("email") != null)
@@ -35,6 +33,8 @@ if(request.getParameter("email") != null)
 		String password = request.getParameter("password");
 		
 		String loginQuery = "SELECT * FROM `openDataCollectionServer`.`Admin` WHERE `adminEmail` = ? AND `adminPassword` = ?";
+		
+		Connection dbConn = myConnectionSource.getDatabaseConnection();
 		try
 		{
 			PreparedStatement queryStmt = dbConn.prepareStatement(loginQuery);
