@@ -74,7 +74,7 @@ if(request.getParameter("email") != null)
 <table id="bodyTable">
 	<tr>
 		<td class="layoutTableSide leftCol">
-			<table id="optionFilterTable" width="100%" height="100%">
+			<table id="optionFilterTable" width="100%" height="100%" style="display:block; overflow-y:scroll">
 					<tr>
 						<td colspan="5">
 								<div align="center">
@@ -301,11 +301,11 @@ if(request.getParameter("email") != null)
 	border-radius:10px;
 	display: none;
 	position: absolute;
-	top: 6.75%;
-	left: 12.5%;
-	width: 75%;
-	height: 75%;
-	max-height:75%;
+	top: 2.5%;
+	left: 5%;
+	width: 90%;
+	height: 95%;
+	max-height:95%;
 	padding: 2px;
 	border: 4px solid #000;
 	background-color: white;
@@ -591,7 +591,7 @@ function fadeOutLightbox()
 						+"<td id = \"filter_" + (i - startFilters) + "_field\">"
 						+d["Field"]
 						+"</td>"
-						+"<td style=\"overflow-x:auto; overflow-y:auto; word-break:break-all; display:block; height:100%;\" id = \"filter_" + (i - startFilters) + "_value\">"
+						+"<td style=\"overflow-x:auto; overflow-y:auto; word-break:break-all; height:100%;\" id = \"filter_" + (i - startFilters) + "_value\">"
 						+d["Value"]
 						+"</td>"
 						+"<td class=\"clickableHover\" id = \"filter_" + (i - startFilters) + "_remove\">"
@@ -1365,6 +1365,8 @@ function fadeOutLightbox()
 		
 		var timelineZoom = Number(document.getElementById("timelineZoom").value);
 		visWidth = (visWidthParent) * timelineZoom;
+		
+		
 		
 		if(needsUpdate)
 		{
@@ -2967,12 +2969,12 @@ function fadeOutLightbox()
 												.attr("style", "cursor:pointer;")
 												.on("click", async function()
 														{
-															//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + userName + "&timestamp=" + getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Index MS"] + "&session=" + getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Original Session"] + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
-															showLightbox("<tr><td><div width=\"100%\"><img src=\""+ "data:image/jpg;base64," + (await getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Screenshot"]()) + "\" style=\"width: 100%;\"></div></td></tr>");
+															//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + userName + "&timestamp=" + getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Index MS"] + "&session=" + getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Original Session"] + "&event=" + eventName + "\" style=\"max-height: " + (windowHeight * .9) + "px; max-width:100%\"></div></td></tr>");
+															showLightbox("<tr><td><div width=\"100%\"><img src=\""+ "data:image/jpg;base64," + (await getScreenshot(userName, sessionName, (scale(curX) * 60000) + minSession)["Screenshot"]()) + "\" style=\"max-height: " + (windowHeight * .9) + "px; max-width:100%\"></div></td></tr>");
 														});
 										}
 										updateScreenshot();
-										//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + userName + "&timestamp=" + getScreenshot(userName, sessionName, screenshotIndex)["Index MS"] + "&session=" + sessionName + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
+										//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + userName + "&timestamp=" + getScreenshot(userName, sessionName, screenshotIndex)["Index MS"] + "&session=" + sessionName + "&event=" + eventName + "\" style=\"max-height: " + (windowHeight * .9) + "px; max-width:100%\"></div></td></tr>");
 										//console.log(minSession + (scale(curX) * 60000));
 										return scale(curX)
 									});
@@ -3268,6 +3270,9 @@ function fadeOutLightbox()
 
 		sessionBarG.lower();
 		backgroundG.lower();
+		
+		var visTableHeight = d3.select("#mainVisContainer").node().getBoundingClientRect().height;
+		d3.select("#optionFilterTable").attr("height", visTableHeight * .9);
 	}
 	
 	function startOld()
@@ -4143,6 +4148,7 @@ function fadeOutLightbox()
 		var lastFrame;
 		var lastImg = new Image();
 		
+		
 		var lastMouseClicks = [];
 		
 		var keyboardInputs = [];
@@ -4167,9 +4173,100 @@ function fadeOutLightbox()
 		
 		var prevLastScreenshot;
 		
+		async function loadImage(theFrame)
+		{
+			return new Promise(async function (resolve, reject)
+			{
+				lastImg.onload = async function()
+				{
+					resolve(lastImg);
+				}
+				lastImg.src = "data:image/jpg;base64," + (await (theFrame["Screenshot"]()));
+			})
+		}
+		
 		async function runAnimation()
 		{
+			var curFrame = screenshots[screenshotIndex];
+			
+			//console.log(curFrame);
+			
+			
+			//lastImg.src = "data:image/jpg;base64," + (await (curFrame["Screenshot"]()));
+			lastImg = await loadImage(curFrame);
+			
+			//console.log(lastImg);
+			
+			curScreenshot = backgroundG.append("image")
+				.attr("width", divBounds["width"])
+				.attr("height", divBounds["height"])
+				//.attr("preserveAspectRatio", "xMidYMid meet");
+				.attr("preserveAspectRatio", "none");
+			
+			//console.log(lastImg["height"]);
+			//console.log("Done setting initial pane");
+				
+				var xRatio = divBounds["width"] / lastImg["width"];
+				var yRatio = (divBounds["height"] * .8) / lastImg["height"];
+				var finalRatio = xRatio;
+				if(xRatio > yRatio)
+				{
+					finalRatio = yRatio;
+				}
+			
+			//console.log("Final ratio is " + finalRatio);
+				
+				var finalWidth = finalRatio * lastImg["width"];
+				var finalX = (divBounds["width"] - finalWidth) / 2;
+				
+				curScreenshot.attr("width", finalWidth)
+							.attr("x", finalX)
+							.attr("onload", function()
+									{
+										
+									})
+							.attr("height", finalRatio * lastImg["height"]);
+				
+				curScreenshot.attr("href", "data:image/jpg;base64," + (await curFrame["Screenshot"]()));
+				
+				textHeight = curScreenshot.attr("width") / 50;
+				
+				startY = finalRatio * lastImg["height"];
+				
+				if(!typedText)
+				{
+					typedText = animationG.append("text").attr("x", 0)
+						.attr("y", startY + textHeight + textPadding)
+						.text("Input:")
+						.attr("font-size", textHeight);
+				}
+				
+				if(prevLastScreenshot)
+				{
+					//prevLastScreenshot.remove();
+					garbageToRemove.push(prevLastScreenshot);
+				}
+				if(lastScreenshot)
+				{
+					prevLastScreenshot = lastScreenshot;
+					//lastScreenshot.remove();
+				}
+				lastScreenshot = curScreenshot;
+				for(toRemove in garbageToRemove)
+				{
+					if(curFrame["Index MS Session"] - garbageToRemove[toRemove]["Index MS Session"] > 10000)
+					{
+						garbageToRemove[toRemove].remove();
+					}
+				}
+			
+			runAnimationWrapped();
+		}
+		
+		async function runAnimationWrapped()
+		{
 			var curFrame = nextFrame();
+			
 			//console.log(curFrame);
 			
 			if(curFrame)
@@ -4215,7 +4312,9 @@ function fadeOutLightbox()
 				//.attr("preserveAspectRatio", "xMidYMid meet");
 				.attr("preserveAspectRatio", "none");
 				
-				lastImg.src = "data:image/jpg;base64," + (await curFrame["Screenshot"]());
+				//lastImg.src = "data:image/jpg;base64," + (await curFrame["Screenshot"]());
+				lastImg = await loadImage(curFrame);
+				
 				
 				var xRatio = divBounds["width"] / lastImg["width"];
 				var yRatio = (divBounds["height"] * .8) / lastImg["height"];
@@ -4228,14 +4327,15 @@ function fadeOutLightbox()
 				var finalWidth = finalRatio * lastImg["width"];
 				var finalX = (divBounds["width"] - finalWidth) / 2;
 				
-				curScreenshot.attr("href", "data:image/jpg;base64," + (await curFrame["Screenshot"]()))
-							.attr("width", finalWidth)
+				curScreenshot.attr("width", finalWidth)
 							.attr("x", finalX)
 							.attr("onload", function()
 									{
 										
 									})
 							.attr("height", finalRatio * lastImg["height"]);
+				
+				curScreenshot.attr("href", "data:image/jpg;base64," + (await curFrame["Screenshot"]()));
 				
 				textHeight = curScreenshot.attr("width") / 50;
 				
@@ -4425,12 +4525,12 @@ function fadeOutLightbox()
 			if(playing && curFrame && (!(lastFrame)))
 			{
 				axisTick .style("transition", (Number(curFrame["Index MS Session"]) / playbackSpeedMultiplier) + "ms linear");
-				animationTimeout = setTimeout(runAnimation, Number(curFrame["Index MS Session"]) / playbackSpeedMultiplier);
+				animationTimeout = setTimeout(runAnimationWrapped, Number(curFrame["Index MS Session"]) / playbackSpeedMultiplier);
 			}
 			else if(playing && curFrame)
 			{
 				axisTick .style("transition", ((Number(curFrame["Index MS Session"]) - Number(lastFrame["Index MS Session"])) / playbackSpeedMultiplier) + "ms linear");
-				animationTimeout = setTimeout(runAnimation, (Number(curFrame["Index MS Session"]) - Number(lastFrame["Index MS Session"])) / playbackSpeedMultiplier);
+				animationTimeout = setTimeout(runAnimationWrapped, (Number(curFrame["Index MS Session"]) - Number(lastFrame["Index MS Session"])) / playbackSpeedMultiplier);
 			}
 			lastFrame = curFrame;
 		}
@@ -4710,8 +4810,8 @@ function fadeOutLightbox()
 		.attr("style", "cursor:pointer;")
 		.on("click", function()
 				{
-					//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + owningUser + "&timestamp=" + getScreenshot(owningUser, screenshotSession, screenshotIndex)["Index MS"] + "&session=" + screenshotSession + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
-					showLightbox("<tr><td><div width=\"100%\"><img src=\"data:image/jpg;base64," + (await (theNormData[owningUser][owningSession]["screenshots"][0]["Screenshot"]())) + "\" style=\"width: 100%;\"></div></td></tr>");
+					//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + owningUser + "&timestamp=" + getScreenshot(owningUser, screenshotSession, screenshotIndex)["Index MS"] + "&session=" + screenshotSession + "&event=" + eventName + "\" style=\"max-height: " + (windowHeight * .9) + "px; max-width:100%\"></div></td></tr>");
+					showLightbox("<tr><td><div width=\"100%\"><img src=\"data:image/jpg;base64," + (await (theNormData[owningUser][owningSession]["screenshots"][0]["Screenshot"]())) + "\" style=\"max-height: " + (windowHeight * .9) + "px; max-width:100%\"></div></td></tr>");
 				});
 		
 		
@@ -5762,8 +5862,8 @@ function fadeOutLightbox()
 				.attr("style", "cursor:pointer;")
 				.on("click", async function()
 						{
-							showLightbox("<tr><td><div width=\"100%\"><img src=\"data:image/jpg;base64," + (await (getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Screenshot"]())) + "\" style=\"width: 100%;\"></div></td></tr>");
-							//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Index MS"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName + "\" style=\"width: 100%;\"></div></td></tr>");
+							showLightbox("<tr><td><div width=\"100%\"><img src=\"data:image/jpg;base64," + (await (getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Screenshot"]())) + "\" style=\"max-height: " + (windowHeight * .9) + "px; max-width:100%\"></div></td></tr>");
+							//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Index MS"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName + "\" style=\"max-height: " + (windowHeight * .9) + "px; max-width:100%\"></div></td></tr>");
 						});
 		
 		d3.select("#extraHighlightDiv")
