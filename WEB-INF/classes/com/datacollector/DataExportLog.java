@@ -63,7 +63,22 @@ public class DataExportLog extends HttpServlet {
 			
 			
 			String eventName = request.getParameter("event");
+			
+			String eventPassword = request.getParameter("eventPassword");
 
+			if(eventPassword != null)
+			{
+				session.setAttribute("eventPassword", eventPassword);
+			}
+			
+			String eventAdmin = request.getParameter("eventAdmin");
+
+			if(eventAdmin != null)
+			{
+				session.setAttribute("eventAdmin", eventAdmin);
+			}
+			
+			
 			if(request.getParameter("email") != null)
 			{
 				session.removeAttribute("admin");
@@ -111,6 +126,46 @@ public class DataExportLog extends HttpServlet {
 			
 			String admin = (String)session.getAttribute("admin");
 			
+			eventPassword = (String)session.getAttribute("eventPassword");
+			eventAdmin = (String)session.getAttribute("eventAdmin");
+			
+			//boolean fromAnon = session.getAttribute("fromAnon").equals("true");
+			
+			
+			boolean anon = false;
+			
+			
+			if(admin == null || admin.isEmpty())
+			{
+				System.out.println("Anon request");
+				anon = true;
+				admin = myConnector.getPermission(eventName, eventAdmin, eventPassword);
+			}
+			
+			boolean fromAnon = anon;
+			
+			ConcurrentHashMap userMap = null;
+			ConcurrentHashMap inverseUserMap = null;
+			if(fromAnon || anon)
+			{
+				System.out.println("Building user map");
+				userMap = new ConcurrentHashMap();
+				inverseUserMap = new ConcurrentHashMap();
+				ArrayList userList = myConnector.getUsers(eventName, admin);
+				//System.out.println(userList);
+				for(int x = 0; x < userList.size(); x++)
+				{
+					ConcurrentHashMap curUser = (ConcurrentHashMap) userList.get(x);
+					//System.out.println(curUser);
+					if(!userMap.containsKey(curUser.get("Username")))
+					{
+						userMap.put(curUser.get("Username"), "User" + x);
+						inverseUserMap.put("User" + x, curUser.get("Username"));
+					}
+				}
+				//System.out.println(inverseUserMap);
+			}
+			
 			String toSelect = request.getParameter("datasources");
 			
 			String normalize = request.getParameter("normalize");
@@ -148,8 +203,19 @@ public class DataExportLog extends HttpServlet {
 			if(usersToSelect != null && !usersToSelect.isEmpty() && !usersToSelect.equals("null"))
 			{
 				String[] userSelectArray = usersToSelect.split(",");
-				Collections.addAll(userSelectList, userSelectArray);
-				System.out.println(userSelectList);
+				if(fromAnon)
+				{
+					for(int x=0; x<userSelectArray.length; x++)
+					{
+						//System.out.println(userSelectArray[x]);
+						userSelectList.add(inverseUserMap.get(userSelectArray[x]));
+					}
+				}
+				else
+				{
+					Collections.addAll(userSelectList, userSelectArray);
+				}
+				//System.out.println(userSelectList);
 			}
 			else
 			{
@@ -265,6 +331,28 @@ public class DataExportLog extends HttpServlet {
 			
 			ConcurrentHashMap finalMap = new ConcurrentHashMap();
 			ArrayList finalList = new ArrayList();
+			
+			if(anon)
+			{
+				System.out.println("Anon data");
+				ConcurrentHashMap newMap = new ConcurrentHashMap();
+				Iterator userIterator = headMap.entrySet().iterator();
+				
+				//int userNum = 0;
+				
+				while(userIterator.hasNext())
+				{
+					Entry userEntry = (Entry) userIterator.next();
+					String curUser = (String) userEntry.getKey();
+					
+					ConcurrentHashMap sessionMap = (ConcurrentHashMap) userEntry.getValue();
+					newMap.put(userMap.get(curUser), sessionMap);
+					
+					//userNum++;
+				}
+				
+				headMap = newMap;
+			}
 			
 			if(normalize != null && !normalize.equals("none"))
 			{

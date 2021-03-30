@@ -49,7 +49,7 @@ public class DatabaseConnector
 			"INNER JOIN `Process` ON `Window`.`username` = `Process`.`username` AND `Window`.`session` = `Process`.`session` AND `Window`.`event` = `Process`.`event` AND `Window`.`adminEmail` = `Process`.`adminEmail` AND `Window`.`user` = `Process`.`user` AND `Window`.`pid` = `Process`.`pid` AND `Window`.`start` = `Process`.`start`\n" + 
 			"WHERE `Window`.`event` = ? AND `Window`.`adminEmail` = ?\n" + 
 			"ORDER BY `overallUser`, `overallSession`, `overallTime`, `overallTimeChanged`, `overallPid`, `overallXid`";
-	private String userQuery = "SELECT * FROM `openDataCollectionServer`.`User` WHERE `event` = ? AND `adminEmail` = ?";
+	private String userQuery = "SELECT * FROM `openDataCollectionServer`.`User` WHERE `event` = ? AND `adminEmail` = ? ORDER BY `username`, `session` ASC";
 	
 	private String keyboardQuery = "SELECT *, 'keyboard' AS `fromInput` FROM `openDataCollectionServer`.`KeyboardInput`\n" + 
 			"WHERE `event` = ? AND `adminEmail` = ?\n" + 
@@ -105,6 +105,8 @@ public class DatabaseConnector
 	private String sessionDetailsQuery = "SELECT * FROM `openDataCollectionServer`.`User` WHERE `event` = ? AND `adminEmail` = ? ORDER BY `insertTimestamp` ASC";
 	
 	private String limiter = " LIMIT ?, ?";
+	
+	private String checkPerms = "SELECT `adminEmail` FROM `EventPassword` WHERE `event` = ? AND `adminEmail` = ? AND `password` = ?";
 	
 	private TestingConnectionSource mySource;
 	
@@ -636,6 +638,51 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
+	public String getPermission(String eventName, String eventAdmin, String password)
+	{
+		String myReturn = "";
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		
+		conn = myConnector;
+		try
+		{
+			PreparedStatement myStatement = myConnector.prepareStatement(checkPerms);
+			myStatement.setString(1, eventName);
+			myStatement.setString(2, eventAdmin);
+			myStatement.setString(3, password);
+			ResultSet myResults = myStatement.executeQuery();
+			
+			while(myResults.next())
+			{
+				myReturn = myResults.getString("adminEmail");
+			}
+			
+			
+			stmt = myStatement;
+			rset = myResults;
+			
+			rset.close();
+			stmt.close();
+			conn.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (rset != null) rset.close(); } catch(Exception e) { }
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		return myReturn;
+	}
 	
 	public ArrayList getUsers(String event, String admin)
 	{
@@ -649,6 +696,7 @@ public class DatabaseConnector
 		conn = myConnector;
 		try
 		{
+			//System.out.println(userQuery);
 			PreparedStatement myStatement = myConnector.prepareStatement(userQuery);
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
@@ -658,6 +706,7 @@ public class DatabaseConnector
 				ConcurrentHashMap nextRow = new ConcurrentHashMap();
 				nextRow.put("Username", myResults.getString("username"));
 				nextRow.put("Session", myResults.getString("session"));
+				//System.out.println(nextRow);
 				myReturn.add(nextRow);
 			}
 			stmt = myStatement;

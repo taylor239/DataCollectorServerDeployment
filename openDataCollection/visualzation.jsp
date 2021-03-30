@@ -23,6 +23,21 @@ TestingConnectionSource myConnectionSource = myConnector.getConnectionSource();
 
 String eventName = request.getParameter("event");
 
+String eventPassword = request.getParameter("eventPassword");
+
+if(eventPassword != null)
+{
+	session.setAttribute("eventPassword", eventPassword);
+}
+
+String eventAdmin = request.getParameter("eventAdmin");
+
+if(eventAdmin != null)
+{
+	session.setAttribute("eventAdmin", eventAdmin);
+}
+
+
 if(request.getParameter("email") != null)
 {
 	session.removeAttribute("admin");
@@ -67,7 +82,9 @@ if(request.getParameter("email") != null)
 		
 		</td>
 		<td class="layoutTableSide" style="border:0">
-		
+		<div align="right">
+			Lost? <button type="button" onclick="tutorial()">Info</button>
+		</div>
 		</td>
 	</tr>
 </table>
@@ -194,7 +211,7 @@ if(request.getParameter("email") != null)
 			</td></tr>
 			</table>
 		</td>
-		<td class="layoutTableSide rightCol">
+		<td id="legendTable" class="layoutTableSide rightCol">
 			<table width="100%" height="100%">
 					<tr>
 						<td>
@@ -228,7 +245,7 @@ if(request.getParameter("email") != null)
 				</tr>
 			</table>
 		</td>
-		<td class="layoutTableCenter centerCol">
+		<td class="layoutTableCenter centerCol", id="graphCell">
 			<table id="graphTable" width="100%" class="dataTable">
 				<tr>
 					<td>
@@ -294,6 +311,18 @@ if(request.getParameter("email") != null)
 	opacity:0;
 	cursor:pointer;
 }
+
+.black_highlight
+{
+	transition:300ms linear;
+	position: absolute;
+	top: 0%;
+	left: 0%;
+	width: 100%;
+	height: 100%;
+	z-index:1001;
+	cursor:pointer;
+}
  
 .white_content
 {
@@ -317,6 +346,22 @@ if(request.getParameter("email") != null)
 	vertical-align:middle;
 }
 
+.white_dim
+{
+	transition:300ms linear;
+	border-radius:10px;
+	display: block;
+	padding: 2px;
+	border: 4px solid #000;
+	background-color: white;
+	z-index:1002;
+	overflow: auto;
+	text-align:center;
+	cursor:pointer;
+	opacity:0;
+	vertical-align:middle;
+}
+
 .white_content td
 {
 	text-align:center;
@@ -326,6 +371,207 @@ if(request.getParameter("email") != null)
 </style>
 
 <script>
+
+function getFullWidth() {
+	  return Math.max(
+	    document.body.scrollWidth,
+	    document.documentElement.scrollWidth,
+	    document.body.offsetWidth,
+	    document.documentElement.offsetWidth,
+	    document.documentElement.clientWidth
+	  );
+	}
+
+	function getFullHeight() {
+	  return Math.max(
+	    document.body.scrollHeight,
+	    document.documentElement.scrollHeight,
+	    document.body.offsetHeight,
+	    document.documentElement.offsetHeight,
+	    document.documentElement.clientHeight
+	  );
+	}
+
+var curFunction;
+
+var curTutorialIndex = 0;
+
+var tutorialArray = [];
+
+var titleTutorial = {id: "title", caption: "This is the event you are viewing and the progress of your download.  The visualization first downloads index data and presents that and asynchronously downloads screenshots after.  All data is cached locally."};
+tutorialArray.push(titleTutorial);
+var optionsTutorial = {id: "optionFilterTable", caption: "This is the options and filtering table.  Playback speed is the rate animations are played at as a multiplier of real world time.  Timeline Zoom allows you to zoom in and enlarge the data in the timeline window.  Filters: TODO: write document explaining how this works."};
+tutorialArray.push(optionsTutorial);
+var timelineTutorial = {id: "visRow", caption: "This is the timeline view.  This shows what users were doing when they had data collection software open.  The first item you see on top is the username and the total time period they worked across all sessions - a session being a time period from startup to shutdown on a single device.  Below the username bar are individual sessions from that user.  The time scale for all data is relative to the session; that is, if a window is open 5 minutes into the session then that is where it will be on time time scale, which is visible and labeled just above the middle of each session bar.  The very top bar of each session shows the active window at the given time.  You can click on a window to focus on the session (bringing up the session process graph below, more on that in a minute) and info about the active window.  The bar below th active window bar (just above the time scale) shows screenshots.  You can mouse over to highlight and view individual screenshots.  The bottom bar (the bottom half of a session) is reserved for annotation/task/event data.  Both user supplied and analyst generated annotations go there.  Similarly to selecting a window, clicking on a task selects the session and provides the process info and info about the task.  Red bars lebeled Filter will filter out the data it is attached to - clicking Filter next to a username will filter out the user and clicking next to session bars will filter out the session.  The Play button shows the screenshots, keyboard, mouse, and window data from the session in an animation."};
+tutorialArray.push(timelineTutorial);
+var legendTutorial = {id: "legendTable", caption: "The legend shows what the colors on the timelines correspond to.  Note that windows are labeled by their program, not by their current title, which can be confusing when dealing with windows that frequently change titles such as web browsers.  Each separate title appears as a different entry on the timeline but of the same color.  The legend also shows which user(s) entered which tasks through color coding them."};
+tutorialArray.push(legendTutorial);
+var graphTutorial = {id: "graphCell", caption: "This is the graph table.  By default, it shows summary statistics from all of the sessions (after filters have been applied) and shows process CPU usage over time for sessions when selected.  When a session is selected, a timeline will also appear here; that timeline allows you to enter tasks/events/annotations manually.  Drag your mouse on the timeline to select the time period for your annotation and then enter the annotation and push the Submit button to save it.  It will now appear on the timeline for you.  Note that you must have an admin login to use this feature.  Finally, below the graph is a info table.  When you select items on the timeline, the detailed data of your selection will be there."};
+tutorialArray.push(graphTutorial);
+
+function tutorial()
+{
+	console.log("Starting tutorial")
+	curTutorialIndex = 0;
+	nestedTutorial();
+}
+
+function nestedTutorial()
+{
+	if(curTutorialIndex < tutorialArray.length)
+	{
+		dimBackground(document.getElementById(tutorialArray[curTutorialIndex]["id"]), tutorialArray[curTutorialIndex]["caption"], nestedTutorial);
+		curTutorialIndex++;
+	}
+}
+
+function dimBackground(toHighlight, captionText, nextFunction)
+{
+	
+	curFunction = nextFunction;
+	
+	var totalWidth = getFullWidth();
+	var totalHeight = getFullHeight();
+	
+	
+	var eleX = Math.round(toHighlight.getBoundingClientRect()["x"]);
+	var eleY = Math.round(toHighlight.getBoundingClientRect()["y"]);
+	var eleWidth = Math.round(toHighlight.getBoundingClientRect()["width"]);
+	var eleHeight = Math.round(toHighlight.getBoundingClientRect()["height"]);
+	
+	var surroundingRects = [];
+	
+	var leftRect = {x: 0, y: 0, width: eleX, height: totalHeight};
+	var topRect = {x: eleX, y:0, width: eleWidth, height: eleY};
+	var bottomRect = {x: eleX, y: eleY + eleHeight, width: eleWidth, height: totalHeight - (eleY + eleHeight)};
+	var rightRect = {x: eleX + eleWidth, y: 0, width: totalWidth - (eleX + eleWidth), height: totalHeight};
+	surroundingRects.push(leftRect);
+	surroundingRects.push(topRect);
+	surroundingRects.push(bottomRect);
+	surroundingRects.push(rightRect);
+	
+	
+	var newBlackDiv=document.createElement('div');
+	newBlackDiv.className="black_highlight";
+	//newBlackDiv.style.position = "absolute";
+	//newBlackDiv.style.display = "block";
+	//newBlackDiv.style.width = totalWidth + "px";
+	//newBlackDiv.style.height = totalHeight + "px";
+	newBlackDiv.id="fade";
+	document.body.appendChild(newBlackDiv);
+	newBlackDiv.onclick=undimBackground;
+	newBlackDiv.style.opacity=0;
+	
+	var dimSVG = d3.select(newBlackDiv).append("svg")
+	dimSVG.attr("width", "100%")
+		.attr("height", "100%")
+		.selectAll("rect")
+		.data(surroundingRects)
+		.enter()
+		.append("rect")
+		.attr("x", function(d, i)
+				{
+					return d["x"];
+				})
+		.attr("y", function(d, i)
+				{
+					return d["y"];
+				})
+		.attr("width", function(d, i)
+				{
+					return d["width"];
+				})
+		.attr("height", function(d, i)
+				{
+					return d["height"];
+				})
+		.attr("fill", "Black")
+		.attr("opacity", ".8")
+		.on("click", "undimBackground()");
+	
+	dimSVG.append("text")
+		.attr("fill", "white")
+		.text("Click anywhere to continue.")
+		.attr("alignment-baseline", "hanging")
+		.attr("dominant-baseline", "hanging")
+		.attr("text-anchor", "middle")
+		.attr("x", "50%")
+		.attr("y", "1%");
+	
+	var minWidth = totalWidth * .15;
+	if(eleWidth > minWidth)
+	{
+		minWidth = eleWidth;
+	}
+	
+	if(captionText)
+	{
+		var box = document.createElement('span');
+		box.style.position = 'absolute'; 
+		box.style.left = eleX + "px";
+		box.style.right = (totalWidth - (eleX + minWidth)) + "px";
+		if((eleY + eleHeight) > (totalHeight * .75))
+		{
+			
+			box.style.bottom = (totalHeight - eleY) + "px";
+		}
+		else
+		{
+			box.style.top = (eleY + eleHeight) + "px";
+			
+		}
+		box.className="white_dim";
+		box.id="light";
+		box.onclick=undimBackground;
+		box.innerHTML=captionText;
+		document.body.appendChild(box);
+	}
+	
+	dimTimeout=setTimeout("fadeInDim();", 1);
+}
+
+function fadeInDim()
+{
+	var oldBlackDiv=document.getElementById('fade');
+	oldBlackDiv.style.opacity=.8;
+	var oldWhiteDiv=document.getElementById('light');
+	oldWhiteDiv.style.opacity=1;
+}
+
+function undimBackground()
+{
+	clearTimeout(lightBoxTimeout);
+	
+	var oldBlackDiv=document.getElementById('fade');
+	oldBlackDiv.style.opacity=0;
+	var oldWhiteDiv=document.getElementById('light');
+	if(oldWhiteDiv)
+	{
+		oldWhiteDiv.style.opacity=0;
+	}
+	
+	lightBoxTimeout=setTimeout("fadeOutDim();", 300);
+}
+
+function fadeOutDim()
+{
+	var oldBlackDiv=document.getElementById('fade');
+	oldBlackDiv.display="none";
+	
+	var oldWhiteDiv=document.getElementById('light');
+	if(oldWhiteDiv)
+	{
+		oldWhiteDiv.display="none";
+		document.body.removeChild(oldWhiteDiv);
+	}
+	
+	document.body.removeChild(oldBlackDiv);
+	
+	if(curFunction)
+	{
+		curFunction();
+	}
+}
 
 var lightBoxTimeout;
 
@@ -959,7 +1205,61 @@ function fadeOutLightbox()
 	var db;
 	var objectStore;
 	
+	var curQueue = [];
+	
+	var persistWriting = false;
 	async function persistData(key, value)
+	{
+		var args = {};
+		args["key"] = key;
+		args["value"] = value;
+		//console.log(args);
+		curQueue.push(args);
+		//console.log(curQueue);
+		if(!persistWriting)
+		{
+			writePersist();
+		}
+		return new Promise(async function (resolve, reject)
+		{
+			resolve(true);
+		})
+	}
+	
+	async function writePersist()
+	{
+		persistWriting = true;
+		console.log("Starting write worker");
+		curWrite = curQueue.pop();
+		while(curWrite)
+		{
+			d3.select("body").style("cursor", "wait");
+			//console.log(curWrite);
+			await wrappedPersistData(curWrite["key"], curWrite["value"]);
+			curWrite = curQueue.pop();
+		}
+		persistWriting = false;
+		d3.select("body").style("cursor", "");
+	}
+	
+	Function.prototype.clone = function() {
+    var that = this;
+    var temp = function temporary() { return that.apply(this, arguments); };
+    for(var key in this) {
+        if (this.hasOwnProperty(key)) {
+            temp[key] = this[key];
+        }
+    }
+    return temp;
+	};
+	
+	var blockingPersist = false;
+	//async function persistData(key, value)
+	//{
+	//	return await toClonePersistData.clone()(key, value);
+	//}
+	
+	async function wrappedPersistData(key, value)
 	{
 		// In the following line, you should include the prefixes of implementations you want to test.
 		window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
@@ -997,6 +1297,7 @@ function fadeOutLightbox()
 					}
 					catch(err)
 					{
+						console.log(err);
 						reject(err);
 					}
 				}
@@ -1148,6 +1449,7 @@ function fadeOutLightbox()
 	async function getScreenshotData()
 	{
 		//console.log("Getting screenshot:");
+		//console.log(this);
 		var hashVal = this["ImageHash"];
 		//console.log(hashVal);
 		var toReturn = (await retrieveData(hashVal));
@@ -1179,8 +1481,8 @@ function fadeOutLightbox()
 			persistData("time", new Date());
 			needsUpdate = true;
 		}
-		lastTime = (await retrieveData("time").value)
-		origTitle += ", last visit on " + lastTime;
+		lastTime = (await retrieveData("time"));
+		//origTitle += ", last visit on " + lastTime;
 		
 		d3.select("#title")
 			.html(origTitle);
@@ -1195,7 +1497,11 @@ function fadeOutLightbox()
 					theNormData = preprocess(data);
 					try
 					{
-						await persistData("data", theNormData);
+						var isDone = false;
+						while(!isDone)
+						{
+							isDone = await persistData("data", theNormData);
+						}
 					}
 					catch(err)
 					{
@@ -1287,7 +1593,11 @@ function fadeOutLightbox()
 							//console.log(imageArray[screenshot]);
 							try
 							{
-								await persistData(hashVal, curScreenshotList[screenshot]["Screenshot"]);
+								var isDone = false;
+								while(!isDone)
+								{
+									isDone = await persistData(hashVal, curScreenshotList[screenshot]["Screenshot"]);
+								}
 							}
 							catch(err)
 							{
@@ -5742,6 +6052,8 @@ function fadeOutLightbox()
 				});
 	}
 	
+	var objectCacheMap = {};
+	
 	var curSelectProcess;
 	var curSelElements = [];
 	
@@ -5752,6 +6064,9 @@ function fadeOutLightbox()
 			clearWindow();
 		}
 		var curSlot = lookupTable[username][session][type][timestamp];
+		
+		curSlot["Hash"] = SHA256(curSlot["User"] + curSlot["Original Session"] + curSlot["Index MS"]);
+		
 		//console.log(curSlot);
 		var formattedSlot = [];
 		var finalFormattedSlot = [];
@@ -5824,12 +6139,21 @@ function fadeOutLightbox()
 		
 		if(type == "Events")
 		{
+			
 			if(curSlot["Original Session"] != "User")
 			{
 				d3.select("#extraInfoTable")
 					.append("tr")
 					.html("<td colspan=\"4\"><button type=\"button\" onclick=\"deleteTask('cgtboy1988', '" + curSlot["Original Session"] + "', '" + curSlot["TaskName"] + "', '" + curSlot["Index MS"] + "')\">Delete</button></td>");
 			}
+			
+			
+			objectCacheMap[curSlot["Hash"]] = curSlot;
+			
+			d3.select("#extraInfoTable")
+				.append("tr")
+				.html("<td colspan=\"2\"><button type=\"button\" onclick=\"buildTaskMap('cgtboy1988', '" + curSlot["Original Session"] + "', '" + curSlot["Hash"] + "', true)\">Build Attack Graph Session Limited</button></td>"
+						+ "<td colspan=\"2\"><button type=\"button\" onclick=\"buildTaskMap('cgtboy1988', '" + curSlot["Original Session"] + "', '" + curSlot["Hash"] + "', false)\">Build Attack Graph User Limited</button></td>");
 		}
 		
 		d3.select("#extraInfoTable")
@@ -5882,6 +6206,277 @@ function fadeOutLightbox()
 		
 	}
 	
+	function binarySearch(items, value)
+	{
+	    var firstIndex  = 0,
+	        lastIndex   = items.length - 1,
+	        middleIndex = Math.floor((lastIndex + firstIndex)/2);
+
+	    while(items[middleIndex]["Index MS"] != value && firstIndex < lastIndex)
+	    {
+	       if (value < items[middleIndex]["Index MS"])
+	        {
+	            lastIndex = middleIndex - 1;
+	        } 
+	      else if (value > items[middleIndex]["Index MS"])
+	        {
+	            firstIndex = middleIndex + 1;
+	        }
+	        middleIndex = Math.floor((lastIndex + firstIndex)/2);
+	    }
+		return middleIndex;
+	}
+	
+	async function buildTaskMap(user, session, task, onlySession, colissionMap)
+	{
+		console.log(task);
+		
+		
+		if(task.constructor.name == "String")
+		{
+			task = objectCacheMap[task];
+		}
+		
+		console.log(task);
+		
+		
+		if(!colissionMap)
+		{
+			colissionMap = {};
+		}
+		
+		var thisHash = SHA256(task["User"] + task["Original Session"] + task["TaskName"]);
+		if(colissionMap[thisHash])
+		{
+			console.log("Found in cache")
+			return colissionMap[thisHash];
+		}
+		var concurrentTasks = [];
+		var childTasks = [];
+		
+		var toReturn = {};
+		toReturn["Parent Task"] = task;
+		toReturn["Concurrent Tasks"] = concurrentTasks;
+		toReturn["Child Tasks"] = childTasks
+		
+		if(!(task["Next"]))
+		{
+			return toReturn;
+		}
+		
+		var sessions = [];
+		var sessionTasks = {};
+		var sessionCurIndices = {};
+		//First we select all of the task arrays.
+		
+		if(onlySession)
+		{
+			sessions.push(session);
+			sessionTasks[session] = theNormData[user][session]["events"];
+		}
+		else
+		{
+			for(entry in theNormData[user]["Session Ordering"]["Order List"])
+			{
+				//console.log(entry);
+				//console.log(theNormData[user]["Session Ordering"]["Order List"][entry])
+				if(theNormData[user]["Session Ordering"]["Order List"][entry] == -1)
+				{
+					continue;
+				}
+				else
+				{
+					var curSession = theNormData[user]["Session Ordering"][theNormData[user]["Session Ordering"]["Order List"][entry]];
+					
+					
+					
+					if(theNormData[user][curSession]["events"])
+					{
+						//if(Number(theNormData[user][curSession]["events"][0]["Index MS"]) < Number(task["Next"]["Index MS"]) || theNormData[user][curSession]["events"][theNormData[user][curSession]["events"].length - 1]["Index MS"] > task["Index MS"])
+						{
+							sessions.push(curSession);
+							sessionTasks[curSession] = theNormData[user][curSession]["events"];
+						}
+					}
+				}
+			}
+		}
+		
+		console.log(sessions);
+		console.log(sessionTasks);
+		
+		
+		var sessionsIncluded = [];
+		//Next we find the start and end indices in each session based.
+		//on the parent task start and end.  All task events we look
+		//at will be in between these indices.
+		for(entry in sessions)
+		{
+			var alreadyIn = false;
+			var curSession = sessionTasks[sessions[entry]];
+			var startNode = binarySearch(curSession, task["Index MS"]);
+			var endNode = binarySearch(curSession, task["Next"]["Index MS"]);
+			
+			while((curSession[startNode]["Index MS"] < task["Index MS"] || curSession[startNode] == task) && startNode < curSession.length)
+			{
+				if(curSession[startNode]["Index MS"] > task["Next"]["Index MS"])
+				{
+					//return toReturn;
+					break;
+				}
+				if(startNode == endNode)
+				{
+					//break;
+					//return toReturn;
+				}
+				startNode++;
+			}
+			if(curSession[startNode]["Index MS"] > task["Next"]["Index MS"])
+			{
+				break;
+				//return toReturn;
+			}
+			else
+			{
+				alreadyIn = true;
+				sessionCurIndices["start_" + sessions[entry]] = startNode;
+				sessionsIncluded.push(sessions[entry]);
+				console.log("Starting at:");
+				console.log(curSession[startNode]);
+			}
+			
+			sessionCurIndices["start_" + sessions[entry]] = startNode;
+			
+			while((curSession[endNode]["Index MS"] > task["Next"]["Index MS"] || curSession[endNode] == task["Next"]) && endNode > 0)
+			{
+				if(curSession[endNode]["Index MS"] < task["Index MS"])
+				{
+					break;
+					//return toReturn;
+				}
+				if(startNode == endNode)
+				{
+					//break;
+					//return toReturn;
+				}
+				endNode--;
+			}
+			if(curSession[endNode]["Index MS"] < task["Index MS"])
+			{
+				break;
+				//return toReturn;
+			}
+			else
+			{
+				sessionCurIndices["end_" + sessions[entry]] = endNode;
+				if(!alreadyIn)
+				{
+					sessionsIncluded.push(sessions[entry]);
+				}
+				console.log("Ending at:");
+				console.log(curSession[endNode]);
+			}
+			
+			
+		}
+		
+		
+		//This helper function returns the next task from all session
+		//lists.
+		if(sessionsIncluded.length == 0)
+		{
+			return toReturn;
+		}
+		
+		function nextTask()
+		{
+			var toReturn;
+			var minEvent = Infinity;
+			var finalSession = "";
+			console.log(sessionCurIndices);
+			//console.log(sessionsIncluded);
+			for(entry in sessionsIncluded)
+			{
+				//console.log(sessionsIncluded[entry]);
+				var curSession = sessionTasks[sessionsIncluded[entry]];
+				//console.log("start_" + sessionsIncluded[entry]);
+				var curStart = sessionCurIndices["start_" + sessionsIncluded[entry]];
+				var curEnd = sessionCurIndices["end_" + sessionsIncluded[entry]];
+				
+				//console.log("Start " + curStart);
+				//console.log("End " + curEnd);
+				
+				if(curStart <= curEnd)
+				{
+					if(curSession[curStart]["Index MS"] < minEvent)
+					{
+						minEvent = curSession[curStart]["Index MS"];
+						toReturn = curSession[curStart];
+						finalSession = sessionsIncluded[entry];
+					}
+				}
+			}
+			sessionCurIndices["start_" + finalSession] = sessionCurIndices["start_" + finalSession] + 1;
+			return toReturn;
+		}
+		
+		
+		
+		//Iterate through tasks.  If the task starts or ends during
+		//this task but not both, it is a concurrent task.  Add it to
+		//list of concurrencies.  If the task starts and ends during
+		//this task then it is a child/subtask.  Recursively call
+		//this function to build children/concurrencies in the child/
+		//subtask.  With child concurrencies, if they are encompassed
+		//within the parent then delete and add as another child and
+		//call the same recursive function.  Else add the task as a
+		//concurrence to the parent.  Continue iteration after this
+		//subtask.
+		
+		var hasTask = {};
+		
+		var theTask = nextTask();
+		var curEnd;
+		while(theTask)
+		{
+			var taskHash = SHA256(theTask["User"] + theTask["Original Session"] + theTask["TaskName"]);
+			
+			theTask["Task Hash"] = taskHash;
+			console.log(theTask);
+			if(taskHash in hasTask)
+			{
+				
+			}
+			else
+			{
+				//buildTaskMap(user, session, task, onlySession, colissionMap)
+				hasTask[taskHash] = true;
+				if(theTask["Description"] == "end" || !(theTask["Next"]) || theTask["Next"]["Index MS"] > task["Next"]["Index MS"])
+				{
+					var builtTask = await buildTaskMap(user, session, theTask, onlySession, colissionMap)
+					concurrentTasks.push(builtTask);
+				}
+				else
+				{
+					if(!(curEnd) || theTask["Next"]["Index MS"] > curEnd["Next"]["Index MS"])
+					{
+						var builtTask = await buildTaskMap(user, session, theTask, onlySession, colissionMap)
+						childTasks.push(builtTask);
+						curEnd = theTask;
+					}
+				}
+			}
+			
+			console.log(theTask);
+			theTask = nextTask();
+		}
+		
+		colissionMap[thisHash] = toReturn;
+		console.log("Finally got:");
+		console.log(toReturn);
+		return toReturn;
+		
+	}
 	//var curFocus;
 	
 	
