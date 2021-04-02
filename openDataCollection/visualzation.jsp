@@ -356,7 +356,7 @@ if(request.getParameter("email") != null)
 	background-color: white;
 	z-index:1002;
 	overflow: auto;
-	text-align:center;
+	text-align:justify;
 	cursor:pointer;
 	opacity:0;
 	vertical-align:middle;
@@ -400,8 +400,12 @@ var tutorialArray = [];
 
 var titleTutorial = {id: "title", caption: "This is the event you are viewing and the progress of your download.  The visualization first downloads index data and presents that and asynchronously downloads screenshots after.  All data is cached locally."};
 tutorialArray.push(titleTutorial);
-var optionsTutorial = {id: "optionFilterTable", caption: "This is the options and filtering table.  Playback speed is the rate animations are played at as a multiplier of real world time.  Timeline Zoom allows you to zoom in and enlarge the data in the timeline window.  Filters: TODO: write document explaining how this works."};
-tutorialArray.push(optionsTutorial);
+var optionsTutorial1 = {id: "optionFilterTable", caption: "This is the options and filtering table.  'Playback Speed' is the rate animations are played at as a multiplier of real world time."};
+tutorialArray.push(optionsTutorial1);
+var optionsTutorial2 = {id: "optionFilterTable", caption: "'Timeline Zoom' allows you to zoom in and enlarge the data in the timeline window."};
+tutorialArray.push(optionsTutorial2);
+var optionsTutorial3 = {id: "optionFilterTable", caption: "'Filters' evaluate expressions on pieces of data and exclude them based on the result of the evaluation.  By default, the visualization shows only Aggregate sessions due to the default filter.  To remove this filter, click the X next to it.  The Server checkbox allows the expression to be done server side before downloading the data; this can sometimes drastically reduce the data size.  This feature is currently under construction.  If you are logged in, then your set of filters can be saved and loaded.  Features saved as 'Default' will be loaded by default.  Server-side executing filters must be saved as 'Default' to execute."};
+tutorialArray.push(optionsTutorial3);
 var timelineTutorial = {id: "visRow", caption: "This is the timeline view.  This shows what users were doing when they had data collection software open.  The first item you see on top is the username and the total time period they worked across all sessions - a session being a time period from startup to shutdown on a single device.  Below the username bar are individual sessions from that user.  The time scale for all data is relative to the session; that is, if a window is open 5 minutes into the session then that is where it will be on time time scale, which is visible and labeled just above the middle of each session bar.  The very top bar of each session shows the active window at the given time.  You can click on a window to focus on the session (bringing up the session process graph below, more on that in a minute) and info about the active window.  The bar below th active window bar (just above the time scale) shows screenshots.  You can mouse over to highlight and view individual screenshots.  The bottom bar (the bottom half of a session) is reserved for annotation/task/event data.  Both user supplied and analyst generated annotations go there.  Similarly to selecting a window, clicking on a task selects the session and provides the process info and info about the task.  Red bars lebeled Filter will filter out the data it is attached to - clicking Filter next to a username will filter out the user and clicking next to session bars will filter out the session.  The Play button shows the screenshots, keyboard, mouse, and window data from the session in an animation."};
 tutorialArray.push(timelineTutorial);
 var legendTutorial = {id: "legendTable", caption: "The legend shows what the colors on the timelines correspond to.  Note that windows are labeled by their program, not by their current title, which can be confusing when dealing with windows that frequently change titles such as web browsers.  Each separate title appears as a different entry on the timeline but of the same color.  The legend also shows which user(s) entered which tasks through color coding them."};
@@ -4323,15 +4327,15 @@ function fadeOutLightbox()
 				.attr("textLength", divBounds["width"] / 9)
 				.attr("fill", "Black")
 				.attr("stroke", "Black")
-				.attr("font-size", (divBounds["height"] * .05))
+				.attr("font-size", (divBounds["height"] * .0375))
 				.text("⏸")
 				.attr("x", (8.5 * divBounds["width"]) / 9)
-				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .025));
+				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .03125));
 		var activeWindowTitle = playPauseG.append("text")
 				.style("pointer-events", "none")
 				.attr("text-anchor", "end")
 				.attr("dominant-baseline", "middle")
-				.attr("textLength", (divBounds["width"]) / 9)
+				//.attr("textLength", (divBounds["width"]) / 9)
 				.attr("fill", "Black")
 				.attr("stroke", "Black")
 				.attr("font-size", (divBounds["height"] * .025))
@@ -4602,10 +4606,10 @@ function fadeOutLightbox()
 						else
 						{
 							lastMouseClicks[entry].attr("opacity", ((1 - (timeDiff / degradeCoefficient)) * .5));
-							nextColor = "Grey";
+							nextColor = "Crimson";
 							if(curType == "Down")
 							{
-								nextColor = "Green"
+								nextColor = "Crimson"
 							}
 							lastMouseClicks[entry].attr("stroke", nextColor);
 						}
@@ -4613,6 +4617,7 @@ function fadeOutLightbox()
 					}
 				}
 			}
+			
 			
 			if(curFrame && curFrame["Screenshot"])
 			{
@@ -4672,7 +4677,7 @@ function fadeOutLightbox()
 				lastScreenshot = curScreenshot;
 				for(toRemove in garbageToRemove)
 				{
-					if(curFrame["Index MS Session"] - garbageToRemove[toRemove]["Index MS Session"] > 10000)
+					//if(curFrame["Index MS Session"] - garbageToRemove[toRemove]["Index MS Session"] > 10000)
 					{
 						garbageToRemove[toRemove].remove();
 					}
@@ -4715,10 +4720,10 @@ function fadeOutLightbox()
 				var yLoc = Number(curFrame["YLoc"]) / lastImg["height"];
 				yLoc = yLoc * curScreenshot.attr("height");
 				var centerColor = "Black";
-				var outerColor = "Blue"
+				var outerColor = "Crimson"
 				if(curFrame["Type"] == "down")
 				{
-					outerColor = "Red"
+					outerColor = "Chartreuse"
 				}
 				var nextMouse = animationG.append("circle")
 					.attr("indexTime", curFrame["Index MS Session"])
