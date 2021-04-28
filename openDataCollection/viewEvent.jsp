@@ -69,6 +69,8 @@ String contactName = request.getParameter("contactname");
 String contactContact = request.getParameter("contactcontact");
 String contactNameRemove = request.getParameter("contactnameremove");
 
+ArrayList requesterName = new ArrayList();
+ArrayList requesterEmail = new ArrayList();
 if(request.getParameter("approverequests") != null)
 {
 String requesterQuery = "SELECT * FROM `TokenRequest` WHERE `event` = ? AND `adminEmail` = ?";
@@ -96,6 +98,8 @@ try
 				{
 					newTokens += "," + myResults.getString("requestedUsername");
 				}
+				requesterName.add(myResults.getString("requestedName"));
+				requesterEmail.add(myResults.getString("requestedEmail"));
 				deleteStmt.setString(3, myResults.getString("requestedUsername"));
 				deleteStmt.execute();
 			}
@@ -211,21 +215,23 @@ catch(Exception e)
 
 if(newTokenList.length > 0)
 {
-String insertToken = "INSERT INTO `UserList`(`event`, `adminEmail`, `username`) VALUES (?,?,?)";
+String insertToken = "INSERT INTO `UserList`(`event`, `adminEmail`, `username`, `name`, `email`) VALUES (?,?,?,?,?)";
 try
 {
 	int rowCount=0;
 	for(int x=1; x<newTokenList.length; x++)
 	{
-		insertToken += ",(?,?,?)";
+		insertToken += ",(?,?,?,?,?)";
 		rowCount++;
 	}
 	PreparedStatement insertStmt = dbConn.prepareStatement(insertToken);
 	for(int x=0; x<newTokenList.length; x++)
 	{
-		insertStmt.setString(3*x+1, newEventName);
-		insertStmt.setString(3*x+2, (String)session.getAttribute("admin"));
-		insertStmt.setString(3*x+3, newTokenList[x]);
+		insertStmt.setString(5*x+1, newEventName);
+		insertStmt.setString(5*x+2, (String)session.getAttribute("admin"));
+		insertStmt.setString(5*x+3, newTokenList[x]);
+		insertStmt.setString(5*x+4, (String)requesterName.get(x));
+		insertStmt.setString(5*x+5, (String)requesterEmail.get(x));
 	}
 	insertStmt.execute();
 	insertStmt.close();

@@ -132,13 +132,9 @@ Event Ends: <%=end %>
 </td>
 </tr>
 <tr>
-<td>
-<a href="index.jsp">Catalyst Home</a>
-</td>
 </tr>
 <tr>
 <td>
-<%=desc %>
 <script>
 function updateLink()
 {
@@ -152,7 +148,7 @@ function updateLink()
 	document.getElementById('installScriptLink2').href='./installDataCollection.' + ext + '?event=<%=java.net.URLEncoder.encode(event, "UTF-8") %>&admin=<%=java.net.URLEncoder.encode(admin, "UTF-8") %>&username=' + document.getElementById('tokenform').value + '&devicetype=' + document.getElementById('devicetypeform').value;
 }
 </script>
-<h2>Instructions</h2>
+<h2>Download Data Collection</h2>
 <%
 if(publicData)
 {
@@ -166,7 +162,7 @@ Anyone, including yourself, will be able to query this data.  The organizers may
 %>
 <p>
 If you do not wish to participate in this study, please close this page.  If you
-consent to all terms on this page, enter your event token here:
+consent to all terms on this page and listed where you got the link thereto, enter your event token here:
 </p>
 <p>
 <input type="text" name="token" id="tokenform" value="Token" onKeyUp="updateLink()">
@@ -186,65 +182,12 @@ Select your device type:
 <p>
 <a id="installScriptLink2" href="./installDataCollection.sh?event=<%=java.net.URLEncoder.encode(event, "UTF-8") %>" download>Download Installer</a>
 </p>
-<p>
-Then, follow the following instructions to install the data
-collection software:
-<ol>
-<li>Download and install a virtual machine player/hypervisor for your device.  We recommend
-either VMWare or VirtualBox; select an appropriate option for your operating
-system.  If you are not familiar with virtual machine technology, please do some
-research before continuing.  A good introduction to virtual machines can be
-found <a href="https://www.howtogeek.com/196060/beginner-geek-how-to-create-and-use-virtual-machines/">
-here</a>.</li>
-<li>Download and install a virtual machine.  This software has been tested on
-Ubuntu and Kali Linux, but may work on other versions of Linux.  Windows support
-is currently in beta testing but should work on Windows 10.  We recommend Kali
-Linux for security competitions, as it has handy tools for these problems.</li>
-<li>If you are using a Windows virtual machine, download and install the latest version
-of Java.  We use the Oracle JDK but other virtual machines may also work.
-Windows support is currently in beta testing, so please keep in contact with
-the study admins when using it to ensure data is being uploaded correctly.</li>
-<li>On your virtual device, navigate back to this page and make sure your
-token is entered in the field above.  <b>Press the "Set" button once you have entered
-your token.</b>  This button updates the download links.</li>
-<li>Download <a id="installScriptLink" href="./installDataCollection.sh?event=<%=java.net.URLEncoder.encode(event, "UTF-8") %>" download>the installer script</a>.</li>
-<li>Enable execution of the script.  How to do this is operating system specific.
-On most Linux distributions, you can do this by right clicking the file in the file system interface,
-select "properties" or something similar, and find an execution option under "permissions" or with the "chmod" command.</li>
-<li>Install the data collection software by opening a terminal in the folder with
-the script (on Linux, this can be done by right clicking in the folder and selecting "open terminal" and on Windows this can be done by searching for "cmd" on the start menu, right clicking, and selecting "Run as Administrator" before navigating to the appopriate folder) and running the installer:<br />
-<span>For Linux:</span><br>
-<span style="font-family: Courier New,Courier,Lucida Sans Typewriter,Lucida Typewriter,monospace;"><b>sudo ./install_data_collection.sh</b></span></li>
-<span>For Windows:</span><br>
-<span style="font-family: Courier New,Courier,Lucida Sans Typewriter,Lucida Typewriter,monospace;"><b>./install_data_collection.bat</b></span></li>
-<li>
-This installation step might take a few minutes and will restart your device.
-</li>
-<li>Use this virtual machine to participate in the competition&mdash;have fun!</li>
-</ol>
-</p>
 <h2>How to Stop Data Collection</h2>
 <p>
 If you wish to stop your participation at any point, follow the instructions below.
 If you would like to have your data collected thus far removed as well, contact
 the system admins, listed below.
 </p>
-<ol>
-<li>On your virtual machine, download <a href="./stopDataCollection.sh" download>this script</a>.</li>
-<li>Enable execution of the downloaded script.</li>
-<li>Open a terminal in the folder with the downloaded script and enter the following: <br/>
-<span style="font-family: Courier New,Courier,Lucida Sans Typewriter,Lucida Typewriter,monospace;"><b>sudo ./stopDataCollection.sh.sh</b></span></li>
-<li>
-<b>This script will restart your computer when you run it to complete the uninstallation.</b>
-</li>
-<li>
-Note that this script leaves a few pieces of software that come with the data collection software
-installed so that, if you are running other software using these installations, that other software
-will not fail.  In particular, the default Java JDK, tomcat8, and mariadb are left installed, but
-have their data collection components removed.  These pieces of software can be removed by using
-the apt-get remove command.
-</li>
-</ol>
 </td>
 </tr>
 </table>
@@ -267,93 +210,6 @@ for(int x=0; x<contactName.size(); x++)
 </td>
 </tr>
 </table>
-<%
-if(publicEvent)
-{
-%>
-<table width="60%">
-<%
-if(insertedRequest)
-{
-%>
-<tr>
-<td>
-<%
-if(!dynamicToken && !failed)
-{
-%>
-<h5>Your token request was added.  You may request additional tokens.</h5>
-<%
-}
-else if (!failed)
-{
-%>
-<h5>Your token was added and is available to use.</h5>
-<%
-}
-else
-{
-%>
-<h5>Your token request failed.</h5>
-<%
-}
-%>
-</td>
-</tr>
-<%
-}
-%>
-<tr>
-<td>
-<h2>Want to participate but don't have a token?</h2>
-<p>
-Anyone may request to participate in this event, so you can ask the organizer for a token by filling out this form.
-</p>
-</td>
-</tr>
-<tr>
-<td>
-<h4>Your Name</h4>
-</td>
-</tr>
-<tr>
-<td>
-<input type="hidden" id="event" name="event" value="<%=event %>" form="tokenrequestform">
-<input type="hidden" id="admin" name="admin" value="<%=admin %>" form="tokenrequestform">
-<input type="text" id="name" name="name" form="tokenrequestform">
-</td>
-</tr>
-<tr>
-<td>
-<h4>Your Email</h4>
-</td>
-</tr>
-<tr>
-<td>
-<input type="text" id="email" name="email" form="tokenrequestform">
-</td>
-</tr>
-<tr>
-<td>
-<h4>Desired Token</h4>
-</td>
-</tr>
-<tr>
-<td>
-<input type="text" id="token" name="token" form="tokenrequestform">
-</td>
-</tr>
-<tr>
-<td>
-<form action="event.jsp" id="tokenrequestform">
-<input type="submit" value="Submit">
-</form>
-</td>
-</tr>
-</table>
-<%
-}
-%>
 </div>
 </body>
 </html>
