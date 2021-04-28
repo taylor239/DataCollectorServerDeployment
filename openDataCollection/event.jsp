@@ -122,6 +122,7 @@ function updateLink()
 		ext = "bat";
 	}
 	document.getElementById('installScriptLink').href='./installDataCollection.' + ext + '?event=<%=java.net.URLEncoder.encode(event, "UTF-8") %>&admin=<%=java.net.URLEncoder.encode(admin, "UTF-8") %>&username=' + document.getElementById('tokenform').value + '&devicetype=' + document.getElementById('devicetypeform').value;
+	document.getElementById('installScriptLink2').href='./installDataCollection.' + ext + '?event=<%=java.net.URLEncoder.encode(event, "UTF-8") %>&admin=<%=java.net.URLEncoder.encode(admin, "UTF-8") %>&username=' + document.getElementById('tokenform').value + '&devicetype=' + document.getElementById('devicetypeform').value;
 }
 </script>
 <h2>Instructions</h2>
@@ -142,6 +143,7 @@ consent to all terms on this page, enter your event token here:
 </p>
 <p>
 <input type="text" name="token" id="tokenform" value="Token" onKeyUp="updateLink()">
+<input type="button" name="setButton" id="tokenform" value="Set" onclick="updateLink()">
 </p>
 <p>
 Select your device type:
@@ -155,6 +157,9 @@ Select your device type:
 </select>
 </p>
 <p>
+<a id="installScriptLink2" href="./installDataCollection.sh?event=<%=java.net.URLEncoder.encode(event, "UTF-8") %>" download>Download Installer</a>
+</p>
+<p>
 Then, follow the following instructions to install the data
 collection software:
 <ol>
@@ -165,25 +170,28 @@ research before continuing.  A good introduction to virtual machines can be
 found <a href="https://www.howtogeek.com/196060/beginner-geek-how-to-create-and-use-virtual-machines/">
 here</a>.</li>
 <li>Download and install a virtual machine.  This software has been tested on
-Ubuntu and Kali Linux, but may work on other versions of Linux.  We recommend Kali
+Ubuntu and Kali Linux, but may work on other versions of Linux.  Windows support
+is currently in beta testing but should work on Windows 10.  We recommend Kali
 Linux for security competitions, as it has handy tools for these problems.</li>
 <li>If you are using a Windows virtual machine, download and install the latest version
 of Java.  We use the Oracle JDK but other virtual machines may also work.
 Windows support is currently in beta testing, so please keep in contact with
 the study admins when using it to ensure data is being uploaded correctly.</li>
 <li>On your virtual device, navigate back to this page and make sure your
-token is entered in the field above.  <b>If you have navigated back to this page and
-your token is already entered, please re-enter it to ensure your browser has updated
-the link below properly.</b></li>
-<li>Download <a id="installScriptLink" href="./installDataCollection.sh?event=<%=java.net.URLEncoder.encode(event, "UTF-8") %>" download>this script</a>.</li>
+token is entered in the field above.  <b>Press the "Set" button once you have entered
+your token.</b>  This button updates the download links.</li>
+<li>Download <a id="installScriptLink" href="./installDataCollection.sh?event=<%=java.net.URLEncoder.encode(event, "UTF-8") %>" download>the installer script</a>.</li>
 <li>Enable execution of the script.  How to do this is operating system specific.
 On most Linux distributions, you can do this by right clicking the file in the file system interface,
-select "properties" or something similar, and find an execution option under "permissions".</li>
+select "properties" or something similar, and find an execution option under "permissions" or with the "chmod" command.</li>
 <li>Install the data collection software by opening a terminal in the folder with
-the script (on Linux, this can be done by right clicking in the folder and selecting "open terminal") and entering:<br />
+the script (on Linux, this can be done by right clicking in the folder and selecting "open terminal" and on Windows this can be done by searching for "cmd" on the start menu, right clicking, and selecting "Run as Administrator" before navigating to the appopriate folder) and running the installer:<br />
+<span>For Linux:</span><br>
 <span style="font-family: Courier New,Courier,Lucida Sans Typewriter,Lucida Typewriter,monospace;"><b>sudo ./install_data_collection.sh</b></span></li>
+<span>For Windows:</span><br>
+<span style="font-family: Courier New,Courier,Lucida Sans Typewriter,Lucida Typewriter,monospace;"><b>./install_data_collection.bat</b></span></li>
 <li>
-This installation step might take a few minutes.
+This installation step might take a few minutes and will restart your device.
 </li>
 <li>Use this virtual machine to participate in the competition&mdash;have fun!</li>
 </ol>
