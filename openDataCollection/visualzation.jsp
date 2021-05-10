@@ -5,6 +5,7 @@
 <head>
 <link rel="stylesheet" type="text/css" href="Design.css">
 <script src="./sha_func.js"></script>
+<script src="./clonedeep.js"></script>
 <script src="./pathFunctions.js"></script>
 <script src="./d3.v4.min.js"></script>
 <script src="./d3-scale-chromatic.v0.3.min.js"></script>
@@ -355,7 +356,6 @@ if(request.getParameter("email") != null)
 	z-index:1002;
 	overflow: auto;
 	text-align:center;
-	cursor:pointer;
 	opacity:0;
 	vertical-align:middle;
 }
@@ -612,7 +612,7 @@ async function showLightbox(theHTML)
 	newWhiteDiv.style.display='table';
 	newBlackDiv.style.display='table';
 	
-	newWhiteDiv.onclick=unshowLightbox;
+	//newWhiteDiv.onclick=unshowLightbox;
 	newBlackDiv.onclick=unshowLightbox;
 	
 	newWhiteDiv.style.opacity=0;
@@ -6317,7 +6317,7 @@ function fadeOutLightbox()
 			for(transition in curPlace["Transitions"])
 			{
 				var transitionNode = {};
-				transitionNode["id"] = transitionNum + "_transition";
+				transitionNode["id"] = curPlace["Result"]["Task Hash"] + "_transition";
 				transitionNum++;
 				transitionNode["type"] = "Transition";
 				transitionNode["Target Place"] = curPlace["Result"];
@@ -6387,6 +6387,17 @@ function fadeOutLightbox()
 			
 			if(curChildren.length == 0)
 			{
+				if(!curTask["Predecessor"])
+				{
+					var defPred = {}
+					defPred["Child Tasks"] = [];
+					defPred["Concurrent Tasks"] = [];
+					defParent = {};
+					defPred["Parent Task"] = {};
+					defPred["Parent Task"]["TaskName"] = "_StartNode_";
+					defPred["Parent Task"]["Task Hash"] = "-1";
+					curTask["Predecessor"] = defPred;
+				}
 				if(curTask["Predecessor"])
 				{
 					var nextPredNode = {};
@@ -6406,6 +6417,17 @@ function fadeOutLightbox()
 						//console.log(nextConNode);
 					}
 					curTransition.push(nextPredNode);
+				}
+				else
+				{
+					var defPred = {}
+					defPred["Child Tasks"] = [];
+					defPred["Concurrent Tasks"] = [];
+					defParent = {};
+					defPred["Parent Task"] = {};
+					defPred["Parent Task"]["TaskName"] = "_StartNode_";
+					defPred["Parent Task"]["Task Hash"] = "-1";
+					curTask["Predecessor"] = defPred;
 				}
 			}
 			
@@ -6432,7 +6454,7 @@ function fadeOutLightbox()
 				{
 					//defPred = JSON.parse(JSON.stringify(curTask));
 					//console.log(defPred);
-					defPred = {}
+					var defPred = {}
 					defPred["Child Tasks"] = [];
 					defPred["Concurrent Tasks"] = [];
 					defParent = {};
@@ -6641,9 +6663,14 @@ function fadeOutLightbox()
 			var curSession = sessionTasks[sessions[entry]];
 			var startNode = binarySearch(curSession, task["Index MS"]);
 			var endNode = binarySearch(curSession, task["Next"]["Index MS"]);
-			
+			console.log(curSession[startNode]);
+			console.log(curSession[startNode]["Index MS"]);
+			console.log(task);
+			console.log(task["Index MS"]);
 			while((curSession[startNode]["Index MS"] < task["Index MS"] || curSession[startNode] == task) && startNode < curSession.length)
 			{
+				console.log(task["Next"]);
+				console.log(task["Next"]["Index MS"]);
 				if(curSession[startNode]["Index MS"] > task["Next"]["Index MS"])
 				{
 					//return toReturn;
@@ -6810,6 +6837,21 @@ function fadeOutLightbox()
 		
 		showLightbox("<tr><td id=\"petriRow\"><div id=\"petriDiv\" width=\"100%\" height=\"100%\"></div></td></tr>");
 		
+		
+		var graphArrows = svg.append("svg:defs").selectAll("marker")
+	    .data(["end"])      // Different link/path types can be defined here
+		  .enter().append("svg:marker")    // This section adds in the arrows
+		    .attr("id", String)
+		    .attr("viewBox", "0 -5 10 10")
+		    .attr("refX", 15)
+		    .attr("refY", -1.5)
+		    .attr("markerWidth", 6)
+		    .attr("markerHeight", 6)
+		    .attr("orient", "auto")
+		  .append("svg:path")
+		    .attr("d", "M0,-5L10,0L0,5");
+		
+		
 		var petriRow = d3.select("#petriRow");
 		var petriDiv = d3.select("#petriDiv");
 		
@@ -6824,39 +6866,50 @@ function fadeOutLightbox()
 		var petriG = petriSvg.append("g");
 		
 		var finalNodesEdges = {};
+		finalNodesEdges["links"] = [];
+		finalNodesEdges["nodes"] = [];
 		//For each top level attack:
-		//for(entry in attackGraphs)
-		//{
-		//	
-		//}
-		finalNodesEdges = attackGraphs[0];
-		console.log(finalNodesEdges);
+		var usedPlaces = {};
+		
+		var numUnused = 0;
+		
+		var finalAttackGraphs = JSON.parse(JSON.stringify(attackGraphs));
+		//var finalAttackGraphs = angular.copy(attackGraphs;
 		
 		
-		drag = simulation => {
-			  
-			  function dragstarted(event) {
-			    if (!event.active) simulation.alphaTarget(0.3).restart();
-			    event.subject.fx = event.subject.x;
-			    event.subject.fy = event.subject.y;
-			  }
-			  
-			  function dragged(event) {
-			    event.subject.fx = event.x;
-			    event.subject.fy = event.y;
-			  }
-			  
-			  function dragended(event) {
-			    if (!event.active) simulation.alphaTarget(0);
-			    event.subject.fx = null;
-			    event.subject.fy = null;
-			  }
-			  
-			  return d3.drag()
-			      .on("start", dragstarted)
-			      .on("drag", dragged)
-			      .on("end", dragended);
+		for(var entry in finalAttackGraphs)
+		{
+			for(place in finalAttackGraphs[entry]["nodes"])
+			{
+				if(finalAttackGraphs[entry]["nodes"][place]["id"] in usedPlaces)
+				{
+					
+				}
+				else
+				{
+					usedPlaces[finalAttackGraphs[entry]["nodes"][place]["id"]] = true;
+					finalNodesEdges["nodes"].push(finalAttackGraphs[entry]["nodes"][place]);
+				}
 			}
+			finalNodesEdges["links"] = finalNodesEdges["links"].concat(JSON.parse(JSON.stringify(finalAttackGraphs[entry]["links"])));
+			//finalNodesEdges["nodes"] = finalNodesEdges["nodes"].concat(attackGraphs[entry]["nodes"]);
+		}
+		
+		for(var entry in finalNodesEdges["links"])
+		{
+			//console.log(finalNodesEdges["links"][entry]);
+			//console.log(finalNodesEdges["links"][entry]["source"]);
+			//console.log(finalNodesEdges["links"][entry]["source"]["id"]);
+			usedPlaces[finalNodesEdges["links"][entry]["source"]["id"]] = false;
+			usedPlaces[finalNodesEdges["links"][entry]["source"]] = false;
+		}
+		//console.log(usedPlaces);
+		//finalNodesEdges = attackGraphs[0];
+		//console.log(finalNodesEdges);
+		
+		
+		
+		
 		
 		var simulation = d3.forceSimulation(finalNodesEdges.nodes)
 			.force("link", d3.forceLink(finalNodesEdges.links).id(d => d.id))
@@ -6872,17 +6925,104 @@ function fadeOutLightbox()
 			.enter()
 			.append("line")
 			.attr("stroke", "Black")
-			.attr("stroke-width", "2");
+			.attr("stroke-width", "2")
+			.attr("marker-end", "url(#end)");
 		
 		var node = petriG.append("g")
 			.selectAll("circle")
 			.data(finalNodesEdges.nodes)
 			.enter();
+		
+		function dragged(d) {
+			  if(d["id"] == "-1_place")
+			  {
+			      return;
+			  }
+			  d.fx = d3.event.x;
+			  d.fy = d3.event.y;
+			}
+
+			function dragended(d) {
+			  if(d["id"] == "-1_place")
+			  {
+			      return;
+			  }
+			  d.fx = d3.event.x;
+			  d.fy = d3.event.y;
+			  d3.select("#_petriStartNode_")
+				.attr("x", -divBounds["width"] / 2)
+				.attr("y", 0)
+				.attr("cx", -divBounds["width"] / 2)
+				.attr("cy", 0);
+			  simulation.alphaTarget(0.3).restart();
+			}
+			
+		var curEndNode = 0;
+		var numUnused = 0;
 		var places = node.filter(d => d.type === "Place")
 			.append("circle")
 			.attr("r", "10")
-			.attr("fill", "red");
-			//.call(drag(simulation));
+			.attr("fill", "red")
+			.attr("endpointNum", function(d)
+					{
+						if(usedPlaces[d["id"]] == true)
+						{
+							numUnused++;
+							return numUnused;
+						}
+					})
+			.attr("cx", function(d)
+					{
+						if(d["id"] == "-1_place")
+						{
+							return -divBounds["width"] / 2;
+						}
+						else if(usedPlaces[d["id"]] == true)
+						{
+							return divBounds["width"] / 2;
+						}
+						return 0;
+					})
+			.attr("cy", function(d)
+					{
+						if(d["id"] == "-1_place")
+						{
+							return -divBounds["height"] / 2;
+						}
+						return 0;
+					})
+			.attr("fx", function(d)
+					{
+						if(d["id"] == "-1_place")
+						{
+							return -divBounds["width"] / 2;
+						}
+						else if(usedPlaces[d["id"]] == true)
+						{
+							return divBounds["width"] / 2;
+							numUnused++;
+						}
+						return undefined;
+					})
+			.attr("fy", function(d)
+					{
+						if(d["id"] == "-1_place")
+						{
+							return -divBounds["height"] / 2;
+						}
+						return undefined;
+					})
+			.attr("id", function(d)
+					{
+						if(d["id"] == "-1_place")
+						{
+							return "_petriStartNode_";
+						}
+						return undefined;
+					})
+			.call(d3.drag()
+			   .on("drag", dragged)
+			   .on("end", dragended));
 		
 		var transitionWidth = 10;
 		var transitionHeight = 20;
@@ -6896,13 +7036,25 @@ function fadeOutLightbox()
 		
 		var labels = node.filter(d => d.type === "Place")
 		.append("text")
+		.attr("text-anchor", function(d)
+				{
+					if(d["id"] == "-1_place")
+					{
+						return "start";
+					}
+					else if(usedPlaces[d["id"]] == true)
+					{
+						return "end";
+					}
+					return "middle";
+				})
 		.text(function(d)
 				{
 					return d["Place"]["TaskName"];
 				});
 		
 		node = transitions.merge(places).merge(labels);
-		node.call(drag(simulation));
+		//node.call(drag(simulation));
 		
 		simulation.on("tick", () => {
 			link
@@ -6913,6 +7065,34 @@ function fadeOutLightbox()
 
 			places
 				.attr("cx", d => d.x)
+				.attr("fx", function(d)
+						{
+							if(d["id"] == "-1_place")
+							{
+								d.x = -divBounds["width"] / 2;
+								return -divBounds["width"] / 2;
+							}
+							else if(usedPlaces[d["id"]] == true)
+							{
+								d.x = divBounds["width"] / 2;
+								return divBounds["width"] / 2;
+							}
+							//return d.x;
+						})
+				.attr("fy", function(d)
+						{
+							if(d["id"] == "-1_place")
+							{
+								d.y = 0;
+								return 0;
+							}
+							else if(usedPlaces[d["id"]] == true)
+							{
+								d.y = ((this.getAttribute("endpointNum") / (numUnused + 1)) * (divBounds["height"])) - (divBounds["height"] / 2);
+								return d.y;
+							}
+							//return d.x;
+						})
 				//.attr("x", d => d.x + (transitionWidth / 2))
 				.attr("cy", d => d.y);
 				//.attr("y", d => d.y + (transitionHeight / 2));
@@ -6929,6 +7109,14 @@ function fadeOutLightbox()
 				//.attr("cy", d => d.y);
 				.attr("y", d => d.y - (transitionHeight / 2));
 		});
+		
+		d3.select("#_petriStartNode_")
+			.attr("fx", -divBounds["width"] / 2)
+			.attr("cx", -divBounds["width"] / 2)
+			.attr("fy", 0)
+			.attr("cy", 0);
+		
+		//simulation.alphaTarget(0.3).restart();
 			
 		//invalidation.then(() => simulation.stop());
 	}
