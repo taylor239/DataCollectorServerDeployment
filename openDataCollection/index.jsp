@@ -75,7 +75,7 @@ device.  The software does include a pause feature to stop collection while ente
 but enter that data at your own risk.</b>
 </p>
 <p>
-For more information about the inspiration for Catalyst, see <a href="Getting_Revenge.pdf">Getting RevEngE: A System for Analyzing Reverse Engineering Behavior</a>.
+For more information about the inspiration for Catalyst, see <a href="Getting_RevEngE.pdf">Getting RevEngE: A System for Analyzing Reverse Engineering Behavior</a>.
 </p>
 </td>
 </tr>
