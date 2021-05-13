@@ -22,7 +22,7 @@ In computer science, and particularly in computer security, humans often
 play a huge role in achieving various goals.  For instance, a human might
 classify data manually to train machine learning or use various types of
 security tools in order to compromise a server.  Understanding this
-symbiosis of man and machine allows researchers to determine the limits
+symbiosis of human and machine allows researchers to determine the limits
 of what the combination might accomplish.  This, in the examples above,
 has the potential to quantify the resources needed to train machine
 learning models or how potent a given attack might be.
@@ -73,6 +73,9 @@ the software on virtualized devices, such as virtual machines.  If this software
 will record sensitive data, including passwords, the user enters on that
 device.  The software does include a pause feature to stop collection while entering sensitive data,
 but enter that data at your own risk.</b>
+</p>
+<p>
+For more information about the inspiration for Catalyst, see <a href="Getting_Revenge.pdf">Getting RevEngE: A System for Analyzing Reverse Engineering Behavior</a>.
 </p>
 </td>
 </tr>
