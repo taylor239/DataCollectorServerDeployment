@@ -190,14 +190,17 @@ Select your device type:
 Then, follow the following instructions to install the data
 collection software:
 <ol>
-<li>Download and install a virtual machine player/hypervisor for your device.  We recommend
+<li>Download and install a virtual machine player/hypervisor for your device if you
+are running a virtual machine.  We recommend
 either VMWare or VirtualBox; select an appropriate option for your operating
 system.  If you are not familiar with virtual machine technology, please do some
 research before continuing.  A good introduction to virtual machines can be
 found <a href="https://www.howtogeek.com/196060/beginner-geek-how-to-create-and-use-virtual-machines/">
 here</a>.</li>
-<li>Download and install a virtual machine.  This software has been tested on
-Ubuntu and Kali Linux, but may work on other versions of Linux.  Windows support
+<li>Download and install a virtual machine or install your OS if using a physical device.  This software has been tested on
+Ubuntu, Kali, and 32 bit Raspbian Linux, but may work on other versions of Linux.  Debian
+based distributions with apt running X11 (not Wayland distros) should work.  With Linux, X86 and X64
+architectures work.  ARM 32 bit works, but ARM 64 does not yet.  Windows support
 is currently in beta testing but should work on Windows 10.  We recommend Kali
 Linux for security competitions, as it has handy tools for these problems.</li>
 <li>If you are using a Windows virtual machine, download and install the latest version
