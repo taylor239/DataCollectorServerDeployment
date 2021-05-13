@@ -151,6 +151,31 @@ function updateLink()
 	document.getElementById('installScriptLink').href='./installDataCollection.' + ext + '?event=<%=java.net.URLEncoder.encode(event, "UTF-8") %>&admin=<%=java.net.URLEncoder.encode(admin, "UTF-8") %>&username=' + document.getElementById('tokenform').value + '&devicetype=' + document.getElementById('devicetypeform').value;
 	document.getElementById('installScriptLink2').href='./installDataCollection.' + ext + '?event=<%=java.net.URLEncoder.encode(event, "UTF-8") %>&admin=<%=java.net.URLEncoder.encode(admin, "UTF-8") %>&username=' + document.getElementById('tokenform').value + '&devicetype=' + document.getElementById('devicetypeform').value;
 }
+
+var shown = false;
+function toggleInstructions()
+{
+	if(!shown)
+	{
+		document.getElementById("instrButton").innerHTML = "Hide Instructions";
+		document.getElementById('showHide1').style.display = "";
+		document.getElementById('showHide2').style.display = "";
+		document.getElementById('showHide3').style.display = "";
+		document.getElementById('showHide4').style.display = "";
+		document.getElementById('showHide5').style.display = "";
+		shown = true;
+	}
+	else
+	{
+		document.getElementById("instrButton").innerHTML = "View Instructions";
+		document.getElementById('showHide1').style.display = "none";
+		document.getElementById('showHide2').style.display = "none";
+		document.getElementById('showHide3').style.display = "none";
+		document.getElementById('showHide4').style.display = "none";
+		document.getElementById('showHide5').style.display = "none";
+		shown = false;
+	}
+}
 </script>
 <h2>Instructions</h2>
 <%
@@ -186,10 +211,11 @@ Select your device type:
 <p>
 <a id="installScriptLink2" href="./installDataCollection.sh?event=<%=java.net.URLEncoder.encode(event, "UTF-8") %>" download>Download Installer</a>
 </p>
-<p>
+<button id="instrButton" onclick="toggleInstructions()" style="cursor: pointer;">View Instructions</button>
+<p id="showHide1" style="display:none;">
 Then, follow the following instructions to install the data
 collection software:
-<ol>
+<ol id="showHide2" style="display:none;">
 <li>Download and install a virtual machine player/hypervisor for your device if you
 are running a virtual machine.  We recommend
 either VMWare or VirtualBox; select an appropriate option for your operating
@@ -226,13 +252,13 @@ This installation step might take a few minutes and will restart your device.
 <li>Use this virtual machine to participate in the competition&mdash;have fun!</li>
 </ol>
 </p>
-<h2>How to Stop Data Collection</h2>
-<p>
+<h2 id="showHide3" style="display:none;">How to Stop Data Collection</h2>
+<p id="showHide4" style="display:none;">
 If you wish to stop your participation at any point, follow the instructions below.
 If you would like to have your data collected thus far removed as well, contact
 the system admins, listed below.
 </p>
-<ol>
+<ol id="showHide5" style="display:none;">
 <li>On your virtual machine, download <a href="./stopDataCollection.sh" download>this script</a>.</li>
 <li>Enable execution of the downloaded script.</li>
 <li>Open a terminal in the folder with the downloaded script and enter the following: <br/>
