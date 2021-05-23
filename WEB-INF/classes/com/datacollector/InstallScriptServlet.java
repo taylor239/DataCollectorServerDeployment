@@ -195,7 +195,7 @@ public class InstallScriptServlet extends HttpServlet {
 			+ "\n" 
 			+ "\necho \"\"" 
 			+ "\n" 
-			+ "\necho \"When you downloaded this software, you may have been given a consent document.  Do you agree to the appropriate consent document and to use this software as intended and described in the links above, with no warranty and understanding the risks of using this software?  Please enter yes or no.  If you enter yes, you agree that you have read and agree to any and all appropriate consent agreements.  To confirm, do you agree to the appropriate consent terms located at the links above?  Entering yes will install the data collection software suite and restart your device to launch the data collection software.\"" 
+			+ "\necho \"When you downloaded this software, you were given a consent document.  Do you agree to the appropriate consent document and to use this software as intended and described in the links above, with no warranty and understanding the risks of using this software?  Please enter yes or no.  If you enter yes, you agree that you have read and agree to any and all appropriate consent agreements.  To confirm, do you agree to the appropriate consent terms located at the links above?  Entering yes will install the data collection software suite and restart your device to launch the data collection software.\"" 
 			+ "\n" 
 			+ "\nread CONSENT" 
 			+ "\n" 
