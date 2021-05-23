@@ -36,6 +36,7 @@ public class DataExportLog extends HttpServlet {
 	private boolean keepingAlive = true;
 	private boolean doneKeepingAlive = false;
 	private ZipOutputStream zipOut = null;
+	private Thread threadToJoin = null;
     /**
      * @see HttpServlet#HttpServlet()
      */
@@ -191,6 +192,7 @@ public class DataExportLog extends HttpServlet {
 			{
 				public void run()
 				{
+					threadToJoin = Thread.currentThread();
 					while(keepingAlive)
 					{
 						ZipEntry paddingFile = null;
@@ -245,6 +247,7 @@ public class DataExportLog extends HttpServlet {
 					}
 					doneKeepingAlive = true;
 					System.out.println("Stopped padding");
+					
 				}
 			}).start();
 			
@@ -572,6 +575,7 @@ public class DataExportLog extends HttpServlet {
 			
 			
 			keepingAlive = false;
+			threadToJoin.join();
 			System.out.println("Done");
 			//Gson gson = new GsonBuilder().create();
 			//String output = gson.toJson(headMap);
