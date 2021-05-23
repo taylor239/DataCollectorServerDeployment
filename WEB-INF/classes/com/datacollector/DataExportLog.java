@@ -58,6 +58,79 @@ public class DataExportLog extends HttpServlet {
 			
 			
 			HttpSession session = request.getSession(true);
+			
+			boolean zip = request.getRequestURI().contains(".zip");
+			ServletOutputStream out = null;
+			if(zip)
+			{
+				out=response.getOutputStream();
+				
+				zipOut = new ZipOutputStream(out);
+			}
+			
+			threadToJoin = new Thread()
+			{
+				public void run()
+				{
+					while(keepingAlive)
+					{
+						ZipEntry paddingFile = null;
+						if(zip)
+						{
+							paddingFile = new ZipEntry("paddingFile.txt");
+							try {
+								zipOut.putNextEntry(paddingFile);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+						if(keepingAlive)
+						{
+							System.out.println("Padding");
+							try
+							{
+								if(zip)
+								{
+									
+									zipOut.write(0);
+									zipOut.flush();
+								}
+								else
+								{
+									response.getWriter().append(" ");
+									response.getWriter().flush();
+								}
+								
+							} catch (Exception e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+							try {
+								Thread.currentThread().sleep(500);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+						}
+						else
+						{
+							
+						}
+					}
+					if(zip)
+					{
+						try {
+							zipOut.closeEntry();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+					doneKeepingAlive = true;
+					System.out.println("Stopped padding");
+					
+				}
+			};
+			threadToJoin.start();
+			
 			DatabaseConnector myConnector=(DatabaseConnector)session.getAttribute("connector");
 			if(myConnector==null)
 			{
@@ -179,77 +252,7 @@ public class DataExportLog extends HttpServlet {
 			
 			//boolean zip = request.getParameter("zip") != null && request.getParameter("zip").equals("true");
 			//boolean zip = false;
-			boolean zip = request.getRequestURI().contains(".zip");
-			ServletOutputStream out = null;
-			if(zip)
-			{
-				out=response.getOutputStream();
-				
-				zipOut = new ZipOutputStream(out);
-			}
 			
-			(new Thread()
-			{
-				public void run()
-				{
-					threadToJoin = Thread.currentThread();
-					while(keepingAlive)
-					{
-						ZipEntry paddingFile = null;
-						if(zip)
-						{
-							paddingFile = new ZipEntry("paddingFile.txt");
-							try {
-								zipOut.putNextEntry(paddingFile);
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-						}
-						if(keepingAlive)
-						{
-							System.out.println("Padding");
-							try
-							{
-								if(zip)
-								{
-									
-									zipOut.write(0);
-									zipOut.flush();
-								}
-								else
-								{
-									response.getWriter().append(" ");
-									response.getWriter().flush();
-								}
-								
-							} catch (Exception e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							}
-							try {
-								Thread.currentThread().sleep(500);
-							} catch (InterruptedException e) {
-								e.printStackTrace();
-							}
-						}
-						else
-						{
-							
-						}
-					}
-					if(zip)
-					{
-						try {
-							zipOut.closeEntry();
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
-					doneKeepingAlive = true;
-					System.out.println("Stopped padding");
-					
-				}
-			}).start();
 			
 			ArrayList userSelectList = new ArrayList();
 			
