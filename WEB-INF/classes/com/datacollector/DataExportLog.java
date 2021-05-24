@@ -1,6 +1,7 @@
 package com.datacollector;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -33,16 +34,104 @@ import com.google.gson.GsonBuilder;
 public class DataExportLog extends HttpServlet {
 	private static final long serialVersionUID = 1L;
     
-	private boolean keepingAlive = true;
-	private boolean doneKeepingAlive = false;
-	private ZipOutputStream zipOut = null;
-	private Thread threadToJoin = null;
+	//private boolean keepingAlive = true;
+	//private boolean doneKeepingAlive = false;
+	//private ZipOutputStream zipOut = null;
     /**
      * @see HttpServlet#HttpServlet()
      */
     public DataExportLog() {
         super();
-        // TODO Auto-generated constructor stub
+        System.out.println("New export");
+    }
+    
+    private class PadderThread implements Runnable
+    {
+    	boolean keepingAlive = true;
+		boolean doneKeepingAlive = false;
+		ZipOutputStream zipOut = null;
+		boolean zip = false;
+		PrintWriter myWriter;
+		
+		
+		public PadderThread(PrintWriter writer)
+		{
+			myWriter = writer;
+		}
+		
+		public PadderThread(ZipOutputStream zipStream)
+		{
+			zip = true;
+			zipOut = zipStream;
+		}
+		
+		public void setKeepingAlive(boolean toSet)
+		{
+			keepingAlive = toSet;
+		}
+		
+		public boolean getDoneKeepingAlive()
+		{
+			return doneKeepingAlive;
+		}
+		
+		public void run()
+		{
+			while(keepingAlive)
+			{
+				ZipEntry paddingFile = null;
+				if(zip)
+				{
+					paddingFile = new ZipEntry("paddingFile.txt");
+					try {
+						zipOut.putNextEntry(paddingFile);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+				if(keepingAlive)
+				{
+					System.out.println("Padding");
+					try
+					{
+						if(zip)
+						{
+							
+							zipOut.write(0);
+							zipOut.flush();
+						}
+						else
+						{
+							myWriter.append(" ");
+							myWriter.flush();
+						}
+						
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					try {
+						Thread.currentThread().sleep(500);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				else
+				{
+					
+				}
+			}
+			if(zip)
+			{
+				try {
+					zipOut.closeEntry();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			doneKeepingAlive = true;
+			System.out.println("Stopped padding");
+		}
     }
 
 	/**
@@ -50,7 +139,10 @@ public class DataExportLog extends HttpServlet {
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		
+		//boolean keepingAlive = true;
+		//boolean doneKeepingAlive = false;
+		ZipOutputStream zipOut = null;
+		Thread threadToJoin = null;
 		System.out.println("Got an export query");
 		try
 		{
@@ -68,67 +160,17 @@ public class DataExportLog extends HttpServlet {
 				zipOut = new ZipOutputStream(out);
 			}
 			
-			threadToJoin = new Thread()
+			PadderThread padder = null;
+			if(zip)
 			{
-				public void run()
-				{
-					while(keepingAlive)
-					{
-						ZipEntry paddingFile = null;
-						if(zip)
-						{
-							paddingFile = new ZipEntry("paddingFile.txt");
-							try {
-								zipOut.putNextEntry(paddingFile);
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-						}
-						if(keepingAlive)
-						{
-							System.out.println("Padding");
-							try
-							{
-								if(zip)
-								{
-									
-									zipOut.write(0);
-									zipOut.flush();
-								}
-								else
-								{
-									response.getWriter().append(" ");
-									response.getWriter().flush();
-								}
-								
-							} catch (Exception e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							}
-							try {
-								Thread.currentThread().sleep(500);
-							} catch (InterruptedException e) {
-								e.printStackTrace();
-							}
-						}
-						else
-						{
-							
-						}
-					}
-					if(zip)
-					{
-						try {
-							zipOut.closeEntry();
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
-					doneKeepingAlive = true;
-					System.out.println("Stopped padding");
-					
-				}
-			};
+				padder = new PadderThread(zipOut);
+			}
+			else
+			{
+				padder = new PadderThread(response.getWriter());
+			}
+			
+			threadToJoin = new Thread(padder);
 			threadToJoin.start();
 			
 			DatabaseConnector myConnector=(DatabaseConnector)session.getAttribute("connector");
@@ -508,13 +550,13 @@ public class DataExportLog extends HttpServlet {
 			}
 			System.out.println("Shutting down padding");
 			
-			keepingAlive = false;
+			padder.setKeepingAlive(false);
 			
 			if(zip)
 			{
-				while(!doneKeepingAlive)
+				while(!padder.getDoneKeepingAlive())
 				{
-					keepingAlive = false;
+					padder.setKeepingAlive(false);
 					Thread.currentThread().sleep(100);
 				}
 				System.out.println("Zipping");
@@ -567,17 +609,17 @@ public class DataExportLog extends HttpServlet {
 			else
 			{
 				System.out.println("Sending");
-				while(!doneKeepingAlive)
+				while(!padder.getDoneKeepingAlive())
 				{
-					keepingAlive = false;
+					padder.setKeepingAlive(false);
 					Thread.currentThread().sleep(100);
 				}
 				response.getWriter().append(output);
 				response.getWriter().close();
 			}
 			
+			padder.setKeepingAlive(false);
 			
-			keepingAlive = false;
 			threadToJoin.join();
 			System.out.println("Done");
 			//Gson gson = new GsonBuilder().create();
