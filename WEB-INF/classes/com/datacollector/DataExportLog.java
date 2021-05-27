@@ -361,42 +361,49 @@ public class DataExportLog extends HttpServlet {
 			ConcurrentHashMap headMap = new ConcurrentHashMap();
 			if(toSelect.contains("events"))
 			{
+				System.out.println("Reading events");
 				dataTypes.add("events");
 				ConcurrentHashMap eventMap = myConnector.getTasksHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
 			if(toSelect.contains("windows"))
 			{
+				System.out.println("Reading windows");
 				dataTypes.add("windows");
 				ConcurrentHashMap dataMap = myConnector.getWindowDataHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, dataMap);
 			}
 			if(toSelect.contains("processes"))
 			{
+				System.out.println("Reading processes");
 				dataTypes.add("processes");
 				ConcurrentHashMap dataMap = myConnector.getProcessDataHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, dataMap);
 			}
 			if(toSelect.contains("environment"))
 			{
+				System.out.println("Reading environment");
 				dataTypes.add("environment");
 				ConcurrentHashMap dataMap = myConnector.getSessionDetailsHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, dataMap);
 			}
 			if(toSelect.contains("keystrokes"))
 			{
+				System.out.println("Reading keystrokes");
 				dataTypes.add("keystrokes");
 				ConcurrentHashMap dataMap = myConnector.getKeystrokesHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, dataMap);
 			}
 			if(toSelect.contains("mouse"))
 			{
+				System.out.println("Reading mouse");
 				dataTypes.add("mouse");
 				ConcurrentHashMap dataMap = myConnector.getMouseHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, dataMap);
 			}
 			if(toSelect.contains("screenshots"))
 			{
+				System.out.println("Reading screenshots");
 				if(zip)
 				{
 					dataTypes.add("screenshots");
@@ -433,6 +440,7 @@ public class DataExportLog extends HttpServlet {
 			}
 			if(toSelect.contains("screenshotindices"))
 			{
+				System.out.println("Reading screenshotindices");
 				dataTypes.add("screenshots");
 				ConcurrentHashMap screenshotMap = myConnector.getScreenshotsHierarchy(eventName, admin, userSelectList, sessionSelectList, true, true, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, screenshotMap);
@@ -445,6 +453,7 @@ public class DataExportLog extends HttpServlet {
 			}
 			//System.out.println("Removing debug data");
 			//headMap = deInsert(headMap);
+			System.out.println("Normalizing time");
 			headMap = myConnector.normalizeAllTime(headMap);
 			
 			
