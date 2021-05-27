@@ -329,7 +329,7 @@ public class DataExportLog extends HttpServlet {
 				{
 					for(int x=0; x<userSelectArray.length; x++)
 					{
-						//System.out.println(userSelectArray[x]);
+						System.out.println(userSelectArray[x]);
 						userSelectList.add(inverseUserMap.get(userSelectArray[x]));
 					}
 				}
@@ -337,7 +337,7 @@ public class DataExportLog extends HttpServlet {
 				{
 					Collections.addAll(userSelectList, userSelectArray);
 				}
-				//System.out.println(userSelectList);
+				System.out.println(userSelectList);
 			}
 			else
 			{
@@ -356,7 +356,7 @@ public class DataExportLog extends HttpServlet {
 			}
 			
 			ArrayList dataTypes = new ArrayList();
-			
+			System.out.println("Starting db read");
 			//ArrayList dataList = myConnector.getCollectedData(eventName, admin);
 			ConcurrentHashMap headMap = new ConcurrentHashMap();
 			if(toSelect.contains("events"))
