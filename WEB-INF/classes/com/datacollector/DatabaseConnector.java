@@ -80,13 +80,36 @@ public class DatabaseConnector
 			"LEFT JOIN `ProcessAttributes` ON `Process`.`event` = `ProcessAttributes`.`event` AND `Process`.`adminEmail` = `ProcessAttributes`.`adminEmail` AND `Process`.`username` = `ProcessAttributes`.`username` AND `Process`.`session` = `ProcessAttributes`.`session` AND `Process`.`user` = `ProcessAttributes`.`user` AND `Process`.`pid` = `ProcessAttributes`.`pid` AND `Process`.`start` = `ProcessAttributes`.`start`\n" + 
 			"WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? ORDER BY `ProcessAttributes`.`timestamp`, `ProcessAttributes`.`insertTimestamp` ASC";
 	
-	private String allProcessQueryFix = "SELECT * FROM `Process` LEFT JOIN \n" + 
+	//private String allProcessQueryFix = "SELECT * FROM `Process` LEFT JOIN \n" + 
+	//		"(\n" + 
+	//		"SELECT `event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`, GROUP_CONCAT(`arg` ORDER BY `numbered` ASC SEPARATOR ' ') AS `arguments` FROM `ProcessArgs` GROUP BY `ProcessArgs`.`event`, `ProcessArgs`.`adminEmail`, `ProcessArgs`.`username`, `ProcessArgs`.`session`, `ProcessArgs`.`user`, `ProcessArgs`.`pid`, `ProcessArgs`.`start`\n" + 
+	//		") a\n" + 
+	//		"USING (`event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`)\n" + 
+	//		"LEFT JOIN `ProcessAttributes` ON `Process`.`event` = `ProcessAttributes`.`event` AND `Process`.`adminEmail` = `ProcessAttributes`.`adminEmail` AND `Process`.`username` = `ProcessAttributes`.`username` AND `Process`.`session` = `ProcessAttributes`.`session` AND `Process`.`user` = `ProcessAttributes`.`user` AND `Process`.`pid` = `ProcessAttributes`.`pid` AND `Process`.`start` = `ProcessAttributes`.`start`\n" + 
+	//		"WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? ORDER BY `ProcessAttributes`.`insertTimestamp`, `ProcessAttributes`.`timestamp` ASC";
+	
+	private String allProcessQueryFix = "SELECT * FROM\n" + 
 			"(\n" + 
-			"SELECT `event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`, GROUP_CONCAT(`arg` ORDER BY `numbered` ASC SEPARATOR ' ') AS `arguments` FROM `ProcessArgs` GROUP BY `ProcessArgs`.`event`, `ProcessArgs`.`adminEmail`, `ProcessArgs`.`username`, `ProcessArgs`.`session`, `ProcessArgs`.`user`, `ProcessArgs`.`pid`, `ProcessArgs`.`start`\n" + 
+			"\n" + 
+			"SELECT `Process`.`command`, `Process`.`parentpid`, `Process`.`parentuser`, `Process`.`parentstart`, a.`arguments`, `ProcessAttributes`.*, @prev_username AS 'prev_username', @prev_username := `Process`.`username`, @prev_session AS 'prev_session', @prev_session := `Process`.`session`, @prev_user AS 'prev_user', @prev_user := `Process`.`user`, @prev_pid AS 'prev_pid', @prev_pid := `Process`.`pid`, @prev_start AS 'prev_start', @prev_start := `Process`.`start`, @prev_cpu AS 'prev_cpu', @prev_cpu := `ProcessAttributes`.`cpu`, @prev_mem AS 'prev_mem', @prev_mem := `ProcessAttributes`.`mem` FROM `Process` LEFT JOIN \n" + 
+			"\n" + 
+			"(\n" + 
+			"	SELECT `event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`, GROUP_CONCAT(`arg` ORDER BY `numbered` ASC SEPARATOR ' ') AS `arguments` FROM `ProcessArgs` GROUP BY `ProcessArgs`.`event`, `ProcessArgs`.`adminEmail`, `ProcessArgs`.`username`, `ProcessArgs`.`session`, `ProcessArgs`.`user`, `ProcessArgs`.`pid`, `ProcessArgs`.`start`\n" + 
 			") a\n" + 
+			"\n" + 
 			"USING (`event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`)\n" + 
+			"\n" + 
 			"LEFT JOIN `ProcessAttributes` ON `Process`.`event` = `ProcessAttributes`.`event` AND `Process`.`adminEmail` = `ProcessAttributes`.`adminEmail` AND `Process`.`username` = `ProcessAttributes`.`username` AND `Process`.`session` = `ProcessAttributes`.`session` AND `Process`.`user` = `ProcessAttributes`.`user` AND `Process`.`pid` = `ProcessAttributes`.`pid` AND `Process`.`start` = `ProcessAttributes`.`start`\n" + 
-			"WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? ORDER BY `ProcessAttributes`.`insertTimestamp`, `ProcessAttributes`.`timestamp` ASC";
+			"\n" + 
+			"WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ?\n" + 
+			"\n" + 
+			"ORDER BY `ProcessAttributes`.`event`, `ProcessAttributes`.`adminEmail`, `ProcessAttributes`.`username`, `ProcessAttributes`.`session`, `ProcessAttributes`.`user`, `ProcessAttributes`.`pid`, `ProcessAttributes`.`start`, `ProcessAttributes`.`timestamp` ASC\n" + 
+			"\n" + 
+			") qu\n" + 
+			"\n" + 
+			"WHERE `prev_username` != `qu`.`username` OR `prev_session` != `qu`.`session` OR `prev_user` != `qu`.`user` OR `prev_pid` != `qu`.`pid` OR `prev_start` != `qu`.`start` OR `prev_cpu` != `qu`.`cpu` OR `prev_mem` != `qu`.`mem`\n" + 
+			"\n" + 
+			"ORDER BY `qu`.`timestamp` ASC";
 	
 	private String allWindowQuery = "SELECT * FROM `Window` LEFT JOIN `WindowDetails`ON `Window`.`event` = `WindowDetails`.`event` AND `Window`.`adminEmail` = `WindowDetails`.`adminEmail` AND `Window`.`username` = `WindowDetails`.`username` AND `Window`.`session` = `WindowDetails`.`session` AND `Window`.`user` = `WindowDetails`.`user` AND `Window`.`pid` = `WindowDetails`.`pid` AND `Window`.`start` = `WindowDetails`.`start` AND `Window`.`xid` = `WindowDetails`.`xid` WHERE `WindowDetails`.`event` = ? AND `WindowDetails`.`adminEmail` = ? ORDER BY `WindowDetails`.`timeChanged`, `WindowDetails`.`insertTimestamp` ASC";
 	

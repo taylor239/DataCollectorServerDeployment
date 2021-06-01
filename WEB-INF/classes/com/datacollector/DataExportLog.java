@@ -324,6 +324,7 @@ public class DataExportLog extends HttpServlet {
 			
 			if(usersToSelect != null && !usersToSelect.isEmpty() && !usersToSelect.equals("null"))
 			{
+				System.out.println("Getting users");
 				String[] userSelectArray = usersToSelect.split(",");
 				if(fromAnon)
 				{
@@ -337,6 +338,7 @@ public class DataExportLog extends HttpServlet {
 				{
 					Collections.addAll(userSelectList, userSelectArray);
 				}
+				System.out.println("Users:");
 				System.out.println(userSelectList);
 			}
 			else
