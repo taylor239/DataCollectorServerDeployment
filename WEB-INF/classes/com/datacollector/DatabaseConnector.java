@@ -55,17 +55,29 @@ public class DatabaseConnector
 			"WHERE `event` = ? AND `adminEmail` = ?\n" + 
 			"ORDER BY `inputTime`, `insertTimestamp` ASC";
 	
+	private String keyboardQueryBounds = "SELECT `KeyboardInput`.`username`, `KeyboardInput`.`session`, MIN(`KeyboardInput`.`inputTime`) AS `mintime`, MAX(`KeyboardInput`.`inputTime`) AS `maxtime` FROM `openDataCollectionServer`.`KeyboardInput`\n" + 
+			"WHERE `event` = ? AND `adminEmail` = ?\n" + 
+			"GROUP BY `KeyboardInput`.`session`, `KeyboardInput`.`username`, `KeyboardInput`.`event`, `KeyboardInput`.`adminEmail`";
+	
 	private String mouseQuery = "SELECT *, 'mouse' AS `fromInput` FROM `openDataCollectionServer`.`MouseInput`\n" + 
 			"WHERE `event` = ? AND `adminEmail` = ?\n" + 
 			"ORDER BY `inputTime`, `insertTimestamp` ASC";
 	
+	private String mouseQueryBounds = "SELECT `MouseInput`.`username`, `MouseInput`.`session`, MIN(`MouseInput`.`inputTime`) AS `mintime`, MAX(`MouseInput`.`inputTime`) AS `maxtime` FROM `openDataCollectionServer`.`MouseInput`\n" + 
+			"WHERE `event` = ? AND `adminEmail` = ?\n" + 
+			"GROUP BY `MouseInput`.`session`, `MouseInput`.`username`, `MouseInput`.`event`, `MouseInput`.`adminEmail`";
+	
 	private String taskQuery = "SELECT * FROM `openDataCollectionServer`.`Task` LEFT JOIN `TaskEvent` ON `Task`.`username` = `TaskEvent`.`username` AND `Task`.`event` = `TaskEvent`.`event` AND `Task`.`adminEmail` = `TaskEvent`.`adminEmail` AND `Task`.`taskName` = `TaskEvent`.`taskName` WHERE `Task`.`event` = ? AND `Task`.`adminEmail` = ? ORDER BY `TaskEvent`.`eventTime`, `TaskEvent`.`insertTimestamp` ASC";
+	private String taskQueryBounds = "SELECT `TaskEvent`.`username`, `TaskEvent`.`session`, MIN(`TaskEvent`.`eventTime`) AS `mintime`, MAX(`TaskEvent`.`eventTime`) AS `maxtime` FROM `openDataCollectionServer`.`Task` LEFT JOIN `TaskEvent` ON `Task`.`username` = `TaskEvent`.`username` AND `Task`.`event` = `TaskEvent`.`event` AND `Task`.`adminEmail` = `TaskEvent`.`adminEmail` AND `Task`.`taskName` = `TaskEvent`.`taskName` WHERE `Task`.`event` = ? AND `Task`.`adminEmail` = ? GROUP BY `TaskEvent`.`adminEmail`, `TaskEvent`.`event`, `TaskEvent`.`username`, `TaskEvent`.`session`";
 	
 	private String imageQuery = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `username` = ? AND `session` = ? AND `event` = ? AND `adminEmail` = ? ORDER BY abs(? - (UNIX_TIMESTAMP(`taken`) * 1000)) LIMIT 1";
 	private String imageQueryExact = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `username` = ? AND `session` = ? AND `event` = ? AND `adminEmail` = ? AND (UNIX_TIMESTAMP(`taken`) * 1000) = ?";
 	//" AND (UNIX_TIMESTAMP(`taken`) * 1000) > ?" - after time
 	//" AND (UNIX_TIMESTAMP(`taken`) * 1000) < ?" - before time
 	private String allImageQuery = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `event` = ? AND `adminEmail` = ? ORDER BY `taken`, `insertTimestamp` ASC";
+	
+	private String allImageQueryBounds = "SELECT `Screenshot`.`username`, `Screenshot`.`session`, MIN(`Screenshot`.`taken`) AS `mintime`, MAX(`Screenshot`.`taken`) AS `maxtime` FROM `openDataCollectionServer`.`Screenshot` WHERE `event` = ? AND `adminEmail` = ?\n" + 
+			"GROUP BY `Screenshot`.`session`, `Screenshot`.`username`, `Screenshot`.`event`, `Screenshot`.`adminEmail`";
 	
 	
 	private String filterQuery = "SELECT * FROM `openDataCollectionServer`.`VisualizationFilters` WHERE `VisualizationFilters`.`event` = ? AND `VisualizationFilters`.`adminEmail` = ? ORDER BY `VisualizationFilters`.`saveName`, `VisualizationFilters`.`filterNum` ASC";
@@ -80,38 +92,41 @@ public class DatabaseConnector
 			"LEFT JOIN `ProcessAttributes` ON `Process`.`event` = `ProcessAttributes`.`event` AND `Process`.`adminEmail` = `ProcessAttributes`.`adminEmail` AND `Process`.`username` = `ProcessAttributes`.`username` AND `Process`.`session` = `ProcessAttributes`.`session` AND `Process`.`user` = `ProcessAttributes`.`user` AND `Process`.`pid` = `ProcessAttributes`.`pid` AND `Process`.`start` = `ProcessAttributes`.`start`\n" + 
 			"WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? ORDER BY `ProcessAttributes`.`timestamp`, `ProcessAttributes`.`insertTimestamp` ASC";
 	
-	//private String allProcessQueryFix = "SELECT * FROM `Process` LEFT JOIN \n" + 
-	//		"(\n" + 
-	//		"SELECT `event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`, GROUP_CONCAT(`arg` ORDER BY `numbered` ASC SEPARATOR ' ') AS `arguments` FROM `ProcessArgs` GROUP BY `ProcessArgs`.`event`, `ProcessArgs`.`adminEmail`, `ProcessArgs`.`username`, `ProcessArgs`.`session`, `ProcessArgs`.`user`, `ProcessArgs`.`pid`, `ProcessArgs`.`start`\n" + 
-	//		") a\n" + 
-	//		"USING (`event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`)\n" + 
-	//		"LEFT JOIN `ProcessAttributes` ON `Process`.`event` = `ProcessAttributes`.`event` AND `Process`.`adminEmail` = `ProcessAttributes`.`adminEmail` AND `Process`.`username` = `ProcessAttributes`.`username` AND `Process`.`session` = `ProcessAttributes`.`session` AND `Process`.`user` = `ProcessAttributes`.`user` AND `Process`.`pid` = `ProcessAttributes`.`pid` AND `Process`.`start` = `ProcessAttributes`.`start`\n" + 
-	//		"WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? ORDER BY `ProcessAttributes`.`insertTimestamp`, `ProcessAttributes`.`timestamp` ASC";
-	
-	private String allProcessQueryFix = "SELECT * FROM\n" + 
+	private String allProcessQueryFix = "SELECT * FROM `Process` LEFT JOIN \n" + 
 			"(\n" + 
-			"\n" + 
-			"SELECT `Process`.`command`, `Process`.`parentpid`, `Process`.`parentuser`, `Process`.`parentstart`, a.`arguments`, `ProcessAttributes`.*, @prev_username AS 'prev_username', @prev_username := `Process`.`username`, @prev_session AS 'prev_session', @prev_session := `Process`.`session`, @prev_user AS 'prev_user', @prev_user := `Process`.`user`, @prev_pid AS 'prev_pid', @prev_pid := `Process`.`pid`, @prev_start AS 'prev_start', @prev_start := `Process`.`start`, @prev_cpu AS 'prev_cpu', @prev_cpu := `ProcessAttributes`.`cpu`, @prev_mem AS 'prev_mem', @prev_mem := `ProcessAttributes`.`mem` FROM `Process` LEFT JOIN \n" + 
-			"\n" + 
-			"(\n" + 
-			"	SELECT `event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`, GROUP_CONCAT(`arg` ORDER BY `numbered` ASC SEPARATOR ' ') AS `arguments` FROM `ProcessArgs` GROUP BY `ProcessArgs`.`event`, `ProcessArgs`.`adminEmail`, `ProcessArgs`.`username`, `ProcessArgs`.`session`, `ProcessArgs`.`user`, `ProcessArgs`.`pid`, `ProcessArgs`.`start`\n" + 
+			"SELECT `event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`, GROUP_CONCAT(`arg` ORDER BY `numbered` ASC SEPARATOR ' ') AS `arguments` FROM `ProcessArgs` GROUP BY `ProcessArgs`.`event`, `ProcessArgs`.`adminEmail`, `ProcessArgs`.`username`, `ProcessArgs`.`session`, `ProcessArgs`.`user`, `ProcessArgs`.`pid`, `ProcessArgs`.`start`\n" + 
 			") a\n" + 
-			"\n" + 
 			"USING (`event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`)\n" + 
-			"\n" + 
 			"LEFT JOIN `ProcessAttributes` ON `Process`.`event` = `ProcessAttributes`.`event` AND `Process`.`adminEmail` = `ProcessAttributes`.`adminEmail` AND `Process`.`username` = `ProcessAttributes`.`username` AND `Process`.`session` = `ProcessAttributes`.`session` AND `Process`.`user` = `ProcessAttributes`.`user` AND `Process`.`pid` = `ProcessAttributes`.`pid` AND `Process`.`start` = `ProcessAttributes`.`start`\n" + 
-			"\n" + 
-			"WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ?\n" + 
-			"\n" + 
-			"ORDER BY `ProcessAttributes`.`event`, `ProcessAttributes`.`adminEmail`, `ProcessAttributes`.`username`, `ProcessAttributes`.`session`, `ProcessAttributes`.`user`, `ProcessAttributes`.`pid`, `ProcessAttributes`.`start`, `ProcessAttributes`.`timestamp` ASC\n" + 
-			"\n" + 
-			") qu\n" + 
-			"\n" + 
-			"WHERE `prev_username` != `qu`.`username` OR `prev_session` != `qu`.`session` OR `prev_user` != `qu`.`user` OR `prev_pid` != `qu`.`pid` OR `prev_start` != `qu`.`start` OR `prev_cpu` != `qu`.`cpu` OR `prev_mem` != `qu`.`mem`\n" + 
-			"\n" + 
-			"ORDER BY `qu`.`timestamp` ASC";
+			"WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? ORDER BY `ProcessAttributes`.`insertTimestamp`, `ProcessAttributes`.`timestamp` ASC";
+	
+	//private String allProcessQuery = "SELECT * FROM\n" + 
+	//		"(\n" + 
+	//		"\n" + 
+	//		"SELECT `Process`.`command`, `Process`.`parentpid`, `Process`.`parentuser`, `Process`.`parentstart`, a.`arguments`, `ProcessAttributes`.*, @prev_username AS 'prev_username', @prev_username := `Process`.`username`, @prev_session AS 'prev_session', @prev_session := `Process`.`session`, @prev_user AS 'prev_user', @prev_user := `Process`.`user`, @prev_pid AS 'prev_pid', @prev_pid := `Process`.`pid`, @prev_start AS 'prev_start', @prev_start := `Process`.`start`, @prev_cpu AS 'prev_cpu', @prev_cpu := `ProcessAttributes`.`cpu`, @prev_mem AS 'prev_mem', @prev_mem := `ProcessAttributes`.`mem` FROM `Process` LEFT JOIN \n" + 
+	//		"\n" + 
+	//		"(\n" + 
+	//		"	SELECT `event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`, GROUP_CONCAT(`arg` ORDER BY `numbered` ASC SEPARATOR ' ') AS `arguments` FROM `ProcessArgs` GROUP BY `ProcessArgs`.`event`, `ProcessArgs`.`adminEmail`, `ProcessArgs`.`username`, `ProcessArgs`.`session`, `ProcessArgs`.`user`, `ProcessArgs`.`pid`, `ProcessArgs`.`start`\n" + 
+	//		") a\n" + 
+	//		"\n" + 
+	//		"USING (`event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`)\n" + 
+	//		"\n" + 
+	//		"LEFT JOIN `ProcessAttributes` ON `Process`.`event` = `ProcessAttributes`.`event` AND `Process`.`adminEmail` = `ProcessAttributes`.`adminEmail` AND `Process`.`username` = `ProcessAttributes`.`username` AND `Process`.`session` = `ProcessAttributes`.`session` AND `Process`.`user` = `ProcessAttributes`.`user` AND `Process`.`pid` = `ProcessAttributes`.`pid` AND `Process`.`start` = `ProcessAttributes`.`start`\n" + 
+	//		"\n" + 
+	//		"WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ?\n" + 
+	//		"\n" + 
+	//		"ORDER BY `ProcessAttributes`.`event`, `ProcessAttributes`.`adminEmail`, `ProcessAttributes`.`username`, `ProcessAttributes`.`session`, `ProcessAttributes`.`user`, `ProcessAttributes`.`pid`, `ProcessAttributes`.`start`, `ProcessAttributes`.`timestamp` ASC\n" + 
+	//		"\n" + 
+	//		") qu\n" + 
+	//		"\n" + 
+	//		"WHERE `prev_username` != `qu`.`username` OR `prev_session` != `qu`.`session` OR `prev_user` != `qu`.`user` OR `prev_pid` != `qu`.`pid` OR `prev_start` != `qu`.`start` OR `prev_cpu` != `qu`.`cpu` OR `prev_mem` != `qu`.`mem`\n" + 
+	//		"\n" + 
+	//		"ORDER BY `qu`.`timestamp` ASC";
+	
+	private String allProcessQueryBounds = "SELECT `ProcessAttributes`.`username`, `ProcessAttributes`.`session`, MIN(`ProcessAttributes`.`timestamp`) AS `mintime`, MAX(`ProcessAttributes`.`timestamp`) AS `maxtime` FROM `ProcessAttributes` WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? GROUP BY `ProcessAttributes`.`session`, `ProcessAttributes`.`username`, `ProcessAttributes`.`event`, `ProcessAttributes`.`adminEmail`";
 	
 	private String allWindowQuery = "SELECT * FROM `Window` LEFT JOIN `WindowDetails`ON `Window`.`event` = `WindowDetails`.`event` AND `Window`.`adminEmail` = `WindowDetails`.`adminEmail` AND `Window`.`username` = `WindowDetails`.`username` AND `Window`.`session` = `WindowDetails`.`session` AND `Window`.`user` = `WindowDetails`.`user` AND `Window`.`pid` = `WindowDetails`.`pid` AND `Window`.`start` = `WindowDetails`.`start` AND `Window`.`xid` = `WindowDetails`.`xid` WHERE `WindowDetails`.`event` = ? AND `WindowDetails`.`adminEmail` = ? ORDER BY `WindowDetails`.`timeChanged`, `WindowDetails`.`insertTimestamp` ASC";
+	private String allWindowQueryBounds = "SELECT `WindowDetails`.`username`, `WindowDetails`.`session`, MIN(`WindowDetails`.`timeChanged`) AS `mintime`, MAX(`WindowDetails`.`timeChanged`) AS `maxtime` FROM `Window` LEFT JOIN `WindowDetails`ON `Window`.`event` = `WindowDetails`.`event` AND `Window`.`adminEmail` = `WindowDetails`.`adminEmail` AND `Window`.`username` = `WindowDetails`.`username` AND `Window`.`session` = `WindowDetails`.`session` AND `Window`.`user` = `WindowDetails`.`user` AND `Window`.`pid` = `WindowDetails`.`pid` AND `Window`.`start` = `WindowDetails`.`start` AND `Window`.`xid` = `WindowDetails`.`xid` WHERE `WindowDetails`.`event` = ? AND `WindowDetails`.`adminEmail` = ? GROUP BY `WindowDetails`.`adminEmail`, `WindowDetails`.`event`, `WindowDetails`.`username`, `WindowDetails`.`session`";
 	
 	private String insertFilter = "INSERT INTO `VisualizationFilters`(`event`, `adminEmail`, `level`, `field`, `value`, `server`, `saveName`, `filterNum`) VALUES ";
 	private String insertFilterValues = "(?,?,?,?,?,?,?,?)";
@@ -1273,6 +1288,142 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
+	public ConcurrentHashMap getTasksHierarchyBounds(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	{
+		ConcurrentHashMap myReturn = new ConcurrentHashMap();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		conn = myConnector;
+		
+		String taskQuery = this.taskQueryBounds;
+		String userSelectString = "";
+		if(!usersToSelect.isEmpty())
+		{
+			userSelectString = " AND `Task`.`username` IN (";
+			for(int x=0; x<usersToSelect.size(); x++)
+			{
+				userSelectString += "?";
+				if(!(x + 1 == usersToSelect.size()))
+				{
+					userSelectString += ", ";
+				}
+			}
+			userSelectString += ")";
+			taskQuery = taskQuery.replace("`Task`.`adminEmail` = ?", "`Task`.`adminEmail` = ? " + userSelectString);
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `Task`.`session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			taskQuery = taskQuery.replace("`Task`.`adminEmail` = ?", "`Task`.`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		
+		
+		try
+		{
+			System.out.println(taskQuery);
+			PreparedStatement myStatement = myConnector.prepareStatement(taskQuery);
+			myStatement.setString(1, event);
+			myStatement.setString(2, admin);
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
+			for(int x=0; x < usersToSelect.size(); x++)
+			{
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
+			}
+			
+			
+			
+			
+			ResultSet myResults = myStatement.executeQuery();
+			while(myResults.next())
+			{
+				ConcurrentHashMap nextRow = new ConcurrentHashMap();
+				ConcurrentHashMap nextNextRow = new ConcurrentHashMap();
+				
+				//nextRow.put("Username", myResults.getString("username"));
+				//nextNextRow.put("Username", myResults.getString("username"));
+				String userName = myResults.getString("username");
+				//nextRow.put("Session", myResults.getString("session"));
+				//nextNextRow.put("Session", myResults.getString("session"));
+				String sessionName = myResults.getString("session");
+				//nextRow.put("Source", myResults.getString("source"));
+				//nextRow.put("TaskName", myResults.getString("taskName"));
+				//nextRow.put("Completion", myResults.getString("completion"));
+				//nextRow.put("EventTime", myResults.getTimestamp("eventTime", cal));
+				//nextRow.put("StartTime", myResults.getTimestamp("startTimestamp", cal));
+				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
+				nextRow.put("Index", myResults.getTimestamp("mintime", cal));
+				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal));
+				//nextRow.put("Event", myResults.getString("event"));
+				
+				//nextRow.put("Description", myResults.getString("eventDescription"));
+				
+				if(!myReturn.containsKey(userName))
+				{
+					myReturn.put(userName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap userMap = (ConcurrentHashMap) myReturn.get(userName);
+				
+				if(!userMap.containsKey(sessionName))
+				{
+					userMap.put(sessionName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userMap.get(sessionName);
+				
+				if(!sessionMap.containsKey("eventbounds"))
+				{
+					sessionMap.put("eventbounds", new ArrayList());
+				}
+				ArrayList eventList = (ArrayList) sessionMap.get("eventbounds");
+				
+				eventList.add(nextRow);
+				eventList.add(nextNextRow);
+				//myReturn.add(nextRow);
+			}
+			stmt = myStatement;
+			rset = myResults;
+			
+			rset.close();
+			stmt.close();
+			conn.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (rset != null) rset.close(); } catch(Exception e) { }
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		return myReturn;
+	}
+	
 	public ConcurrentHashMap getSessionDetailsHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
@@ -1529,6 +1680,128 @@ public class DatabaseConnector
 				ArrayList eventList = (ArrayList) sessionMap.get("screenshots");
 				
 				eventList.add(nextRow);
+				//myReturn.add(nextRow);
+			}
+			stmt = myStatement;
+			rset = myResults;
+			
+			rset.close();
+			stmt.close();
+			conn.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (rset != null) rset.close(); } catch(Exception e) { }
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		return myReturn;
+	}
+	
+	public ConcurrentHashMap getScreenshotsHierarchyBounds(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	{
+		ConcurrentHashMap myReturn = new ConcurrentHashMap();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+        String allImageQuery = this.allImageQueryBounds;
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		conn = myConnector;
+		String userSelectString = "";
+		if(!usersToSelect.isEmpty())
+		{
+			userSelectString = "AND `username` IN (";
+			for(int x=0; x<usersToSelect.size(); x++)
+			{
+				userSelectString += "?";
+				if(!(x + 1 == usersToSelect.size()))
+				{
+					userSelectString += ", ";
+				}
+			}
+			userSelectString += ")";
+			allImageQuery = allImageQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + userSelectString);
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			allImageQuery = allImageQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		try
+		{
+			PreparedStatement myStatement = myConnector.prepareStatement(allImageQuery);
+			myStatement.setString(1, event);
+			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
+			for(int x=0; x < usersToSelect.size(); x++)
+			{
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
+			}
+			
+			
+			ResultSet myResults = myStatement.executeQuery();
+			while(myResults.next())
+			{
+				ConcurrentHashMap nextRow = new ConcurrentHashMap();
+				ConcurrentHashMap nextNextRow = new ConcurrentHashMap();
+				
+				//nextRow.put("Username", myResults.getString("username"));
+				String userName = myResults.getString("username");
+				//nextRow.put("Session", myResults.getString("session"));
+				String sessionName = myResults.getString("session");
+				
+				//nextRow.put("Index", myResults.getTimestamp("taken", cal));
+				nextRow.put("Index", myResults.getTimestamp("mintime", cal));
+				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal));
+				
+				if(!myReturn.containsKey(userName))
+				{
+					myReturn.put(userName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap userMap = (ConcurrentHashMap) myReturn.get(userName);
+				
+				if(!userMap.containsKey(sessionName))
+				{
+					userMap.put(sessionName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userMap.get(sessionName);
+				
+				if(!sessionMap.containsKey("screenshotsbounds"))
+				{
+					sessionMap.put("screenshotsbounds", new ArrayList());
+				}
+				ArrayList eventList = (ArrayList) sessionMap.get("screenshotsbounds");
+				
+				eventList.add(nextRow);
+				eventList.add(nextNextRow);
 				//myReturn.add(nextRow);
 			}
 			stmt = myStatement;
@@ -1976,6 +2249,181 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
+	public ConcurrentHashMap getProcessDataHierarchyBounds(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	{
+		ConcurrentHashMap lastMap = new ConcurrentHashMap();
+		ConcurrentHashMap myReturn = new ConcurrentHashMap();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		conn = myConnector;
+		
+		String allProcessQuery = this.allProcessQueryBounds;
+		String userSelectString = "";
+		if(!usersToSelect.isEmpty())
+		{
+			userSelectString = "AND `ProcessAttributes`.`username` IN (";
+			for(int x=0; x<usersToSelect.size(); x++)
+			{
+				userSelectString += "?";
+				if(!(x + 1 == usersToSelect.size()))
+				{
+					userSelectString += ", ";
+				}
+			}
+			userSelectString += ")";
+			allProcessQuery = allProcessQuery.replace("`ProcessAttributes`.`adminEmail` = ?", "`ProcessAttributes`.`adminEmail` = ? " + userSelectString);
+
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `ProcessAttributes`.`session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			allProcessQuery = allProcessQuery.replace("`ProcessAttributes`.`adminEmail` = ?", "`ProcessAttributes`.`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		
+		
+		try
+		{
+			PreparedStatement myStatement = myConnector.prepareStatement(allProcessQuery);
+			myStatement.setString(1, event);
+			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
+			for(int x=0; x < usersToSelect.size(); x++)
+			{
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
+			}
+			
+			
+			
+			//System.out.println(myStatement);
+			ResultSet myResults = myStatement.executeQuery();
+			while(myResults.next())
+			{
+				ConcurrentHashMap nextRow = new ConcurrentHashMap();
+				ConcurrentHashMap nextNextRow = new ConcurrentHashMap();
+				
+				//nextRow.put("Username", myResults.getString("username"));
+				String userName = myResults.getString("username");
+				//nextRow.put("Session", myResults.getString("session"));
+				String sessionName = myResults.getString("session");
+				
+				//Timestamp timeString = myResults.getTimestamp("timestamp", cal);
+				//System.out.println(timeString);
+				
+				//nextRow.put("User", myResults.getString("user"));
+				//nextRow.put("PID", myResults.getString("pid"));
+				//nextRow.put("Start", myResults.getString("start"));
+				//nextRow.put("Command", myResults.getString("command"));
+				
+				
+				//if(myResults.getObject("arguments") != null)
+				//{
+				//	nextRow.put("Arguments", myResults.getString("arguments"));
+				//}
+				
+				//ConcurrentHashMap rowKey = new ConcurrentHashMap(nextRow);
+				
+				//rowKey.put("Username", userName);
+				//rowKey.put("Session", sessionName);
+				//if(lastMap.containsKey(rowKey))
+				//{
+				//	nextRow.put("Prev", lastMap.get(rowKey));
+				//	((ConcurrentHashMap)lastMap.get(rowKey)).put("Next", nextRow);
+				//}
+				//lastMap.put(rowKey, nextRow);
+				
+				//if(timeString.toString().contains("0000-00-00"))
+				//{
+				//	nextRow.put("SnapTime", new Timestamp(0));
+				//}
+				//else
+				//{
+				//	nextRow.put("SnapTime", myResults.getTimestamp("timestamp", cal));
+				//}
+				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
+				nextRow.put("Index", myResults.getTimestamp("mintime"));
+				nextNextRow.put("Index", myResults.getTimestamp("maxtime"));
+				
+				
+				//nextRow.put("CPU", myResults.getString("cpu"));
+				//nextRow.put("Mem", myResults.getString("mem"));
+				//nextRow.put("VSZ", myResults.getString("vsz"));
+				//nextRow.put("RSS", myResults.getString("rss"));
+				//nextRow.put("TTY", myResults.getString("tty"));
+				//nextRow.put("Stat", myResults.getString("stat"));
+				//nextRow.put("Time", myResults.getString("time"));
+				
+				
+				if(!myReturn.containsKey(userName))
+				{
+					myReturn.put(userName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap userMap = (ConcurrentHashMap) myReturn.get(userName);
+				
+				if(!userMap.containsKey(sessionName))
+				{
+					userMap.put(sessionName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userMap.get(sessionName);
+				
+				if(!sessionMap.containsKey("processbounds"))
+				{
+					sessionMap.put("processbounds", new ArrayList());
+				}
+				ArrayList eventList = (ArrayList) sessionMap.get("processbounds");
+				
+				eventList.add(nextRow);
+				eventList.add(nextNextRow);
+				//myReturn.add(nextRow);
+			}
+			stmt = myStatement;
+			rset = myResults;
+			
+			rset.close();
+			stmt.close();
+			conn.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (rset != null) rset.close(); } catch(Exception e) { }
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		
+		
+		
+		return myReturn;
+	}
+	
 	public ConcurrentHashMap getProcessDataHierarchyFix(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
@@ -2054,6 +2502,7 @@ public class DatabaseConnector
 			
 			
 			ResultSet myResults = myStatement.executeQuery();
+			System.out.println("Query ready");
 			while(myResults.next())
 			{
 				ConcurrentHashMap nextRow = new ConcurrentHashMap();
@@ -2289,6 +2738,129 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
+	public ConcurrentHashMap getKeystrokesHierarchyBounds(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	{
+		ConcurrentHashMap myReturn = new ConcurrentHashMap();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		conn = myConnector;
+		
+		String keyboardQuery = this.keyboardQueryBounds;
+		String userSelectString = "";
+		if(!usersToSelect.isEmpty())
+		{
+			userSelectString = "AND `username` IN (";
+			for(int x=0; x<usersToSelect.size(); x++)
+			{
+				userSelectString += "?";
+				if(!(x + 1 == usersToSelect.size()))
+				{
+					userSelectString += ", ";
+				}
+			}
+			userSelectString += ")";
+			keyboardQuery = keyboardQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + userSelectString);
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			keyboardQuery = keyboardQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		try
+		{
+			PreparedStatement myStatement = myConnector.prepareStatement(keyboardQuery);
+			myStatement.setString(1, event);
+			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
+			for(int x=0; x < usersToSelect.size(); x++)
+			{
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
+			}
+			
+			
+			
+			ResultSet myResults = myStatement.executeQuery();
+			while(myResults.next())
+			{
+				ConcurrentHashMap nextRow = new ConcurrentHashMap();
+				ConcurrentHashMap nextNextRow = new ConcurrentHashMap();
+				
+				//nextRow.put("Username", myResults.getString("username"));
+				String userName = myResults.getString("username");
+				//nextRow.put("Session", myResults.getString("session"));
+				String sessionName = myResults.getString("session");
+				
+				nextRow.put("Index", myResults.getTimestamp("mintime", cal));
+				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal));
+				
+				if(!myReturn.containsKey(userName))
+				{
+					myReturn.put(userName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap userMap = (ConcurrentHashMap) myReturn.get(userName);
+				
+				if(!userMap.containsKey(sessionName))
+				{
+					userMap.put(sessionName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userMap.get(sessionName);
+				
+				if(!sessionMap.containsKey("keystrokesbounds"))
+				{
+					sessionMap.put("keystrokesbounds", new ArrayList());
+				}
+				ArrayList eventList = (ArrayList) sessionMap.get("keystrokesbounds");
+				
+				eventList.add(nextRow);
+				eventList.add(nextNextRow);
+				//myReturn.add(nextRow);
+			}
+			stmt = myStatement;
+			rset = myResults;
+			
+			rset.close();
+			stmt.close();
+			conn.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (rset != null) rset.close(); } catch(Exception e) { }
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		return myReturn;
+	}
+	
 	public ConcurrentHashMap getMouseHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
@@ -2407,6 +2979,133 @@ public class DatabaseConnector
 				ArrayList eventList = (ArrayList) sessionMap.get("mouse");
 				
 				eventList.add(nextRow);
+				//myReturn.add(nextRow);
+			}
+			stmt = myStatement;
+			rset = myResults;
+			
+			rset.close();
+			stmt.close();
+			conn.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (rset != null) rset.close(); } catch(Exception e) { }
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		return myReturn;
+	}
+	
+	public ConcurrentHashMap getMouseHierarchyBounds(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	{
+		ConcurrentHashMap myReturn = new ConcurrentHashMap();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		conn = myConnector;
+		
+		String mouseQuery = this.mouseQueryBounds;
+		String userSelectString = "";
+		if(!usersToSelect.isEmpty())
+		{
+			userSelectString = "AND `username` IN (";
+			for(int x=0; x<usersToSelect.size(); x++)
+			{
+				userSelectString += "?";
+				if(!(x + 1 == usersToSelect.size()))
+				{
+					userSelectString += ", ";
+				}
+			}
+			userSelectString += ")";
+			mouseQuery = mouseQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + userSelectString);
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			mouseQuery = mouseQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		
+		try
+		{
+			PreparedStatement myStatement = myConnector.prepareStatement(mouseQuery);
+			myStatement.setString(1, event);
+			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
+			for(int x=0; x < usersToSelect.size(); x++)
+			{
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
+			}
+			
+			
+			
+			
+			ResultSet myResults = myStatement.executeQuery();
+			while(myResults.next())
+			{
+				ConcurrentHashMap nextRow = new ConcurrentHashMap();
+				ConcurrentHashMap nextNextRow = new ConcurrentHashMap();
+				
+				//nextRow.put("Username", myResults.getString("username"));
+				String userName = myResults.getString("username");
+				//nextRow.put("Session", myResults.getString("session"));
+				String sessionName = myResults.getString("session");
+				
+				//nextRow.put("Index", myResults.getTimestamp("inputTime", cal));
+				nextRow.put("Index", myResults.getTimestamp("mintime", cal));
+				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal));
+				
+				
+				if(!myReturn.containsKey(userName))
+				{
+					myReturn.put(userName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap userMap = (ConcurrentHashMap) myReturn.get(userName);
+				
+				if(!userMap.containsKey(sessionName))
+				{
+					userMap.put(sessionName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userMap.get(sessionName);
+				
+				if(!sessionMap.containsKey("mousebounds"))
+				{
+					sessionMap.put("mousebounds", new ArrayList());
+				}
+				ArrayList eventList = (ArrayList) sessionMap.get("mousebounds");
+				
+				eventList.add(nextRow);
+				eventList.add(nextNextRow);
 				//myReturn.add(nextRow);
 			}
 			stmt = myStatement;
@@ -2552,6 +3251,148 @@ public class DatabaseConnector
 				ArrayList eventList = (ArrayList) sessionMap.get("windows");
 				
 				eventList.add(nextRow);
+				//myReturn.add(nextRow);
+			}
+			stmt = myStatement;
+			rset = myResults;
+			
+			rset.close();
+			stmt.close();
+			conn.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (rset != null) rset.close(); } catch(Exception e) { }
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		return myReturn;
+	}
+	
+	public ConcurrentHashMap getWindowDataHierarchyBounds(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	{
+		ConcurrentHashMap myReturn = new ConcurrentHashMap();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		conn = myConnector;
+		
+		String allWindowQuery = this.allWindowQueryBounds;
+		String userSelectString = "";
+		if(!usersToSelect.isEmpty())
+		{
+			userSelectString = "AND `WindowDetails`.`username` IN (";
+			for(int x=0; x<usersToSelect.size(); x++)
+			{
+				userSelectString += "?";
+				if(!(x + 1 == usersToSelect.size()))
+				{
+					userSelectString += ", ";
+				}
+			}
+			userSelectString += ")";
+			allWindowQuery = allWindowQuery.replace("`WindowDetails`.`adminEmail` = ?", "`WindowDetails`.`adminEmail` = ? " + userSelectString);
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `WindowDetails`.`session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			allWindowQuery = allWindowQuery.replace("`WindowDetails`.`adminEmail` = ?", "`WindowDetails`.`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		
+		
+		try
+		{
+			System.out.println(allWindowQuery);
+			PreparedStatement myStatement = myConnector.prepareStatement(allWindowQuery);
+			myStatement.setString(1, event);
+			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			int secondSessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			for(int x=0; x < usersToSelect.size(); x++)
+			{
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
+			}
+			
+			
+			
+			
+			ResultSet myResults = myStatement.executeQuery();
+			while(myResults.next())
+			{
+				ConcurrentHashMap nextRow = new ConcurrentHashMap();
+				ConcurrentHashMap nextNextRow = new ConcurrentHashMap();
+				
+				//nextRow.put("Username", myResults.getString("username"));
+				String userName = myResults.getString("username");
+				//nextRow.put("Session", myResults.getString("session"));
+				String sessionName = myResults.getString("session");
+				
+				//nextRow.put("ChangeTime", myResults.getTimestamp("timeChanged", cal));
+				nextRow.put("Index", myResults.getTimestamp("mintime", cal));
+				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal));
+				
+				/*
+				nextRow.put("User", myResults.getString("user"));
+				nextRow.put("PID", myResults.getString("pid"));
+				nextRow.put("Start", myResults.getString("start"));
+				nextRow.put("XID", myResults.getString("xid"));
+				nextRow.put("FirstClass", myResults.getString("firstClass"));
+				nextRow.put("SecondClass", myResults.getString("secondClass"));
+				nextRow.put("X", myResults.getString("x"));
+				nextRow.put("Y", myResults.getString("y"));
+				nextRow.put("Width", myResults.getString("width"));
+				nextRow.put("Height", myResults.getString("height"));
+				nextRow.put("Name", myResults.getString("name"));
+				nextRow.put("Active", myResults.getString("active"));
+				*/
+				
+				if(!myReturn.containsKey(userName))
+				{
+					myReturn.put(userName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap userMap = (ConcurrentHashMap) myReturn.get(userName);
+				
+				if(!userMap.containsKey(sessionName))
+				{
+					userMap.put(sessionName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userMap.get(sessionName);
+				
+				if(!sessionMap.containsKey("windowbounds"))
+				{
+					sessionMap.put("windowbounds", new ArrayList());
+				}
+				ArrayList eventList = (ArrayList) sessionMap.get("windowbounds");
+				
+				eventList.add(nextRow);
+				eventList.add(nextNextRow);
 				//myReturn.add(nextRow);
 			}
 			stmt = myStatement;

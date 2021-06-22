@@ -79,6 +79,11 @@ public class DataExportLog extends HttpServlet {
 		{
 			while(keepingAlive)
 			{
+				if(myWriter == null)
+				{
+					keepingAlive = false;
+					return;
+				}
 				ZipEntry paddingFile = null;
 				if(zip)
 				{
@@ -87,6 +92,8 @@ public class DataExportLog extends HttpServlet {
 						zipOut.putNextEntry(paddingFile);
 					} catch (IOException e) {
 						e.printStackTrace();
+						keepingAlive = false;
+						return;
 					}
 				}
 				if(keepingAlive)
@@ -96,24 +103,37 @@ public class DataExportLog extends HttpServlet {
 					{
 						if(zip)
 						{
-							
+							if(zipOut == null || keepingAlive == false)
+							{
+								keepingAlive = false;
+								return;
+							}
 							zipOut.write(0);
-							zipOut.flush();
+							//zipOut.flush();
 						}
 						else
 						{
+							if(myWriter == null || keepingAlive == false)
+							{
+								keepingAlive = false;
+								return;
+							}
 							myWriter.append(" ");
-							myWriter.flush();
+							//myWriter.flush();
 						}
 						
 					} catch (Exception e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
+						keepingAlive = false;
+						return;
 					}
 					try {
 						Thread.currentThread().sleep(500);
 					} catch (InterruptedException e) {
 						e.printStackTrace();
+						keepingAlive = false;
+						return;
 					}
 				}
 				else
@@ -127,6 +147,8 @@ public class DataExportLog extends HttpServlet {
 					zipOut.closeEntry();
 				} catch (IOException e) {
 					e.printStackTrace();
+					keepingAlive = false;
+					return;
 				}
 			}
 			doneKeepingAlive = true;
@@ -144,6 +166,7 @@ public class DataExportLog extends HttpServlet {
 		ZipOutputStream zipOut = null;
 		Thread threadToJoin = null;
 		System.out.println("Got an export query");
+		PadderThread padder = null;
 		try
 		{
 			Class.forName("com.mysql.jdbc.Driver");
@@ -160,7 +183,6 @@ public class DataExportLog extends HttpServlet {
 				zipOut = new ZipOutputStream(out);
 			}
 			
-			PadderThread padder = null;
 			if(zip)
 			{
 				padder = new PadderThread(zipOut);
@@ -361,11 +383,20 @@ public class DataExportLog extends HttpServlet {
 			System.out.println("Starting db read");
 			//ArrayList dataList = myConnector.getCollectedData(eventName, admin);
 			ConcurrentHashMap headMap = new ConcurrentHashMap();
+			//dataTypes.add("bounds");
 			if(toSelect.contains("events"))
 			{
 				System.out.println("Reading events");
 				dataTypes.add("events");
 				ConcurrentHashMap eventMap = myConnector.getTasksHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				headMap = myConnector.mergeMaps(headMap, eventMap);
+			}
+			//else
+			{
+				System.out.println("Getting event bounds");
+				dataTypes.add("eventbounds");
+				ConcurrentHashMap eventMap = myConnector.getTasksHierarchyBounds(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				//System.out.println(eventMap);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
 			if(toSelect.contains("windows"))
@@ -375,12 +406,28 @@ public class DataExportLog extends HttpServlet {
 				ConcurrentHashMap dataMap = myConnector.getWindowDataHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, dataMap);
 			}
+			//else
+			{
+				System.out.println("Getting window bounds");
+				dataTypes.add("windowbounds");
+				ConcurrentHashMap eventMap = myConnector.getWindowDataHierarchyBounds(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				//System.out.println(eventMap);
+				headMap = myConnector.mergeMaps(headMap, eventMap);
+			}
 			if(toSelect.contains("processes"))
 			{
 				System.out.println("Reading processes");
 				dataTypes.add("processes");
 				ConcurrentHashMap dataMap = myConnector.getProcessDataHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, dataMap);
+			}
+			//else
+			{
+				System.out.println("Getting process bounds");
+				dataTypes.add("processbounds");
+				ConcurrentHashMap eventMap = myConnector.getProcessDataHierarchyBounds(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				//System.out.println(eventMap);
+				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
 			if(toSelect.contains("environment"))
 			{
@@ -396,12 +443,26 @@ public class DataExportLog extends HttpServlet {
 				ConcurrentHashMap dataMap = myConnector.getKeystrokesHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, dataMap);
 			}
+			{
+				System.out.println("Getting keystrokes bounds");
+				dataTypes.add("keystrokesbounds");
+				ConcurrentHashMap eventMap = myConnector.getKeystrokesHierarchyBounds(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				//System.out.println(eventMap);
+				headMap = myConnector.mergeMaps(headMap, eventMap);
+			}
 			if(toSelect.contains("mouse"))
 			{
 				System.out.println("Reading mouse");
 				dataTypes.add("mouse");
 				ConcurrentHashMap dataMap = myConnector.getMouseHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, dataMap);
+			}
+			{
+				System.out.println("Getting mouse bounds");
+				dataTypes.add("mousebounds");
+				ConcurrentHashMap eventMap = myConnector.getMouseHierarchyBounds(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				//System.out.println(eventMap);
+				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
 			if(toSelect.contains("screenshots"))
 			{
@@ -421,6 +482,13 @@ public class DataExportLog extends HttpServlet {
 					ConcurrentHashMap screenshotMap = myConnector.getScreenshotsHierarchy(eventName, admin, userSelectList, sessionSelectList, false, true, firstIndex, count);
 					headMap = myConnector.mergeMaps(headMap, screenshotMap);
 				}
+			}
+			{
+				System.out.println("Getting screenshots bounds");
+				dataTypes.add("screenshotsbounds");
+				ConcurrentHashMap eventMap = myConnector.getScreenshotsHierarchyBounds(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				//System.out.println(eventMap);
+				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
 			if(false || toSelect.contains("video"))
 			{
@@ -457,6 +525,9 @@ public class DataExportLog extends HttpServlet {
 			//headMap = deInsert(headMap);
 			System.out.println("Normalizing time");
 			headMap = myConnector.normalizeAllTime(headMap);
+			System.out.println("Time normalized");
+			//System.out.println(headMap.get("bounds"));
+			//headMap.remove("bounds");
 			
 			
 			//System.out.println("Exporting " + headMap.size());
@@ -486,6 +557,34 @@ public class DataExportLog extends HttpServlet {
 				
 				headMap = newMap;
 			}
+			/*
+			{
+			Iterator userIterator = headMap.entrySet().iterator();
+			while(userIterator.hasNext())
+			{
+				Entry userEntry = (Entry) userIterator.next();
+				String curUser = (String) userEntry.getKey();
+				ArrayList sessionList = new ArrayList();
+				//System.out.println("User: " + curUser);
+				//System.out.println(userEntry.getValue().getClass());
+				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userEntry.getValue();
+				//System.out.println(sessionMap.size());
+				Iterator sessionIterator = (Iterator) sessionMap.entrySet().iterator();
+				while(sessionIterator.hasNext())
+				{
+					Entry sessionEntry = (Entry) sessionIterator.next();
+					String curSession = (String) sessionEntry.getKey();
+					sessionList.add(curSession);
+					//System.out.println("Sess: " + curSession);
+					//System.out.println(sessionEntry.getValue().getClass());
+					ConcurrentHashMap dataMap = (ConcurrentHashMap) sessionEntry.getValue();
+					System.out.println(((ArrayList) dataMap.get("bounds")).size());
+					System.out.println(dataMap.get("bounds"));
+					dataMap.remove("bounds");
+				}
+			}
+			}
+			*/
 			
 			if(normalize != null && !normalize.equals("none"))
 			{
@@ -546,12 +645,33 @@ public class DataExportLog extends HttpServlet {
 			{
 				finalMap = headMap;
 			}
-			
+			/*
 			System.out.println("Encoding to JSON");
-			
+			System.out.println(finalMap.keySet());
+			System.out.println(((ConcurrentHashMap)((ConcurrentHashMap)finalMap.get("arek.kupka@gmail.com")).get("b01a62f6-f274-4c6e-9d84-fed76fd2a52f")).keySet());
+			ArrayList debugList = (ArrayList) (((ConcurrentHashMap)((ConcurrentHashMap)finalMap.get("arek.kupka@gmail.com")).get("b01a62f6-f274-4c6e-9d84-fed76fd2a52f")).get("processes"));
+			System.out.println(debugList.size());
+			for(int z=0; z<debugList.size(); z++)
+			{
+				System.out.println(z);
+				ConcurrentHashMap debugMap = (ConcurrentHashMap) debugList.get(z);
+				System.out.println(debugMap.keySet());
+				Iterator tmpIter = debugMap.entrySet().iterator();
+				while(tmpIter.hasNext())
+				{
+					Entry tmpEntry = (Entry) tmpIter.next();
+					System.out.println(tmpEntry.getKey());
+					System.out.println(tmpEntry.getValue());
+				}
+			}
+			if(true)
+			{
+				return;
+			}
+			*/
 			Gson gson = new GsonBuilder().create();
 			String output = "";
-			if(normalize.equals("user"))
+			if(normalize != null && normalize.equals("user"))
 			{
 				output = gson.toJson(finalList);
 			}
@@ -569,6 +689,7 @@ public class DataExportLog extends HttpServlet {
 				{
 					padder.setKeepingAlive(false);
 					Thread.currentThread().sleep(100);
+					threadToJoin.join(100);
 				}
 				System.out.println("Zipping");
 				
@@ -624,6 +745,7 @@ public class DataExportLog extends HttpServlet {
 				{
 					padder.setKeepingAlive(false);
 					Thread.currentThread().sleep(100);
+					threadToJoin.join(100);
 				}
 				response.getWriter().append(output);
 				response.getWriter().close();
@@ -639,7 +761,32 @@ public class DataExportLog extends HttpServlet {
 		}
 		catch(Exception e)
 		{
-			
+			try {
+				if(padder != null)
+				{
+					padder.setKeepingAlive(false);
+				}
+				if(threadToJoin != null)
+				{
+					threadToJoin.join();
+				}
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}
+		try {
+			if(padder != null)
+			{
+				padder.setKeepingAlive(false);
+			}
+			if(threadToJoin != null)
+			{
+				threadToJoin.join();
+			}
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
 	}
 	

@@ -912,9 +912,11 @@ function fadeOutLightbox()
 		start(true);
 	}
 	
+	var startedDownload = {};
 	
 	function preprocess(dataToModify)
 	{
+		totalSessions = 0;
 		for(user in dataToModify)
 		{
 			//console.log(dataToModify);
@@ -938,7 +940,19 @@ function fadeOutLightbox()
 					//dataToModify[user][session]["screenshots"][entry]["Screenshot"] = getScreenshotData;
 					//dataToModify[user][session]["screenshots"][entry]["HasScreenshot"] = hasScreenshot;
 				}
-				downloadImages(user, session, dataToModify[user][session]["screenshots"], 0);
+				
+				var hashValDownload = SHA256(user + session + "_download");
+				if(!startedDownload[hashValDownload])
+				{
+					console.log("Starting first download " + user + ":" + session);
+					startedDownload[hashValDownload] = true;
+					downloadImages(user, session, dataToModify[user][session]["screenshots"], 0);
+					downloadProcesses(user, session, 0);
+				}
+				else
+				{
+					console.log("Already downloaded " + user + ":" + session);
+				}
 				
 				if(dataToModify[user][session]["windows"])
 				{
@@ -996,14 +1010,47 @@ function fadeOutLightbox()
 			}
 			dataToModify[user]["Aggregated"] = newSession;
 		}
+		
 		return dataToModify;
 	}
 	
 	var summaryProcStats = {};
 	var summaryProcStatsArray = [];
 	var measureBy = "session";
-	function filter(dataToFilter, filters)
+	async function filter(dataToFilter, filters)
 	{
+		/*
+		//console.log("Filtering:");
+		//console.log(dataToFilter);
+		for(user in dataToFilter)
+		{
+			for(session in dataToFilter[user])
+			{
+				//console.log("Checking " + user + ":" + session)
+				var hashVal = SHA256(user + session + "_processes");
+				//console.log((retrieveData(hashVal)))
+				//console.log(await retrieveData(hashVal))
+				//console.log((await hasData(hashVal)));
+				if((await hasData(hashVal)))
+				{
+					//console.log("Has process data")
+					var hasStored = ((await retrieveData(hashVal)).value)
+					//console.log("Looking for processes for: " + user + ":" + session)
+					//console.log(hashVal);
+					//console.log(hasStored);
+					if(hasStored)
+					{
+						//console.log("Found");
+						//console.log(((await retrieveData(hashVal)).value));
+						console.log(dataToFilter[user][session]);
+						dataToFilter[user][session]["processes"] = hasStored;
+					}
+					//dataToFilter[user][session]["processes"] = ((await retrieveData(SHA256(user + session + "_processes"))).value)
+				}
+			}
+		}
+		*/
+		
 		summaryProcStats = {};
 		summaryProcStatsArray = [];
 		var filterMap = {};
@@ -1035,6 +1082,7 @@ function fadeOutLightbox()
 			}
 			for(session in dataToFilter[user])
 			{
+				
 				if(measureBy = "session")
 				{
 					var userProcFound = {};
@@ -1051,6 +1099,8 @@ function fadeOutLightbox()
 						}
 					}
 				}
+				
+				
 				
 				for(data in dataToFilter[user][session])
 				{
@@ -1486,7 +1536,89 @@ function fadeOutLightbox()
 	}
 	
 	var downloadedImageSize = 0;
+	var downloadedProcessSize = 0;
 	var downloadedSize = 0;
+	
+	var updating = false;
+	
+	async function refreshData()
+	{
+		console.log("Refreshing data");
+		if(updating)
+		{
+			console.log("Refresh already underway");
+			return;
+		}
+		updating = true;
+		
+		
+		var initData = ((await retrieveData("indexdata")).value);
+		for(user in initData)
+		{
+			for(session in initData[user])
+			{
+				//console.log("Checking " + user + ":" + session)
+				var hashVal = SHA256(user + session + "_processes");
+				//console.log("hasData(" + hashVal + ")");
+				//console.log((retrieveData(hashVal)))
+				//console.log(await retrieveData(hashVal))
+				//console.log((await hasData(hashVal)));
+				if((await hasData(hashVal)))
+				{
+					//console.log("Has process data")
+					var hasStored = ((await retrieveData(hashVal)).value)
+					//console.log("Looking for processes for: " + user + ":" + session)
+					//console.log(hashVal);
+					//console.log(hasStored);
+					if(hasStored)
+					{
+						//console.log("Found");
+						//console.log(((await retrieveData(hashVal)).value));
+						//console.log("Pairing:");
+						//console.log(initData[user][session]);
+						//console.log(hasStored);
+						if(hasStored.length > 0)
+						{
+							//console.log("Not empty, pairing...")
+							initData[user][session]["processes"] = hasStored;
+						}
+					}
+					//dataToFilter[user][session]["processes"] = ((await retrieveData(SHA256(user + session + "_processes"))).value)
+				}
+			}
+		}
+		
+		try
+		{
+			var isDone = false;
+			while(!isDone)
+			{
+				isDone = await persistData("indexdata", initData);
+			}
+		}
+		catch(err)
+		{
+			console.log(err);
+		}
+		
+		theNormData = preprocess(initData);
+		try
+		{
+			var isDone = false;
+			while(!isDone)
+			{
+				isDone = await persistData("data", theNormData);
+			}
+		}
+		catch(err)
+		{
+			console.log(err);
+		}
+		
+		start(true);
+		
+		updating = false;
+	}
 	
 	async function downloadData()
 	{
@@ -1511,8 +1643,20 @@ function fadeOutLightbox()
 		{
 			d3.select("#title")
 				.html(origTitle + "<br />Starting download...");
-			d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes,mouse,processes,windows,events,environment,screenshotindices&normalize=none", async function(error, data)
+			d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes,mouse,windows,events,environment,screenshotindices&normalize=none", async function(error, data)
 				{
+					try
+					{
+						var isDone = false;
+						while(!isDone)
+						{
+							isDone = await persistData("indexdata", data);
+						}
+					}
+					catch(err)
+					{
+						console.log(err);
+					}
 					theNormData = preprocess(data);
 					try
 					{
@@ -1538,7 +1682,7 @@ function fadeOutLightbox()
 					theNormDataDone = true;
 					
 					d3.select("#title")
-						.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes, finished " + downloadedSessions + " of " + totalSessions + " sessions.")
+						.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes; new process data: <b>" + downloadedProcessSize + "</b> bytes; finished " + downloadedSessions + " of " + totalSessions + " sessions.")
 					
 					
 					d3.select("body").style("cursor", "");
@@ -1560,17 +1704,133 @@ function fadeOutLightbox()
 		}
 	}
 	
-	var chunkSize = 50;
-	
 	var downloadedSessions = 0;
+	var downloadedProcessSessions = 0;
 	var totalSessions = 0;
+	
+	var processChunkSize = 100000;
+	
+	var downloadedSessionProcesses = 0;
+	
+	async function downloadProcesses(userName, sessionName, nextCount, sheet)
+	{
+		console.log("Downloading process data for: " + userName + ":" + sessionName + ", index " + nextCount);
+		if(!sheet)
+		{
+			var hashVal = SHA256(user + session + "_processes");
+			var hasStored = ((await hasData(hashVal)))
+			if(hasStored)
+			{
+				var curProcArray = ((await retrieveData(hashVal)).value);
+				//nextCount = curProcArray.length;
+				//console.log("Already stored: " + nextCount);
+				var isDone = false;
+				while(!isDone)
+				{
+					isDone = await persistData(hashVal, []);
+				}
+				
+			}
+			
+			var sheet = document.getElementById("style_" + SHA256(userName + sessionName));
+			if(!sheet)
+			{
+				var sheet = document.createElement('style');
+				sheet.id = "style_" + SHA256(userName + sessionName);
+			}
+		}
+		
+		sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Yellow;}";
+		document.body.appendChild(sheet);
+		
+		var curCount = nextCount;
+		
+		var curSelect = "&users=" + userName + "&sessions=" + sessionName + "&first=" + curCount + "&count=" + processChunkSize;
+		await d3.json("logExport.json?event=" + eventName + "&datasources=processes&normalize=none" + curSelect, async function(error, data)
+		{
+			for(user in data)
+			{
+				for(session in data[user])
+				{
+					
+					var curProcessList = data[user][session]["processes"];
+					
+					if(curProcessList)
+					{
+						var hashVal = SHA256(user + session + "_processes");
+						//console.log("Hash for process: " + hashVal);
+						try
+						{
+							var hasStored = ((await hasData(hashVal)))
+							//console.log("New data for " + user + ":" + session);
+							//console.log(curProcessList);
+							var curProcArray = curProcessList;
+							if(hasStored)
+							{
+								curProcArray = ((await retrieveData(hashVal)).value);
+								//console.log("This array stored for " + user + ":" + session);
+								//console.log(curProcArray);
+								curProcArray = curProcArray.concat(curProcessList);
+							}
+							
+							var isDone = false;
+							//console.log("Storing for " + user + ":" + session + ": ");
+							//console.log(curProcArray);
+							while(!isDone)
+							{
+								isDone = await persistData(hashVal, curProcArray);
+							}
+						}
+						catch(err)
+						{
+							console.log(err);
+						}
+						downloadProcesses(userName, sessionName, curCount + processChunkSize, sheet);
+					}
+					else
+					{
+						downloadedProcessSessions++;
+						console.log("Done downloading processes for " + user + ":" + session);
+						//start(true);
+						refreshData();
+					}
+					
+				}
+			}
+		})
+		.on("progress", async function(d, i)
+		{
+			//downloadedSize = d["loaded"];
+			downloadedProcessSize += d["loaded"];
+			d3.select("#title")
+			.html(origTitle + "<br />Index data: <b>"
+					+ downloadedSize
+					+ "</b> bytes; new image data: <b>"
+					+ downloadedImageSize
+					+ "</b> bytes; new process data: <b>"
+					+ downloadedProcessSize + "</b> bytes; finished "
+					+ downloadedSessions
+					+ " screenshot and "
+					+ downloadedProcessSessions + " process sessions of "
+					+ totalSessions
+					+ " total sessions.")
+		});
+	}
+	
+	var chunkSize = 50;
 	
 	async function downloadImages(userName, sessionName, imageArray, nextCount, sheet)
 	{
 		if(!sheet)
 		{
-			var sheet = document.createElement('style')
+			var sheet = document.getElementById("style_" + SHA256(userName + sessionName));
+			if(!sheet)
+			{
+				var sheet = document.createElement('style');
+				sheet.id = "style_" + SHA256(userName + sessionName);
+			}
 		}
+		//console.log(sheet);
 		sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Yellow;}";
 		document.body.appendChild(sheet);
 		
@@ -1628,7 +1888,17 @@ function fadeOutLightbox()
 				}
 				
 				d3.select("#title")
-					.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes, finished " + downloadedSessions + " of " + totalSessions + " sessions.")
+				.html(origTitle + "<br />Index data: <b>"
+						+ downloadedSize
+						+ "</b> bytes; new image data: <b>"
+						+ downloadedImageSize
+						+ "</b> bytes; new process data: <b>"
+						+ downloadedProcessSize + "</b> bytes; finished "
+						+ downloadedSessions
+						+ " screenshot and "
+						+ downloadedProcessSessions + " process sessions of "
+						+ totalSessions
+						+ " total sessions.")
 				
 				
 				if(curCount < imageArray.length)
@@ -1640,7 +1910,17 @@ function fadeOutLightbox()
 				{
 					downloadedSessions++;
 					d3.select("#title")
-					.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes, finished " + downloadedSessions + " of " + totalSessions + " sessions.")
+					.html(origTitle + "<br />Index data: <b>"
+							+ downloadedSize
+							+ "</b> bytes; new image data: <b>"
+							+ downloadedImageSize
+							+ "</b> bytes; new process data: <b>"
+							+ downloadedProcessSize + "</b> bytes; finished "
+							+ downloadedSessions
+							+ " screenshot and "
+							+ downloadedProcessSessions + " process sessions of "
+							+ totalSessions
+							+ " total sessions.")
 					sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
 				}
 				
@@ -1650,14 +1930,34 @@ function fadeOutLightbox()
 						//downloadedSize = d["loaded"];
 						downloadedImageSize += d["loaded"];
 						d3.select("#title")
-						.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; image data: <b>" + downloadedImageSize + "</b> bytes, finished " + downloadedSessions + " of " + totalSessions + " sessions.");
+						.html(origTitle + "<br />Index data: <b>"
+								+ downloadedSize
+								+ "</b> bytes; new image data: <b>"
+								+ downloadedImageSize
+								+ "</b> bytes; new process data: <b>"
+								+ downloadedProcessSize + "</b> bytes; finished "
+								+ downloadedSessions
+								+ " screenshot and "
+								+ downloadedProcessSessions + " process sessions of "
+								+ totalSessions
+								+ " total sessions.")
 					});
 		}
 		else
 		{
 			downloadedSessions++;
 			d3.select("#title")
-			.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes, finished " + downloadedSessions + " of " + totalSessions + " sessions.")
+			.html(origTitle + "<br />Index data: <b>"
+					+ downloadedSize
+					+ "</b> bytes; new image data: <b>"
+					+ downloadedImageSize
+					+ "</b> bytes; new process data: <b>"
+					+ downloadedProcessSize + "</b> bytes; finished "
+					+ downloadedSessions
+					+ " screenshot and "
+					+ downloadedProcessSessions + " process sessions of "
+					+ totalSessions
+					+ " total sessions.")
 			sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
 		}
 	}
@@ -1705,8 +2005,18 @@ function fadeOutLightbox()
 			
 			//d3.select("#legend").html("");
 			clearWindow();
-			theNormData = ((await retrieveData("data")).value);
-			theNormData = filter(theNormData, filters);
+			var theNormDataInit = ((await retrieveData("data")).value);
+			//console.log("Data:");
+			//console.log(theNormDataInit);
+			//console.log("Filtering...");
+			var filteredData = await filter(theNormDataInit, filters);
+			console.log("Filtered:");
+			console.log(filteredData);
+			//console.log("Awaiting");
+			//console.log((await (filter(theNormDataInit, filters))));
+			
+			theNormData = filteredData//((await filter(theNormDataInit, filters)).value);
+			//console.log(theNormData);
 			showDefault();
 		}
 		console.log("Starting Main Vis")
