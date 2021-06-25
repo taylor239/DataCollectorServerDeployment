@@ -52,6 +52,7 @@ public class DataExportLog extends HttpServlet {
 		ZipOutputStream zipOut = null;
 		boolean zip = false;
 		PrintWriter myWriter;
+		String padderID = "";
 		
 		
 		public PadderThread(PrintWriter writer)
@@ -73,6 +74,11 @@ public class DataExportLog extends HttpServlet {
 		public boolean getDoneKeepingAlive()
 		{
 			return doneKeepingAlive;
+		}
+		
+		public void setID(String id)
+		{
+			padderID = id;
 		}
 		
 		public void run()
@@ -98,7 +104,7 @@ public class DataExportLog extends HttpServlet {
 				}
 				if(keepingAlive)
 				{
-					System.out.println("Padding");
+					System.out.println("Padding: " + padderID);
 					try
 					{
 						if(zip)
@@ -152,7 +158,7 @@ public class DataExportLog extends HttpServlet {
 				}
 			}
 			doneKeepingAlive = true;
-			System.out.println("Stopped padding");
+			System.out.println("Stopped padding: " + padderID);
 		}
     }
 
@@ -192,6 +198,7 @@ public class DataExportLog extends HttpServlet {
 				padder = new PadderThread(response.getWriter());
 			}
 			
+			
 			threadToJoin = new Thread(padder);
 			threadToJoin.start();
 			
@@ -204,7 +211,7 @@ public class DataExportLog extends HttpServlet {
 			TestingConnectionSource myConnectionSource = myConnector.getConnectionSource();
 			
 			
-			
+			padder.setID(request.getRequestURL().toString());
 			
 			String eventName = request.getParameter("event");
 			
@@ -395,7 +402,7 @@ public class DataExportLog extends HttpServlet {
 			{
 				System.out.println("Getting event bounds");
 				dataTypes.add("eventbounds");
-				ConcurrentHashMap eventMap = myConnector.getTasksHierarchyBounds(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				ConcurrentHashMap eventMap = myConnector.getTasksHierarchyBounds(eventName, admin);
 				//System.out.println(eventMap);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
@@ -410,7 +417,7 @@ public class DataExportLog extends HttpServlet {
 			{
 				System.out.println("Getting window bounds");
 				dataTypes.add("windowbounds");
-				ConcurrentHashMap eventMap = myConnector.getWindowDataHierarchyBounds(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				ConcurrentHashMap eventMap = myConnector.getWindowDataHierarchyBounds(eventName, admin);
 				//System.out.println(eventMap);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
@@ -425,7 +432,7 @@ public class DataExportLog extends HttpServlet {
 			{
 				System.out.println("Getting process bounds");
 				dataTypes.add("processbounds");
-				ConcurrentHashMap eventMap = myConnector.getProcessDataHierarchyBounds(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				ConcurrentHashMap eventMap = myConnector.getProcessDataHierarchyBounds(eventName, admin);
 				//System.out.println(eventMap);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
@@ -446,7 +453,7 @@ public class DataExportLog extends HttpServlet {
 			{
 				System.out.println("Getting keystrokes bounds");
 				dataTypes.add("keystrokesbounds");
-				ConcurrentHashMap eventMap = myConnector.getKeystrokesHierarchyBounds(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				ConcurrentHashMap eventMap = myConnector.getKeystrokesHierarchyBounds(eventName, admin);
 				//System.out.println(eventMap);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
@@ -460,7 +467,7 @@ public class DataExportLog extends HttpServlet {
 			{
 				System.out.println("Getting mouse bounds");
 				dataTypes.add("mousebounds");
-				ConcurrentHashMap eventMap = myConnector.getMouseHierarchyBounds(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				ConcurrentHashMap eventMap = myConnector.getMouseHierarchyBounds(eventName, admin);
 				//System.out.println(eventMap);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
@@ -486,7 +493,7 @@ public class DataExportLog extends HttpServlet {
 			{
 				System.out.println("Getting screenshots bounds");
 				dataTypes.add("screenshotsbounds");
-				ConcurrentHashMap eventMap = myConnector.getScreenshotsHierarchyBounds(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				ConcurrentHashMap eventMap = myConnector.getScreenshotsHierarchyBounds(eventName, admin);
 				//System.out.println(eventMap);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}

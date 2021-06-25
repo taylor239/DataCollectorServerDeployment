@@ -1746,18 +1746,30 @@ function fadeOutLightbox()
 		var curCount = nextCount;
 		
 		var curSelect = "&users=" + userName + "&sessions=" + sessionName + "&first=" + curCount + "&count=" + processChunkSize;
+		
+		var failed = true;
+	
 		await d3.json("logExport.json?event=" + eventName + "&datasources=processes&normalize=none" + curSelect, async function(error, data)
 		{
-			for(user in data)
+			if(error)
 			{
-				for(session in data[user])
+				failed = true;
+				console.log("Error, retrying...");
+				console.log(error);
+				downloadProcesses(userName, sessionName, curCount, sheet);
+				return;
+			}
+			failed = false;
+			//for(user in data)
+			{
+				//for(session in data[user])
 				{
 					
-					var curProcessList = data[user][session]["processes"];
+					var curProcessList = data[userName][sessionName]["processes"];
 					
 					if(curProcessList)
 					{
-						var hashVal = SHA256(user + session + "_processes");
+						var hashVal = SHA256(userName + sessionName + "_processes");
 						//console.log("Hash for process: " + hashVal);
 						try
 						{
@@ -1783,6 +1795,7 @@ function fadeOutLightbox()
 						}
 						catch(err)
 						{
+							failed = true;
 							console.log(err);
 						}
 						downloadProcesses(userName, sessionName, curCount + processChunkSize, sheet);
@@ -1790,8 +1803,20 @@ function fadeOutLightbox()
 					else
 					{
 						downloadedProcessSessions++;
-						console.log("Done downloading processes for " + user + ":" + session);
+						console.log("Done downloading processes for " + userName + ":" + sessionName);
 						//start(true);
+						d3.select("#title")
+						.html(origTitle + "<br />Index data: <b>"
+								+ downloadedSize
+								+ "</b> bytes; new image data: <b>"
+								+ downloadedImageSize
+								+ "</b> bytes; new process data: <b>"
+								+ downloadedProcessSize + "</b> bytes; finished "
+								+ downloadedSessions
+								+ " screenshot and "
+								+ downloadedProcessSessions + " process sessions of "
+								+ totalSessions
+								+ " total sessions.")
 						refreshData();
 					}
 					
@@ -1859,16 +1884,24 @@ function fadeOutLightbox()
 			var curSelect = "&users=" + userName + "&sessions=" + sessionName + "&first=" + curCount + "&count=" + chunkSize;
 			await d3.json("logExport.json?event=" + eventName + "&datasources=screenshots&normalize=none" + curSelect, async function(error, data)
 			{
-				for(user in data)
+				if(error)
 				{
-					for(session in data[user])
+					failed = true;
+					console.log("Error, retrying...");
+					console.log(error);
+					downloadImages(userName, sessionName, imageArray, curCount, sheet);
+					return;
+				}
+				//for(user in data)
+				{
+					//for(session in data[user])
 					{
 						
-						var curScreenshotList = data[user][session]["screenshots"];
+						var curScreenshotList = data[userName][sessionName]["screenshots"];
 						
 						for(screenshot in curScreenshotList)
 						{
-							var hashVal = SHA256(user + session + curScreenshotList[screenshot]["Index MS"]);
+							var hashVal = SHA256(userName + sessionName + curScreenshotList[screenshot]["Index MS"]);
 							//console.log(imageArray[screenshot]);
 							try
 							{

@@ -1288,7 +1288,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getTasksHierarchyBounds(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getTasksHierarchyBounds(String event, String admin)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -1301,36 +1301,10 @@ public class DatabaseConnector
 		
 		String taskQuery = this.taskQueryBounds;
 		String userSelectString = "";
-		if(!usersToSelect.isEmpty())
-		{
-			userSelectString = " AND `Task`.`username` IN (";
-			for(int x=0; x<usersToSelect.size(); x++)
-			{
-				userSelectString += "?";
-				if(!(x + 1 == usersToSelect.size()))
-				{
-					userSelectString += ", ";
-				}
-			}
-			userSelectString += ")";
-			taskQuery = taskQuery.replace("`Task`.`adminEmail` = ?", "`Task`.`adminEmail` = ? " + userSelectString);
-		}
+		
 		
 		String sessionSelectString = "";
-		if(!sessionsToSelect.isEmpty())
-		{
-			sessionSelectString = " AND `Task`.`session` IN (";
-			for(int x=0; x<sessionsToSelect.size(); x++)
-			{
-				sessionSelectString += "?";
-				if(!(x + 1 == sessionsToSelect.size()))
-				{
-					sessionSelectString += ", ";
-				}
-			}
-			sessionSelectString += ")";
-			taskQuery = taskQuery.replace("`Task`.`adminEmail` = ?", "`Task`.`adminEmail` = ? " + sessionSelectString);
-		}
+		
 		
 		
 		
@@ -1341,18 +1315,10 @@ public class DatabaseConnector
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
 			int sessionOffset = 0;
-			for(int x=0; x < sessionsToSelect.size(); x++)
-			{
-				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
-				sessionOffset = x + 1;
-			}
+			
 			
 			int secondSessionOffset = 0;
-			for(int x=0; x < usersToSelect.size(); x++)
-			{
-				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
-				secondSessionOffset = x + 1;
-			}
+			
 			
 			
 			
@@ -1703,7 +1669,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getScreenshotsHierarchyBounds(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getScreenshotsHierarchyBounds(String event, String admin)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -1715,36 +1681,10 @@ public class DatabaseConnector
 		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
 		conn = myConnector;
 		String userSelectString = "";
-		if(!usersToSelect.isEmpty())
-		{
-			userSelectString = "AND `username` IN (";
-			for(int x=0; x<usersToSelect.size(); x++)
-			{
-				userSelectString += "?";
-				if(!(x + 1 == usersToSelect.size()))
-				{
-					userSelectString += ", ";
-				}
-			}
-			userSelectString += ")";
-			allImageQuery = allImageQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + userSelectString);
-		}
+		
 		
 		String sessionSelectString = "";
-		if(!sessionsToSelect.isEmpty())
-		{
-			sessionSelectString = " AND `session` IN (";
-			for(int x=0; x<sessionsToSelect.size(); x++)
-			{
-				sessionSelectString += "?";
-				if(!(x + 1 == sessionsToSelect.size()))
-				{
-					sessionSelectString += ", ";
-				}
-			}
-			sessionSelectString += ")";
-			allImageQuery = allImageQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + sessionSelectString);
-		}
+		
 		
 		try
 		{
@@ -1753,18 +1693,10 @@ public class DatabaseConnector
 			myStatement.setString(2, admin);
 			
 			int sessionOffset = 0;
-			for(int x=0; x < sessionsToSelect.size(); x++)
-			{
-				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
-				sessionOffset = x + 1;
-			}
+			
 			
 			int secondSessionOffset = 0;
-			for(int x=0; x < usersToSelect.size(); x++)
-			{
-				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
-				secondSessionOffset = x + 1;
-			}
+			
 			
 			
 			ResultSet myResults = myStatement.executeQuery();
@@ -2249,7 +2181,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getProcessDataHierarchyBounds(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getProcessDataHierarchyBounds(String event, String admin)
 	{
 		ConcurrentHashMap lastMap = new ConcurrentHashMap();
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
@@ -2263,37 +2195,10 @@ public class DatabaseConnector
 		
 		String allProcessQuery = this.allProcessQueryBounds;
 		String userSelectString = "";
-		if(!usersToSelect.isEmpty())
-		{
-			userSelectString = "AND `ProcessAttributes`.`username` IN (";
-			for(int x=0; x<usersToSelect.size(); x++)
-			{
-				userSelectString += "?";
-				if(!(x + 1 == usersToSelect.size()))
-				{
-					userSelectString += ", ";
-				}
-			}
-			userSelectString += ")";
-			allProcessQuery = allProcessQuery.replace("`ProcessAttributes`.`adminEmail` = ?", "`ProcessAttributes`.`adminEmail` = ? " + userSelectString);
-
-		}
+		
 		
 		String sessionSelectString = "";
-		if(!sessionsToSelect.isEmpty())
-		{
-			sessionSelectString = " AND `ProcessAttributes`.`session` IN (";
-			for(int x=0; x<sessionsToSelect.size(); x++)
-			{
-				sessionSelectString += "?";
-				if(!(x + 1 == sessionsToSelect.size()))
-				{
-					sessionSelectString += ", ";
-				}
-			}
-			sessionSelectString += ")";
-			allProcessQuery = allProcessQuery.replace("`ProcessAttributes`.`adminEmail` = ?", "`ProcessAttributes`.`adminEmail` = ? " + sessionSelectString);
-		}
+		
 		
 		
 		
@@ -2304,18 +2209,10 @@ public class DatabaseConnector
 			myStatement.setString(2, admin);
 			
 			int sessionOffset = 0;
-			for(int x=0; x < sessionsToSelect.size(); x++)
-			{
-				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
-				sessionOffset = x + 1;
-			}
+			
 			
 			int secondSessionOffset = 0;
-			for(int x=0; x < usersToSelect.size(); x++)
-			{
-				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
-				secondSessionOffset = x + 1;
-			}
+			
 			
 			
 			
@@ -2365,8 +2262,8 @@ public class DatabaseConnector
 				//	nextRow.put("SnapTime", myResults.getTimestamp("timestamp", cal));
 				//}
 				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
-				nextRow.put("Index", myResults.getTimestamp("mintime"));
-				nextNextRow.put("Index", myResults.getTimestamp("maxtime"));
+				nextRow.put("Index", myResults.getTimestamp("mintime", cal));
+				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal));
 				
 				
 				//nextRow.put("CPU", myResults.getString("cpu"));
@@ -2738,7 +2635,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getKeystrokesHierarchyBounds(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getKeystrokesHierarchyBounds(String event, String admin)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -2751,36 +2648,10 @@ public class DatabaseConnector
 		
 		String keyboardQuery = this.keyboardQueryBounds;
 		String userSelectString = "";
-		if(!usersToSelect.isEmpty())
-		{
-			userSelectString = "AND `username` IN (";
-			for(int x=0; x<usersToSelect.size(); x++)
-			{
-				userSelectString += "?";
-				if(!(x + 1 == usersToSelect.size()))
-				{
-					userSelectString += ", ";
-				}
-			}
-			userSelectString += ")";
-			keyboardQuery = keyboardQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + userSelectString);
-		}
+		
 		
 		String sessionSelectString = "";
-		if(!sessionsToSelect.isEmpty())
-		{
-			sessionSelectString = " AND `session` IN (";
-			for(int x=0; x<sessionsToSelect.size(); x++)
-			{
-				sessionSelectString += "?";
-				if(!(x + 1 == sessionsToSelect.size()))
-				{
-					sessionSelectString += ", ";
-				}
-			}
-			sessionSelectString += ")";
-			keyboardQuery = keyboardQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + sessionSelectString);
-		}
+		
 		
 		try
 		{
@@ -2789,18 +2660,10 @@ public class DatabaseConnector
 			myStatement.setString(2, admin);
 			
 			int sessionOffset = 0;
-			for(int x=0; x < sessionsToSelect.size(); x++)
-			{
-				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
-				sessionOffset = x + 1;
-			}
+			
 			
 			int secondSessionOffset = 0;
-			for(int x=0; x < usersToSelect.size(); x++)
-			{
-				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
-				secondSessionOffset = x + 1;
-			}
+			
 			
 			
 			
@@ -3002,7 +2865,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getMouseHierarchyBounds(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getMouseHierarchyBounds(String event, String admin)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -3015,36 +2878,10 @@ public class DatabaseConnector
 		
 		String mouseQuery = this.mouseQueryBounds;
 		String userSelectString = "";
-		if(!usersToSelect.isEmpty())
-		{
-			userSelectString = "AND `username` IN (";
-			for(int x=0; x<usersToSelect.size(); x++)
-			{
-				userSelectString += "?";
-				if(!(x + 1 == usersToSelect.size()))
-				{
-					userSelectString += ", ";
-				}
-			}
-			userSelectString += ")";
-			mouseQuery = mouseQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + userSelectString);
-		}
+		
 		
 		String sessionSelectString = "";
-		if(!sessionsToSelect.isEmpty())
-		{
-			sessionSelectString = " AND `session` IN (";
-			for(int x=0; x<sessionsToSelect.size(); x++)
-			{
-				sessionSelectString += "?";
-				if(!(x + 1 == sessionsToSelect.size()))
-				{
-					sessionSelectString += ", ";
-				}
-			}
-			sessionSelectString += ")";
-			mouseQuery = mouseQuery.replace("`adminEmail` = ?", "`adminEmail` = ? " + sessionSelectString);
-		}
+		
 		
 		
 		try
@@ -3054,18 +2891,10 @@ public class DatabaseConnector
 			myStatement.setString(2, admin);
 			
 			int sessionOffset = 0;
-			for(int x=0; x < sessionsToSelect.size(); x++)
-			{
-				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
-				sessionOffset = x + 1;
-			}
+			
 			
 			int secondSessionOffset = 0;
-			for(int x=0; x < usersToSelect.size(); x++)
-			{
-				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
-				secondSessionOffset = x + 1;
-			}
+			
 			
 			
 			
@@ -3274,7 +3103,7 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap getWindowDataHierarchyBounds(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	public ConcurrentHashMap getWindowDataHierarchyBounds(String event, String admin)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -3287,36 +3116,10 @@ public class DatabaseConnector
 		
 		String allWindowQuery = this.allWindowQueryBounds;
 		String userSelectString = "";
-		if(!usersToSelect.isEmpty())
-		{
-			userSelectString = "AND `WindowDetails`.`username` IN (";
-			for(int x=0; x<usersToSelect.size(); x++)
-			{
-				userSelectString += "?";
-				if(!(x + 1 == usersToSelect.size()))
-				{
-					userSelectString += ", ";
-				}
-			}
-			userSelectString += ")";
-			allWindowQuery = allWindowQuery.replace("`WindowDetails`.`adminEmail` = ?", "`WindowDetails`.`adminEmail` = ? " + userSelectString);
-		}
+		
 		
 		String sessionSelectString = "";
-		if(!sessionsToSelect.isEmpty())
-		{
-			sessionSelectString = " AND `WindowDetails`.`session` IN (";
-			for(int x=0; x<sessionsToSelect.size(); x++)
-			{
-				sessionSelectString += "?";
-				if(!(x + 1 == sessionsToSelect.size()))
-				{
-					sessionSelectString += ", ";
-				}
-			}
-			sessionSelectString += ")";
-			allWindowQuery = allWindowQuery.replace("`WindowDetails`.`adminEmail` = ?", "`WindowDetails`.`adminEmail` = ? " + sessionSelectString);
-		}
+		
 		
 		
 		
@@ -3329,16 +3132,8 @@ public class DatabaseConnector
 			
 			int sessionOffset = 0;
 			int secondSessionOffset = 0;
-			for(int x=0; x < sessionsToSelect.size(); x++)
-			{
-				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
-				sessionOffset = x + 1;
-			}
-			for(int x=0; x < usersToSelect.size(); x++)
-			{
-				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
-				secondSessionOffset = x + 1;
-			}
+			
+			
 			
 			
 			
