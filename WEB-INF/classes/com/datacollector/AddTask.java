@@ -38,6 +38,8 @@ public class AddTask extends HttpServlet {
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		HttpSession session = request.getSession(true);
+		
+		
 		DatabaseConnector myConnector=(DatabaseConnector)session.getAttribute("connector");
 		if(myConnector==null)
 		{
@@ -47,10 +49,23 @@ public class AddTask extends HttpServlet {
 		TestingConnectionSource myConnectionSource = myConnector.getConnectionSource();
 		
 		
-		Connection dbConn = myConnectionSource.getDatabaseConnection();
-		
 		String eventName = request.getParameter("event");
+		
+		String eventPassword = request.getParameter("eventPassword");
 
+		if(eventPassword != null)
+		{
+			session.setAttribute("eventPassword", eventPassword);
+		}
+		
+		String eventAdmin = request.getParameter("eventAdmin");
+
+		if(eventAdmin != null)
+		{
+			session.setAttribute("eventAdmin", eventAdmin);
+		}
+		
+		
 		if(request.getParameter("email") != null)
 		{
 			session.removeAttribute("admin");
@@ -63,7 +78,7 @@ public class AddTask extends HttpServlet {
 				
 				PreparedStatement outerStmt = null;
 				ResultSet outerSet = null;
-				
+				Connection dbConn = myConnectionSource.getDatabaseConnection();
 				try
 				{
 					PreparedStatement queryStmt = dbConn.prepareStatement(loginQuery);
@@ -95,16 +110,89 @@ public class AddTask extends HttpServlet {
 			}
 		}
 		
+		
 		String admin = (String)session.getAttribute("admin");
+		
+		eventPassword = (String)session.getAttribute("eventPassword");
+		eventAdmin = (String)session.getAttribute("eventAdmin");
+		
+		//boolean fromAnon = session.getAttribute("fromAnon").equals("true");
+		
+		
+		boolean anon = false;
+		ConcurrentHashMap privs = null;
+		
+		boolean fromPrivs = false;
+		String tagger = null;
+		
+		if(admin == null || admin.isEmpty())
+		{
+			fromPrivs = true;
+			System.out.println("Privs request");
+			privs = myConnector.getPermissionDetails(eventName, eventAdmin, eventPassword);
+			anon = (boolean) privs.get("anon");
+			admin = (String) privs.get("adminemail");
+			if(privs.containsKey("tagger"))
+			{
+				tagger = (String) privs.get("tagger");
+			}
+			else
+			{
+				return;
+			}
+		}
+		
+		boolean fromAnon = anon;
+		
+		ConcurrentHashMap userMap = null;
+		ConcurrentHashMap inverseUserMap = null;
+		if(fromAnon || anon)
+		{
+			System.out.println("Building user map");
+			userMap = new ConcurrentHashMap();
+			inverseUserMap = new ConcurrentHashMap();
+			ArrayList userList = myConnector.getUsers(eventName, admin);
+			//System.out.println(userList);
+			for(int x = 0; x < userList.size(); x++)
+			{
+				ConcurrentHashMap curUser = (ConcurrentHashMap) userList.get(x);
+				//System.out.println(curUser);
+				if(!userMap.containsKey(curUser.get("Username")))
+				{
+					userMap.put(curUser.get("Username"), "User" + x);
+					inverseUserMap.put("User" + x, curUser.get("Username"));
+				}
+			}
+			//System.out.println(inverseUserMap);
+		}
+		
+		//String admin = (String)session.getAttribute("admin");
 		
 		long startTime = Math.round(Double.parseDouble((String)request.getParameter("start")));
 		long endTime = Math.round(Double.parseDouble((String)request.getParameter("end")));
 		String taskName = (String)request.getParameter("taskName");
+		String taskTags = (String)request.getParameter("taskTags");
+		if(taskTags == null)
+		{
+			taskTags = "";
+		}
+		String taskLines[] = taskTags.split("\\r?\\n");
 		String userName = (String)request.getParameter("userName");
 		String sessionName = (String)request.getParameter("sessionName");
 		
-		
-		ConcurrentHashMap result = myConnector.addTask(eventName, userName, sessionName, admin, startTime, endTime, taskName);
+		ConcurrentHashMap result = null;
+		if(tagger == null)
+		{
+			tagger = admin;
+		}
+		if(fromAnon)
+		{
+			result = myConnector.addTask(eventName, (String) inverseUserMap.get(userName), sessionName, admin, startTime, endTime, taskName, taskLines, tagger);
+		}
+		else
+		{
+			result = myConnector.addTask(eventName, userName, sessionName, admin, startTime, endTime, taskName, taskLines, tagger);
+		}
 		Gson gson = new GsonBuilder().create();
 		
 		

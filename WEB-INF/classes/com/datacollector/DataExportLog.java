@@ -284,13 +284,15 @@ public class DataExportLog extends HttpServlet {
 			
 			
 			boolean anon = false;
-			
+			ConcurrentHashMap privs = null;
 			
 			if(admin == null || admin.isEmpty())
 			{
-				System.out.println("Anon request");
-				anon = true;
-				admin = myConnector.getPermission(eventName, eventAdmin, eventPassword);
+				System.out.println("Privs request");
+				privs = myConnector.getPermissionDetails(eventName, eventAdmin, eventPassword);
+				//System.out.println(privs);
+				anon = (boolean) privs.get("anon");
+				admin = (String) privs.get("adminemail");
 			}
 			
 			boolean fromAnon = anon;
@@ -397,6 +399,9 @@ public class DataExportLog extends HttpServlet {
 				dataTypes.add("events");
 				ConcurrentHashMap eventMap = myConnector.getTasksHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
+				dataTypes.add("eventtags");
+				ConcurrentHashMap eventTagMap = myConnector.getTaskTagsHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				headMap = myConnector.mergeMaps(headMap, eventTagMap);
 			}
 			//else
 			{

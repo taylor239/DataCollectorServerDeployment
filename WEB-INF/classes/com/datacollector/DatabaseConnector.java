@@ -68,7 +68,10 @@ public class DatabaseConnector
 			"GROUP BY `MouseInput`.`session`, `MouseInput`.`username`, `MouseInput`.`event`, `MouseInput`.`adminEmail`";
 	
 	private String taskQuery = "SELECT * FROM `openDataCollectionServer`.`Task` LEFT JOIN `TaskEvent` ON `Task`.`username` = `TaskEvent`.`username` AND `Task`.`event` = `TaskEvent`.`event` AND `Task`.`adminEmail` = `TaskEvent`.`adminEmail` AND `Task`.`taskName` = `TaskEvent`.`taskName` WHERE `Task`.`event` = ? AND `Task`.`adminEmail` = ? ORDER BY `TaskEvent`.`eventTime`, `TaskEvent`.`insertTimestamp` ASC";
+	private String taskTagQuery = "SELECT * FROM `openDataCollectionServer`.`Task` INNER JOIN `TaskTags` ON `Task`.`username` = `TaskTags`.`username` AND `Task`.`event` = `TaskTags`.`event` AND `Task`.`adminEmail` = `TaskTags`.`adminEmail` AND `Task`.`taskName` = `TaskTags`.`taskName` WHERE `Task`.`event` = ? AND `Task`.`adminEmail` = ?";
 	private String taskQueryBounds = "SELECT `TaskEvent`.`username`, `TaskEvent`.`session`, MIN(`TaskEvent`.`eventTime`) AS `mintime`, MAX(`TaskEvent`.`eventTime`) AS `maxtime` FROM `openDataCollectionServer`.`Task` LEFT JOIN `TaskEvent` ON `Task`.`username` = `TaskEvent`.`username` AND `Task`.`event` = `TaskEvent`.`event` AND `Task`.`adminEmail` = `TaskEvent`.`adminEmail` AND `Task`.`taskName` = `TaskEvent`.`taskName` WHERE `Task`.`event` = ? AND `Task`.`adminEmail` = ? GROUP BY `TaskEvent`.`adminEmail`, `TaskEvent`.`event`, `TaskEvent`.`username`, `TaskEvent`.`session`";
+	private String taskQueryTags = "SELECT DISTINCT(`tag`) FROM `TaskTags` WHERE `TaskTags`.`event` = ? AND `TaskTags`.`adminEmail` = ? UNION SELECT `tag` FROM `TaskTagsPublic`";
+	
 	
 	private String imageQuery = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `username` = ? AND `session` = ? AND `event` = ? AND `adminEmail` = ? ORDER BY abs(? - (UNIX_TIMESTAMP(`taken`) * 1000)) LIMIT 1";
 	private String imageQueryExact = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `username` = ? AND `session` = ? AND `event` = ? AND `adminEmail` = ? AND (UNIX_TIMESTAMP(`taken`) * 1000) = ?";
@@ -135,6 +138,7 @@ public class DatabaseConnector
 	
 	private String insertTask = "INSERT INTO `Task`(`event`, `adminEmail`, `username`, `session`, `taskName`, `completion`, `startTimestamp`) VALUES (?,?,?,?,?,?, FROM_UNIXTIME(? / 1000))";
 	private String insertTaskEvent = "INSERT INTO `TaskEvent`(`event`, `adminEmail`, `username`, `session`, `taskName`, `eventTime`, `eventDescription`, `startTimestamp`, `source`) VALUES (?,?,?,?,?,FROM_UNIXTIME(? / 1000),?,FROM_UNIXTIME(? / 1000),?)";
+	private String insertTaskTag = "INSERT INTO `TaskTags`(`event`, `adminEmail`, `username`, `session`, `taskName`, `startTimestamp`, `tag`) VALUES (?,?,?,?,?, FROM_UNIXTIME(? / 1000), ?)";
 	
 	private String deleteTaskEvents = "DELETE FROM `TaskEvent` WHERE `event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ? AND `taskName` = ? AND `source` = ? AND `startTimestamp` = FROM_UNIXTIME(? / 1000)";
 	private String selectTaskEvents = "SELECT * FROM `TaskEvent` WHERE `event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ? AND `taskName` = ? AND `startTimestamp` = FROM_UNIXTIME(? / 1000)";
@@ -144,7 +148,7 @@ public class DatabaseConnector
 	
 	private String limiter = " LIMIT ?, ?";
 	
-	private String checkPerms = "SELECT `adminEmail` FROM `EventPassword` WHERE `event` = ? AND `adminEmail` = ? AND `password` = ?";
+	private String checkPerms = "SELECT * FROM `EventPassword` WHERE `event` = ? AND `adminEmail` = ? AND `password` = ?";
 	
 	private TestingConnectionSource mySource;
 	
@@ -722,6 +726,58 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
+	public ConcurrentHashMap getPermissionDetails(String eventName, String eventAdmin, String password)
+	{
+		ConcurrentHashMap myReturn = new ConcurrentHashMap();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		
+		conn = myConnector;
+		try
+		{
+			PreparedStatement myStatement = myConnector.prepareStatement(checkPerms);
+			myStatement.setString(1, eventName);
+			myStatement.setString(2, eventAdmin);
+			myStatement.setString(3, password);
+			ResultSet myResults = myStatement.executeQuery();
+			
+			while(myResults.next())
+			{
+				myReturn.put("adminemail", myResults.getString("adminEmail"));
+				String tagger = myResults.getString("tagger");
+				if(tagger != null)
+				{
+					myReturn.put("tagger", tagger);
+				}
+				myReturn.put("anon", myResults.getInt("anon") > 0);
+			}
+			
+			
+			stmt = myStatement;
+			rset = myResults;
+			
+			rset.close();
+			stmt.close();
+			conn.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (rset != null) rset.close(); } catch(Exception e) { }
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		return myReturn;
+	}
+	
 	public ArrayList getUsers(String event, String admin)
 	{
 		ArrayList myReturn = new ArrayList();
@@ -917,7 +973,9 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public ConcurrentHashMap addTask(String event, String user, String session, String admin, long start, long end, String taskName)
+	
+	
+	public ConcurrentHashMap addTask(String event, String user, String session, String admin, long start, long end, String taskName, String[] tags, String tagger)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -929,8 +987,8 @@ public class DatabaseConnector
 		conn = myConnector;
 		try
 		{
-			String curStatement = insertFilter;
-			curStatement = insertTask;
+			//String curStatement = insertFilter;
+			String curStatement = insertTask;
 			PreparedStatement myStatement = myConnector.prepareStatement(curStatement);
 			//`event`, `adminEmail`, `username`, `session`, `taskName`, `completion`, `startTimestamp`
 			myStatement.setString(1, event);
@@ -946,6 +1004,29 @@ public class DatabaseConnector
 			myStatement.execute();
 			myStatement.close();
 			
+			for(int x=0; tags != null && x < tags.length; x++)
+			{
+				if(tags[x].isEmpty())
+				{
+					continue;
+				}
+				curStatement = insertTaskTag;
+				myStatement = myConnector.prepareStatement(curStatement);
+				//`event`, `adminEmail`, `username`, `session`, `taskName`, `completion`, `startTimestamp`
+				myStatement.setString(1, event);
+				myStatement.setString(2, admin);
+				myStatement.setString(3, user);
+				myStatement.setString(4, session);
+				myStatement.setString(5, taskName);
+				myStatement.setLong(6, start);
+				myStatement.setString(7, tags[x]);
+				
+				//System.out.println(myStatement);
+				
+				myStatement.execute();
+				myStatement.close();
+			}
+			
 			curStatement = insertTaskEvent;
 			myStatement = myConnector.prepareStatement(curStatement);
 			//`event`, `adminEmail`, `username`, `session`, `taskName`, `eventTime`, `eventDescription`, `startTimestamp`, `source`
@@ -957,7 +1038,7 @@ public class DatabaseConnector
 			myStatement.setLong(6, start);
 			myStatement.setString(7, "start");
 			myStatement.setLong(8, start);
-			myStatement.setString(9, admin);
+			myStatement.setString(9, tagger);
 			
 			myStatement.execute();
 			myStatement.close();
@@ -972,7 +1053,7 @@ public class DatabaseConnector
 			myStatement.setLong(6, end);
 			myStatement.setString(7, "end");
 			myStatement.setLong(8, start);
-			myStatement.setString(9, admin);
+			myStatement.setString(9, tagger);
 			
 			myStatement.execute();
 			
@@ -983,12 +1064,12 @@ public class DatabaseConnector
 			conn.close();
 			myReturn.put("result", "okay");
 			
-			ArrayList thisUser = new ArrayList();
-			thisUser.add(user);
-			ArrayList thisSession = new ArrayList();
-			thisUser.add(session);
+			//ArrayList thisUser = new ArrayList();
+			//thisUser.add(user);
+			//ArrayList thisSession = new ArrayList();
+			//thisUser.add(session);
 			
-			myReturn.put("newEvents", normalizeAllTime(getTasksHierarchy(event, admin, thisUser, thisSession, "", "")));
+			//myReturn.put("newEvents", normalizeAllTime(getTasksHierarchy(event, admin, thisUser, thisSession, "", "")));
 			
 		}
 		catch(Exception e)
@@ -1288,6 +1369,141 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
+	public ConcurrentHashMap getTaskTagsHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	{
+		ConcurrentHashMap myReturn = new ConcurrentHashMap();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		conn = myConnector;
+		
+		String taskQuery = this.taskTagQuery;
+		String userSelectString = "";
+		if(!usersToSelect.isEmpty())
+		{
+			userSelectString = " AND `Task`.`username` IN (";
+			for(int x=0; x<usersToSelect.size(); x++)
+			{
+				userSelectString += "?";
+				if(!(x + 1 == usersToSelect.size()))
+				{
+					userSelectString += ", ";
+				}
+			}
+			userSelectString += ")";
+			taskQuery = taskQuery.replace("`Task`.`adminEmail` = ?", "`Task`.`adminEmail` = ? " + userSelectString);
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `Task`.`session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			taskQuery = taskQuery.replace("`Task`.`adminEmail` = ?", "`Task`.`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			taskQuery = taskQuery + limiter;
+		}
+		
+		try
+		{
+			System.out.println(taskQuery);
+			PreparedStatement myStatement = myConnector.prepareStatement(taskQuery);
+			myStatement.setString(1, event);
+			myStatement.setString(2, admin);
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
+			for(int x=0; x < usersToSelect.size(); x++)
+			{
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
+			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
+			
+			ResultSet myResults = myStatement.executeQuery();
+			while(myResults.next())
+			{
+				ConcurrentHashMap nextRow = new ConcurrentHashMap();
+				
+				//nextRow.put("Username", myResults.getString("username"));
+				String userName = myResults.getString("username");
+				//nextRow.put("Session", myResults.getString("session"));
+				String sessionName = myResults.getString("session");
+				nextRow.put("TaskName", myResults.getString("taskName"));
+				nextRow.put("Completion", myResults.getString("completion"));
+				nextRow.put("StartTime", myResults.getTimestamp("startTimestamp", cal));
+				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
+				//nextRow.put("Event", myResults.getString("event"));
+				
+				nextRow.put("Tag", myResults.getString("tag"));
+				
+				if(!myReturn.containsKey(userName))
+				{
+					myReturn.put(userName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap userMap = (ConcurrentHashMap) myReturn.get(userName);
+				
+				if(!userMap.containsKey(sessionName))
+				{
+					userMap.put(sessionName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userMap.get(sessionName);
+				
+				if(!sessionMap.containsKey("eventtags"))
+				{
+					sessionMap.put("eventtags", new ArrayList());
+				}
+				ArrayList eventList = (ArrayList) sessionMap.get("eventtags");
+				
+				eventList.add(nextRow);
+				//myReturn.add(nextRow);
+			}
+			stmt = myStatement;
+			rset = myResults;
+			
+			rset.close();
+			stmt.close();
+			conn.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (rset != null) rset.close(); } catch(Exception e) { }
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		return myReturn;
+	}
+	
 	public ConcurrentHashMap getTasksHierarchyBounds(String event, String admin)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
@@ -1368,6 +1584,60 @@ public class DatabaseConnector
 				eventList.add(nextRow);
 				eventList.add(nextNextRow);
 				//myReturn.add(nextRow);
+			}
+			stmt = myStatement;
+			rset = myResults;
+			
+			rset.close();
+			stmt.close();
+			conn.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (rset != null) rset.close(); } catch(Exception e) { }
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		return myReturn;
+	}
+	
+	public ArrayList getTaskTags(String event, String admin)
+	{
+		ArrayList myReturn = new ArrayList();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		conn = myConnector;
+		
+		String taskQuery = this.taskQueryTags;
+		String userSelectString = "";
+		
+		
+		String sessionSelectString = "";
+		
+		
+		
+		
+		try
+		{
+			System.out.println(taskQuery);
+			PreparedStatement myStatement = myConnector.prepareStatement(taskQuery);
+			myStatement.setString(1, event);
+			myStatement.setString(2, admin);
+			
+			ResultSet myResults = myStatement.executeQuery();
+			while(myResults.next())
+			{
+				myReturn.add(myResults.getString("tag"));
+				
 			}
 			stmt = myStatement;
 			rset = myResults;

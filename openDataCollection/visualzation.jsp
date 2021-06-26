@@ -912,6 +912,53 @@ function fadeOutLightbox()
 		start(true);
 	}
 	
+	async function getProcessData()
+	{
+		if(session == "Aggregated")
+		{
+			return [];
+		}
+		else
+		{
+			var hashVal = SHA256(this.user + this.session + "_processes");
+			var toReturn = (await retrieveData(hashVal));
+			return toReturn;
+		}
+	}
+	
+	async function getProcessDataFiltered()
+	{
+		if(session == "Aggregated")
+		{
+			return [];
+		}
+		else
+		{
+			var hashVal = SHA256(this.user + this.session + "_processes_filtered");
+			var toReturn = (await retrieveData(hashVal));
+			return toReturn;
+		}
+	}
+	
+	async function storeProcessDataFiltered(toStore)
+	{
+		//console.log("Storing for: " + this.session);
+		//console.log(toStore);
+		if(session == "Aggregated")
+		{
+			
+		}
+		else
+		{
+			var isDone = false;
+			while(!isDone)
+			{
+				var hashVal = SHA256(this.user + this.session + "_processes_filtered");
+				isDone = await persistData(hashVal, toStore);
+			}
+		}
+	}
+	
 	var startedDownload = {};
 	
 	function preprocess(dataToModify)
@@ -1019,37 +1066,7 @@ function fadeOutLightbox()
 	var measureBy = "session";
 	async function filter(dataToFilter, filters)
 	{
-		/*
-		//console.log("Filtering:");
-		//console.log(dataToFilter);
-		for(user in dataToFilter)
-		{
-			for(session in dataToFilter[user])
-			{
-				//console.log("Checking " + user + ":" + session)
-				var hashVal = SHA256(user + session + "_processes");
-				//console.log((retrieveData(hashVal)))
-				//console.log(await retrieveData(hashVal))
-				//console.log((await hasData(hashVal)));
-				if((await hasData(hashVal)))
-				{
-					//console.log("Has process data")
-					var hasStored = ((await retrieveData(hashVal)).value)
-					//console.log("Looking for processes for: " + user + ":" + session)
-					//console.log(hashVal);
-					//console.log(hasStored);
-					if(hasStored)
-					{
-						//console.log("Found");
-						//console.log(((await retrieveData(hashVal)).value));
-						console.log(dataToFilter[user][session]);
-						dataToFilter[user][session]["processes"] = hasStored;
-					}
-					//dataToFilter[user][session]["processes"] = ((await retrieveData(SHA256(user + session + "_processes"))).value)
-				}
-			}
-		}
-		*/
+		
 		
 		summaryProcStats = {};
 		summaryProcStatsArray = [];
@@ -1104,6 +1121,23 @@ function fadeOutLightbox()
 				
 				for(data in dataToFilter[user][session])
 				{
+					//console.log(data);
+					var isAsync = false;
+					var dataSource = dataToFilter[user][session][data];
+					if(dataToFilter[user][session][data]["data"] && (typeof dataToFilter[user][session][data]["data"]) == "function")
+					{
+						//console.log("Async filter");
+						//console.log(session);
+						//console.log(dataToFilter[user][session][data]["data"]);
+						//console.log(dataToFilter[user][session][data]["data"]());
+						dataSource = (await dataToFilter[user][session][data]["data"]()).value;
+						if(!dataSource)
+						{
+							continue;
+						}
+						//console.log(dataSource);
+						isAsync = true;
+					}
 					toFilter = filterMap[2];
 					if(toFilter)
 					{
@@ -1111,14 +1145,14 @@ function fadeOutLightbox()
 						{
 							if(!(eval("'" + data + "'" + toFilter[curFilter]["Value"])))
 							{
-								dataToFilter[user][session][data] = [];
+								dataSource = [];
 							}
 						}
 					}
 					toSplice = [];
 					//console.log(dataToFilter[user][session][data]);
 					entry = 0;
-					curLength = dataToFilter[user][session][data].length;
+					curLength = dataSource.length;
 					while(entry < curLength)
 					//for(entry in dataToFilter[user][session][data])
 					{
@@ -1128,14 +1162,14 @@ function fadeOutLightbox()
 						{
 							for(curFilter in toFilter)
 							{
-								if(toFilter[curFilter]["Field"] in dataToFilter[user][session][data][entry])
+								if(toFilter[curFilter]["Field"] in dataSource[entry])
 								{
-									if(!(eval("'" + dataToFilter[user][session][data][entry][toFilter[curFilter]["Field"]] + "'" + toFilter[curFilter]["Value"])))
+									if(!(eval("'" + dataSource[entry][toFilter[curFilter]["Field"]] + "'" + toFilter[curFilter]["Value"])))
 									{
 										//console.log(dataToFilter[user][session][data][entry]);
-										dataToFilter[user][session][data].splice(entry, 1);
+										dataSource.splice(entry, 1);
 										entry--;
-										curLength = dataToFilter[user][session][data].length;
+										curLength = dataSource.length;
 										//console.log(entry);
 										//toSplice.push(entry);
 										filteredOut = true;
@@ -1148,39 +1182,30 @@ function fadeOutLightbox()
 						{
 							if(data == "processes")
 							{
-								if(!(dataToFilter[user][session][data][entry]["Command"] in userProcFound))
+								if(!(dataSource[entry]["Command"] in userProcFound))
 								{
-									if(dataToFilter[user][session][data][entry]["Command"] in summaryProcStats)
+									if(dataSource[entry]["Command"] in summaryProcStats)
 									{
-										summaryProcStats[dataToFilter[user][session][data][entry]["Command"]]["count"]++;
+										summaryProcStats[dataSource[entry]["Command"]]["count"]++;
 									}
 									else
 									{
 										procStatMap = {};
-										procStatMap["Command"] = dataToFilter[user][session][data][entry]["Command"];
+										procStatMap["Command"] = dataSource[entry]["Command"];
 										procStatMap["count"] = 1;
-										summaryProcStats[dataToFilter[user][session][data][entry]["Command"]] = procStatMap;
+										summaryProcStats[dataSource[entry]["Command"]] = procStatMap;
 									}
-									userProcFound[dataToFilter[user][session][data][entry]["Command"]] = 0
+									userProcFound[dataSource[entry]["Command"]] = 0
 								}
 							}
 						}
 						entry++;
 					}
-					//toSplice.reverse();
 					
-					//console.log("Removing");
-					//console.log(dataToFilter[user][session][data]);
-					//console.log(toSplice);
-					//console.log(dataToFilter[user][session][data]);
-					//for(reEntry in toSplice)
-					//{
-						//console.log(reEntry);
-						//console.log(dataToFilter[user][session][data][reEntry]);
-						//dataToFilter[user][session][data].splice(entry, 1);
-						//console.log(dataToFilter[user][session][data]);
-						
-					//}
+					if(isAsync)
+					{
+						dataSource = await dataToFilter[user][session][data]["storefiltered"](dataSource);
+					}
 				}
 			}
 			}
@@ -1277,6 +1302,9 @@ function fadeOutLightbox()
 	var curQueue = [];
 	
 	var persistWriting = false;
+	
+	
+	
 	async function persistData(key, value)
 	{
 		var args = {};
@@ -1309,6 +1337,35 @@ function fadeOutLightbox()
 		}
 		persistWriting = false;
 		d3.select("body").style("cursor", "");
+	}
+	
+	function sleep(ms)
+	{
+		return new Promise(resolve => setTimeout(resolve, ms));
+	}
+	
+	async function persistDataAndWait(key, value)
+	{
+		var args = {};
+		args["key"] = key;
+		args["value"] = value;
+		//console.log(args);
+		curQueue.push(args);
+		//console.log(curQueue);
+		await writePersist();
+		
+		
+		//if(curQueue.length > 0)
+		//{
+		//	console.log("Waiting on write...")
+		//	console.log(curQueue.length);
+		//	console.log(curQueue[0]);
+		//	await sleep(150000);
+		//}
+		return new Promise(async function (resolve, reject)
+		{
+			resolve(true);
+		})
 	}
 	
 	Function.prototype.clone = function() {
@@ -1551,40 +1608,17 @@ function fadeOutLightbox()
 		}
 		updating = true;
 		
-		
+		/*
 		var initData = ((await retrieveData("indexdata")).value);
 		for(user in initData)
 		{
 			for(session in initData[user])
 			{
-				//console.log("Checking " + user + ":" + session)
-				var hashVal = SHA256(user + session + "_processes");
-				//console.log("hasData(" + hashVal + ")");
-				//console.log((retrieveData(hashVal)))
-				//console.log(await retrieveData(hashVal))
-				//console.log((await hasData(hashVal)));
-				if((await hasData(hashVal)))
-				{
-					//console.log("Has process data")
-					var hasStored = ((await retrieveData(hashVal)).value)
-					//console.log("Looking for processes for: " + user + ":" + session)
-					//console.log(hashVal);
-					//console.log(hasStored);
-					if(hasStored)
-					{
-						//console.log("Found");
-						//console.log(((await retrieveData(hashVal)).value));
-						//console.log("Pairing:");
-						//console.log(initData[user][session]);
-						//console.log(hasStored);
-						if(hasStored.length > 0)
-						{
-							//console.log("Not empty, pairing...")
-							initData[user][session]["processes"] = hasStored;
-						}
-					}
-					//dataToFilter[user][session]["processes"] = ((await retrieveData(SHA256(user + session + "_processes"))).value)
-				}
+				var processDataObject = {};
+				processDataObject["user"] = user;
+				processDataObject["session"] = session;
+				processDataObject["data"] = getProcessData;
+				initData[user][session]["processes"] = processDataObject;
 			}
 		}
 		
@@ -1614,11 +1648,13 @@ function fadeOutLightbox()
 		{
 			console.log(err);
 		}
-		
+		*/
 		start(true);
 		
 		updating = false;
 	}
+	
+	var searchTerms = [];
 	
 	async function downloadData()
 	{
@@ -1643,6 +1679,10 @@ function fadeOutLightbox()
 		{
 			d3.select("#title")
 				.html(origTitle + "<br />Starting download...");
+			d3.json("getTags.json?event=" + eventName, async function(error, data)
+			{
+				searchTerms = data;
+			});
 			d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes,mouse,windows,events,environment,screenshotindices&normalize=none", async function(error, data)
 				{
 					try
@@ -1702,6 +1742,23 @@ function fadeOutLightbox()
 			d3.select("body").style("cursor", "");
 			start(true);
 		}
+	}
+	
+	var sessionDownloadCount = {};
+	var numAsync = 2;
+	
+	function addDownloadCount(userName, sessionName)
+	{
+		if(!(userName in sessionDownloadCount))
+		{
+			sessionDownloadCount[userName] = {};
+		}
+		if(!(sessionName in sessionDownloadCount[userName]))
+		{
+			sessionDownloadCount[userName][sessionName] = 0;
+		}
+		sessionDownloadCount[userName][sessionName] = sessionDownloadCount[userName][sessionName] + 1;
+		return sessionDownloadCount[userName][sessionName];
 	}
 	
 	var downloadedSessions = 0;
@@ -1770,6 +1827,12 @@ function fadeOutLightbox()
 					if(curProcessList)
 					{
 						var hashVal = SHA256(userName + sessionName + "_processes");
+						
+						for(entry in curProcessList)
+						{
+							curProcessList[entry]["Original Session"] = sessionName;
+						}
+						
 						//console.log("Hash for process: " + hashVal);
 						try
 						{
@@ -1817,6 +1880,10 @@ function fadeOutLightbox()
 								+ downloadedProcessSessions + " process sessions of "
 								+ totalSessions
 								+ " total sessions.")
+						if(addDownloadCount(userName, sessionName) >= numAsync)
+						{
+							sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
+						}
 						refreshData();
 					}
 					
@@ -1990,8 +2057,11 @@ function fadeOutLightbox()
 					+ " screenshot and "
 					+ downloadedProcessSessions + " process sessions of "
 					+ totalSessions
-					+ " total sessions.")
-			sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
+					+ " total sessions.");
+			if(addDownloadCount(userName, sessionName) >= numAsync)
+			{
+				sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
+			}
 		}
 	}
 	
@@ -2020,8 +2090,15 @@ function fadeOutLightbox()
 	
 	
 	var visWidthParent = (containingTableRow.offsetWidth - visPadding);
+	var refreshingStart = false;
 	async function start(needsUpdate)
 	{
+		if(refreshingStart)
+		{
+			console.log("Already restarting");
+			return;
+		}
+		refreshingStart = true;
 		d3.select(visRow).style("max-width", (visWidthParent + visPadding) + "px");
 		d3.select(visTable).style("max-width", (visWidthParent + visPadding) + "px");
 		
@@ -2038,7 +2115,22 @@ function fadeOutLightbox()
 			
 			//d3.select("#legend").html("");
 			clearWindow();
+			
 			var theNormDataInit = ((await retrieveData("data")).value);
+			
+			for(user in theNormDataInit)
+			{
+				for(session in theNormDataInit[user])
+				{
+					var processDataObject = {};
+					processDataObject["user"] = user;
+					processDataObject["session"] = session;
+					processDataObject["data"] = getProcessData;
+					processDataObject["getfiltered"] = getProcessDataFiltered;
+					processDataObject["storefiltered"] = storeProcessDataFiltered;
+					theNormDataInit[user][session]["processes"] = processDataObject;
+				}
+			}
 			//console.log("Data:");
 			//console.log(theNormDataInit);
 			//console.log("Filtering...");
@@ -2086,6 +2178,18 @@ function fadeOutLightbox()
 					{
 						
 						thisData = theCurData[dataType];
+						
+						var isAsync = false;
+						
+						if(thisData["data"] && (typeof thisData["data"]) == "function")
+						{
+							thisData = (await thisData["getfiltered"]()).value;
+							if(!thisData)
+							{
+								continue;
+							}
+							isAsync = true;
+						}
 						
 						for(x=0; x<thisData.length; x++)
 						{
@@ -2218,6 +2322,10 @@ function fadeOutLightbox()
 							}
 						}
 						
+						if(isAsync)
+						{
+							await theCurData[dataType]["storefiltered"](thisData);
+						}
 						
 					}
 					theCurData["Index MS Session Max"] = maxTimeSession;
@@ -3955,6 +4063,7 @@ function fadeOutLightbox()
 		//console.log(legendSVG.node())
 		d3.select("#legend").select("svg").style("height", (legendHeight * (2 + windowLegend.length + eventTypeArray.length)) + "px");
 		d3.select("#legend").style("height", getInnerHeight("legendCell") + "px");
+		refreshingStart = false;
 	}
 	
 	function getInnerHeight(elementID)
@@ -5386,15 +5495,60 @@ function fadeOutLightbox()
 		var startTask = Number(document.getElementById("addTaskStart").value) + theNormData[userName]["Index MS User Min Absolute"] + theNormData[userName][sessionName]["Index MS User Session Min"];
 		var endTask = Number(document.getElementById("addTaskEnd").value) + theNormData[userName]["Index MS User Min Absolute"] + theNormData[userName][sessionName]["Index MS User Session Min"];
 		var taskName = document.getElementById("addTaskName").value;
+		var taskTags = encodeURIComponent(document.getElementById("tags").value);
 		
-		var taskUrl = "addTask.json?event=" + eventName + "&userName=" + userName + "&sessionName=" + sessionName + "&start=" + startTask + "&end=" + endTask + "&taskName=" + taskName;
+		//console.log(taskTags);
+		
+		var taskUrl = "addTask.json?event=" + eventName + "&userName=" + userName + "&sessionName=" + sessionName + "&start=" + startTask + "&end=" + endTask + "&taskName=" + taskName + "&taskTags=" + taskTags;
 		
 		d3.json(taskUrl, function(error, data)
 					{
 						//console.log(data);
 						if(data["result"] == "okay")
 						{
-							
+							console.log("Added task, now refreshing")
+							var curSelect = "&users=" + userName + "&sessions=" + sessionName;
+							d3.json("logExport.json?event=" + eventName + "&datasources=events&normalize=none" + curSelect, async function(error, data)
+							{
+								console.log("Downloaded")
+								console.log(data);
+								var theNormDataInit = ((await retrieveData("indexdata")).value);
+								console.log("Adding to")
+								console.log(theNormDataInit);
+								
+								theNormDataInit[userName][sessionName]["events"] = data[userName][sessionName]["events"];
+								try
+								{
+									var isDone = false;
+									while(!isDone)
+									{
+										isDone = await persistDataAndWait("indexdata", theNormDataInit);
+									}
+								}
+								catch(err)
+								{
+									console.log(err);
+								}
+								
+								theNormData = preprocess(theNormDataInit);
+								console.log("New norm data")
+								console.log(theNormData)
+								try
+								{
+									var isDone = false;
+									while(!(isDone == true))
+									{
+										isDone = (await (persistDataAndWait("data", theNormData)));
+									}
+									start(true);
+								}
+								catch(err)
+								{
+									console.log(err);
+								}
+								
+							});
+							/*
 							var sessEvents = theNormData[userName][sessionName]["events"];
 							var aggEvents = theNormData[userName]["Aggregated"]["events"];
 							
@@ -5450,7 +5604,7 @@ function fadeOutLightbox()
 							}
 							//console.log(newEvents);
 							theNormData[userName][sessionName]["events"] = newEvents;
-							
+							*/
 							
 							
 							//var lastAggIndex = 0;
@@ -5479,10 +5633,66 @@ function fadeOutLightbox()
 							//	}
 							//}
 							//preprocess();
-							start(true);
+							//start(true);
 						}
 						
 					});
+	}
+	
+	var searchTerms = ["Reverse", "Engineering", "Produces", "Resuls"];
+	function filterTags()
+	{
+		var input = document.getElementById("searchTags");
+		var filter = input.value.toUpperCase();
+		var selected = document.getElementById("storedTags");
+		var items = selected.getElementsByTagName("option");
+		for (i = 0; i < items.length; i++)
+		{
+			var txtValue = items[i].textContent || items[i].innerText;
+			if(txtValue.toUpperCase().indexOf(filter) > -1)
+			{
+				items[i].style.display = "";
+			}
+			else
+			{
+				items[i].style.display = "none";
+				items[i].selected = false;
+			}
+		}
+	}
+	
+	function delBlankLines()
+	{
+		 var stringArray = document.getElementById('tags').value.split('\n');
+		 var temp = [""];
+		 var x = 0;
+		 for (var i = 0; i < stringArray.length; i++)
+		 {
+		   if (stringArray[i].trim() != "")
+		   {
+		     temp[x] = stringArray[i];
+		     x++;
+		   }
+		 }
+
+		 temp = temp.join('\n');
+		 document.getElementById('tags').value = temp;
+	}
+	
+	function addTag()
+	{
+		var tagbox = document.getElementById("tags");
+		var selected = document.getElementById("storedTags");
+		var items = selected.getElementsByTagName("option");
+		for (i = 0; i < items.length; i++)
+		{
+			if(items[i].selected)
+			{
+				var txtValue = items[i].textContent || items[i].innerText;
+				tagbox.value = tagbox.value + "\n" + txtValue;
+			}
+		}
+		delBlankLines();
 	}
 	
 	async function showSession(owningUser, owningSession)
@@ -5536,6 +5746,19 @@ function fadeOutLightbox()
 		var addTaskRow = d3.select("#infoTable").append("tr").append("td")
 			.attr("width", visWidthParent + "px")
 			.html("<td><div align=\"center\">Add Task</div></td>");
+		
+		var selectEntries = "";
+		for(var x = 0; x < searchTerms.length; x++)
+		{
+			selectEntries = selectEntries + "<option value=\"" + searchTerms[x] + "\">" + searchTerms[x] + "</option>";
+		}
+		
+		var addTagRow = d3.select("#infoTable").append("tr").append("td")
+		.attr("width", visWidthParent + "px")
+				.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")
+					.html(	"<td colspan=\"2\" width=\"50%\"><div align=\"center\"><b>Search Tags:</b></div><div align=\"center\"><input type=\"text\" style=\"width:75%\" id=\"searchTags\" name=\"searchTags\" value=\"Search/New\" onkeyup=\"filterTags()\"><button type=\"button\" style=\"width:20%\" onclick=\"addTag()\">Add</button></div>" +
+							"<div align=\"center\"><select style=\"width:100%\" name=\"storedTags\" id=\"storedTags\" size=\"3\" multiple>" + selectEntries + "</select></div></td>" +
+							"<td colspan=\"2\" width=\"50%\"><div align=\"center\"><b>Task Tags:</b></div><div align=\"center\"><textarea id=\"tags\" name=\"tags\" rows=\"5\" cols=\"50\"></textarea></div></td>");
 		
 		var addTaskRow = d3.select("#infoTable").append("tr").append("td")
 		.attr("width", visWidthParent + "px")
@@ -6345,6 +6568,7 @@ function fadeOutLightbox()
 	
 	function getScreenshot(userName, sessionName, indexMS)
 	{
+		//console.log(userName +":" + sessionName + ":" + indexMS);
 		var screenshotIndexArray = theNormData[userName][sessionName]["screenshots"];
 		var finalScreenshot = screenshotIndexArray[closestIndexMSBinary(screenshotIndexArray, indexMS)];
 		//console.log(finalScreenshot);
@@ -6570,6 +6794,8 @@ function fadeOutLightbox()
 				.selectAll("*")
 				.remove();
 		
+		
+		//console.log(curSlot);
 		d3.select("#screenshotDiv")
 				.append("img")
 				.attr("width", "100%")
