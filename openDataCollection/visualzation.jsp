@@ -2356,12 +2356,20 @@ function fadeOutLightbox()
 						
 						if(thisData["data"] && (typeof thisData["data"]) == "function")
 						{
-							thisData = (await thisData["getfiltered"]()).value;
+							thisData = (await thisData["getfiltered"]());
 							if(!thisData)
 							{
+								console.log("No data for " + user + ":" + session + ":" + dataType)
 								continue;
 							}
+							thisData = thisData.value;
 							isAsync = true;
+						}
+						
+						if(!thisData)
+						{
+							console.log("No data for " + user + ":" + session + ":" + dataType)
+							continue;
 						}
 						
 						var curUserSessionMap;
