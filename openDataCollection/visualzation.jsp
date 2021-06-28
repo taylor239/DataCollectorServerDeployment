@@ -914,7 +914,7 @@ function fadeOutLightbox()
 	
 	async function getProcessData()
 	{
-		if(session == "Aggregated")
+		if(this.session == "Aggregated")
 		{
 			return [];
 		}
@@ -928,7 +928,7 @@ function fadeOutLightbox()
 	
 	async function getProcessDataFiltered()
 	{
-		if(session == "Aggregated")
+		if(this.session == "Aggregated")
 		{
 			return [];
 		}
@@ -944,7 +944,7 @@ function fadeOutLightbox()
 	{
 		//console.log("Storing for: " + this.session);
 		//console.log(toStore);
-		if(session == "Aggregated")
+		if(this.session == "Aggregated")
 		{
 			
 		}
@@ -2082,6 +2082,43 @@ function fadeOutLightbox()
 		}
 	}
 	
+	async function getProcessMapData()
+	{
+		//console.log("Retrieving for: " + this.session);
+		if(this.session == "Aggregated")
+		{
+			return [];
+		}
+		else
+		{
+			var hashVal = SHA256(this.user + this.session + "_processes_map");
+			//console.log(hashVal);
+			var toReturn = (await retrieveData(hashVal));
+			return toReturn;
+		}
+	}
+	
+	
+	async function storeProcessDataMap(toStore)
+	{
+		//console.log("Storing for: " + this.session);
+		//console.log(toStore);
+		if(this.session == "Aggregated")
+		{
+			
+		}
+		else
+		{
+			var isDone = false;
+			while(!isDone)
+			{
+				var hashVal = SHA256(this.user + this.session + "_processes_map");
+				//console.log(hashVal);
+				isDone = await persistDataAndWait(hashVal, toStore);
+			}
+		}
+	}
+	
 	var colorScale = d3.scaleOrdinal(d3.schemeCategory20);
 	var colorScaleAccent = d3.scaleOrdinal(d3["schemeAccent"]);
 	
@@ -2168,6 +2205,7 @@ function fadeOutLightbox()
 				minTimeUserUniversal = Number.POSITIVE_INFINITY;
 				for(session in theNormData[user])
 				{
+					//console.log("Doing session " + session);
 					maxTimeSession = 0;
 					minTimeSession = Number.POSITIVE_INFINITY;
 					minTimeUserSession = Number.POSITIVE_INFINITY;
@@ -2176,8 +2214,19 @@ function fadeOutLightbox()
 					theCurData = theNormData[user][session];
 					for(dataType in theCurData)
 					{
-						
+						//console.log("Doing data: " + dataType);
 						thisData = theCurData[dataType];
+						
+						if(!(user in lookupTable))
+						{
+							//console.log("Adding to lookup table: " + user)
+							lookupTable[user] = {};
+						}
+						if(!(session in lookupTable[user]))
+						{
+							//console.log("Adding to lookup table: " + session)
+							lookupTable[user][session] = {};
+						}
 						
 						var isAsync = false;
 						
@@ -2189,6 +2238,40 @@ function fadeOutLightbox()
 								continue;
 							}
 							isAsync = true;
+						}
+						
+						var curUserSessionMap;
+						if(dataType == "processes")
+						{
+							if(!("Processes" in lookupTable[user][session]))
+							{
+								lookupTable[user][session]["Processes"] = {};
+							}
+							
+							if(!(user in processMap))
+							{
+								processMap[user] = {};
+							}
+							//console.log("Checking proc map for " + session);
+							if(!(session in processMap[user]))
+							{
+								//console.log("Adding proc map for " + session);
+								//processMap[user][session] = {};
+								var processMapDataObject = {};
+								processMapDataObject["user"] = user;
+								processMapDataObject["session"] = session;
+								processMapDataObject["data"] = getProcessMapData;
+								processMapDataObject["storedata"] = storeProcessDataMap;
+								//console.log("Storing")
+								//console.log(processMapDataObject)
+								//console.log(processMap);
+								await processMapDataObject["storedata"]({});
+								processMap[user][session] = processMapDataObject;
+							}
+							//console.log("Getting proc map");
+							curUserSessionMap = (await (processMap[user][session]["data"]())).value;
+							//console.log("Got");
+							//console.log(curUserSessionMap);
 						}
 						
 						for(x=0; x<thisData.length; x++)
@@ -2211,33 +2294,15 @@ function fadeOutLightbox()
 							
 							if(dataType == "processes")
 							{
-								if(!(user in lookupTable))
-								{
-									lookupTable[user] = {};
-								}
-								if(!(session in lookupTable[user]))
-								{
-									lookupTable[user][session] = {};
-								}
-								if(!("Processes" in lookupTable[user][session]))
-								{
-									lookupTable[user][session]["Processes"] = {};
-								}
+								
 								
 								thisData[x]["Owning User"] = user;
 								thisData[x]["Owning Session"] = session;
 								thisData[x]["Hash"] = SHA256(thisData[x]["User"] + thisData[x]["Start"] + thisData[x]["PID"])
 								lookupTable[user][session]["Processes"][thisData[x]["Hash"]] = thisData[x];
 								
-								if(!(user in processMap))
-								{
-									processMap[user] = {};
-								}
-								if(!(session in processMap[user]))
-								{
-									processMap[user][session] = {};
-								}
-								curUserSessionMap = processMap[user][session];
+								
+								
 								
 								curPid = thisData[x]["PID"]
 								curOSUser = thisData[x]["User"]
@@ -2271,12 +2336,21 @@ function fadeOutLightbox()
 									curList[curList.length - 1]["Next"] = thisData[x];
 									curList.push(thisData[x]);
 								}
+								
 							}
 							
 							thisData[x]["Index MS Universal"] = Number(thisData[x]["Index MS Universal"]);
 							thisData[x]["Index MS"] = Number(thisData[x]["Index MS"]);
 							thisData[x]["Index MS User"] = Number(thisData[x]["Index MS User"]);
 							thisData[x]["Index MS Session"] = Number(thisData[x]["Index MS Session"]);
+						}
+						
+						if(dataType == "processes")
+						{
+							if(curUserSessionMap)
+							{
+								await processMap[user][session]["storedata"](curUserSessionMap);
+							}
 						}
 						
 						if(thisData.length > 0 && !(dataType == "environment"))
@@ -5727,7 +5801,7 @@ function fadeOutLightbox()
 				});
 		
 		
-		curProcessMap = processMap[owningUser][owningSession];
+		curProcessMap = (await processMap[owningUser][owningSession]["data"]()).value;
 		
 		var timeScale;
 		if(timeMode == "Universal")
@@ -5815,10 +5889,6 @@ function fadeOutLightbox()
 				.attr("class", "clickableBar")
 				.attr("width", visWidthParent + "px")
 				.attr("height", (barHeight / 1.75) + "px")
-				//.on("mousedown", function(d)
-				//		{
-				//			console.log(d);
-				//		})
 				.call(dragAddTask);
 		
 		var selectRect = addTaskAxisSVG.append("g")
@@ -6116,9 +6186,6 @@ function fadeOutLightbox()
 						})
 				.each(function(d, i)
 						{
-							//console.log(this);
-							//console.log(d);
-							//var windowsToSelect = processToWindow[d["values"][0]["Hash"]];
 							var windowsToSelect = d["values"][0]["Hash"];
 							if(windowsToSelect)
 							{
@@ -6568,10 +6635,8 @@ function fadeOutLightbox()
 	
 	function getScreenshot(userName, sessionName, indexMS)
 	{
-		//console.log(userName +":" + sessionName + ":" + indexMS);
 		var screenshotIndexArray = theNormData[userName][sessionName]["screenshots"];
 		var finalScreenshot = screenshotIndexArray[closestIndexMSBinary(screenshotIndexArray, indexMS)];
-		//console.log(finalScreenshot);
 		var curHash = SHA256(userName + sessionName + finalScreenshot["Index MS"])
 		var nextScreenshot = d3.select("#" + "screenshot_" + curHash);
 		if(prevScreenshot)
@@ -6594,7 +6659,6 @@ function fadeOutLightbox()
 		var taskUrl = "deleteTask.json?event=" + eventName + "&userName=" + userName + "&sessionName=" + sessionName + "&taskName=" + taskName + "&startTime=" + startTime;
 		d3.json(taskUrl, function(error, data)
 				{
-					//console.log(data);
 					if(data["result"] == "okay")
 					{
 						var sessEvents = theNormData[userName][sessionName]["events"];
@@ -6650,20 +6714,11 @@ function fadeOutLightbox()
 								}
 							}
 						}
-						//console.log(newEvents);
 						theNormData[userName][sessionName]["events"] = newEvents;
 						
 						
 						start(true);
-						//curEvents = theNormDataClone[userName][sessionName]["events"];
-						//for(element in curEvents)
-						//{
-						//	if(curEvents[element]["TaskName"] == taskName && curEvents[element]["Source"] == adminName)
-						//	{
-						//		curEvents.splice(element, 1);
-						//		element--;
-						//	}
-						//}
+						
 					}
 				});
 	}
@@ -6683,7 +6738,6 @@ function fadeOutLightbox()
 		
 		curSlot["Hash"] = SHA256(curSlot["User"] + curSlot["Original Session"] + curSlot["Index MS"]);
 		
-		//console.log(curSlot);
 		var formattedSlot = [];
 		var finalFormattedSlot = [];
 		
@@ -6692,8 +6746,6 @@ function fadeOutLightbox()
 		var count = 0;
 		for(key in curSlot)
 		{
-			//console.log(key);
-			//console.log(curSlot[key]);
 			if(key == "Next" || key == "Prev")
 			{
 				formattedSlot[count] = {"key":"Next Index MS", "value":curSlot[key]["Index MS"]};
@@ -6707,7 +6759,6 @@ function fadeOutLightbox()
 			count++;
 		}
 		
-		//console.log(formattedSlot);
 		formattedSlot = formattedSlot.sort(function(a, b)
 		{
 			if(a.key < b.key) { return -1; }
@@ -6715,7 +6766,6 @@ function fadeOutLightbox()
 			return 0;
 		})
 		
-		//console.log(formattedSlot);
 		
 		for(x=0; x<formattedSlot.length; x+=2)
 		{
@@ -6745,13 +6795,10 @@ function fadeOutLightbox()
 			}
 		}
 		
-		//finalFormattedSlot.unshift("<td colspan=4><div align=\"center\">Details</div></td>");
-		//console.log(finalFormattedSlot);
 		d3.select("#extraInfoTable")
 				.selectAll("tr")
 				.remove();
 		
-		//d3.select("#infoTable").append("tr").html("<td colspan=4><div align=\"center\">Details</div></td>")
 		
 		if(type == "Events")
 		{
@@ -6779,33 +6826,24 @@ function fadeOutLightbox()
 				.append("tr")
 				.html(function(d, i)
 						{
-							//if(i == 0)
-							//{
-							//	return d;
-							//}
 							return "<td width=\"12.5%\" style=\" max-width:" + (.125 * visWidthParent) + "px\">" + d["key1"] + "</td>" + "<td width=\"37.5%\" style=\" max-width:" + (.375 * visWidthParent) + "px; overflow-x:auto;\">" + d["value1"] + "</td>" + "<td width=\"12.5%\" style=\" max-width:" + (.125 * visWidthParent) + "px\">" + d["key2"] + "</td>" + "<td width=\"37.5%\" style=\" max-width:" + (.375 * visWidthParent) + "px; overflow-x:auto;\">" + d["value2"] + "</td>";
 						});
 		
-		//console.log(curSlot);
-		
-		//console.log(curSlot["Start Time"]);
 		
 		d3.select("#screenshotDiv")
 				.selectAll("*")
 				.remove();
 		
 		
-		//console.log(curSlot);
 		d3.select("#screenshotDiv")
 				.append("img")
 				.attr("width", "100%")
 				.attr("src", "data:image/jpg;base64," + (await (getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Screenshot"]())))
-				//.attr("src", "./getScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Index MS"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName)
 				.attr("style", "cursor:pointer;")
 				.on("click", async function()
 						{
 							showLightbox("<tr><td><div width=\"100%\"><img src=\"data:image/jpg;base64," + (await (getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Screenshot"]())) + "\" style=\"max-height: " + (windowHeight * .9) + "px; max-width:100%\"></div></td></tr>");
-							//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + curSlot["Owning User"] + "&timestamp=" + getScreenshot(curSlot["Owning User"], curSlot["Original Session"], curSlot["Index MS"])["Index MS"] + "&session=" + curSlot["Original Session"] + "&event=" + eventName + "\" style=\"max-height: " + (windowHeight * .9) + "px; max-width:100%\"></div></td></tr>");
+							
 						});
 		
 		d3.select("#extraHighlightDiv")
@@ -6852,7 +6890,7 @@ function fadeOutLightbox()
 	{
 		var curGraph = await buildTaskMap(user, session, task, onlySession, colissionMap)
 		
-		console.log(curGraph);
+		//console.log(curGraph);
 		
 		
 		var toReturn = await analyzeTaskMap(curGraph);
