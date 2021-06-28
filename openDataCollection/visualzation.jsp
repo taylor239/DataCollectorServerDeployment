@@ -1130,11 +1130,12 @@ function fadeOutLightbox()
 						//console.log(session);
 						//console.log(dataToFilter[user][session][data]["data"]);
 						//console.log(dataToFilter[user][session][data]["data"]());
-						dataSource = (await dataToFilter[user][session][data]["data"]()).value;
+						dataSource = (await dataToFilter[user][session][data]["data"]());
 						if(!dataSource)
 						{
 							continue;
 						}
+						dataSource = dataSource.value;
 						//console.log(dataSource);
 						isAsync = true;
 					}
