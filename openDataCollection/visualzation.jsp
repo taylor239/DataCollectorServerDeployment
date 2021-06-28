@@ -1823,6 +1823,7 @@ function fadeOutLightbox()
 		{
 			if(error)
 			{
+				curDownloadingProcesses--;
 				failed = true;
 				console.log("Error, retrying...");
 				console.log(error);
@@ -1990,6 +1991,7 @@ function fadeOutLightbox()
 					failed = true;
 					console.log("Error, retrying...");
 					console.log(error);
+					curDownloadingImages--;
 					downloadImages(userName, sessionName, imageArray, curCount, sheet);
 					return;
 				}
@@ -2169,6 +2171,43 @@ function fadeOutLightbox()
 		}
 	}
 	
+	async function getProcessLookupData()
+	{
+		//console.log("Retrieving for: " + this.session);
+		if(this.session == "Aggregated")
+		{
+			return [];
+		}
+		else
+		{
+			var hashVal = SHA256(this.user + this.session + "_processes_lookup");
+			//console.log(hashVal);
+			var toReturn = (await retrieveData(hashVal));
+			return toReturn;
+		}
+	}
+	
+	
+	async function storeProcessDataLookup(toStore)
+	{
+		//console.log("Storing for: " + this.session);
+		//console.log(toStore);
+		if(this.session == "Aggregated")
+		{
+			
+		}
+		else
+		{
+			var isDone = false;
+			while(!isDone)
+			{
+				var hashVal = SHA256(this.user + this.session + "_processes_lookup");
+				//console.log(hashVal);
+				isDone = await persistDataAndWait(hashVal, toStore);
+			}
+		}
+	}
+	
 	var colorScale = d3.scaleOrdinal(d3.schemeCategory20);
 	var colorScaleAccent = d3.scaleOrdinal(d3["schemeAccent"]);
 	
@@ -2293,10 +2332,15 @@ function fadeOutLightbox()
 						var curUserSessionMap;
 						if(dataType == "processes")
 						{
+							var curLookupTable = {};
 							if(!("Processes" in lookupTable[user][session]))
 							{
 								lookupTable[user][session]["Processes"] = {};
+								lookupTable[user][session]["Processes"]["data"] = getProcessLookupData;
+								lookupTable[user][session]["Processes"]["storedata"] = storeProcessDataLookup;
+								await lookupTable[user][session]["Processes"]["storedata"](curLookupTable);
 							}
+							curLookupTable = (await (lookupTable[user][session]["Processes"]["data"]())).value;
 							
 							if(!(user in processMap))
 							{
@@ -2349,7 +2393,10 @@ function fadeOutLightbox()
 								thisData[x]["Owning User"] = user;
 								thisData[x]["Owning Session"] = session;
 								thisData[x]["Hash"] = SHA256(thisData[x]["User"] + thisData[x]["Start"] + thisData[x]["PID"])
-								lookupTable[user][session]["Processes"][thisData[x]["Hash"]] = thisData[x];
+								
+								
+								curLookupTable[thisData[x]["Hash"]] = thisData[x];
+								//lookupTable[user][session]["Processes"][thisData[x]["Hash"]] = thisData[x];
 								
 								
 								
@@ -2401,6 +2448,7 @@ function fadeOutLightbox()
 							{
 								await processMap[user][session]["storedata"](curUserSessionMap);
 							}
+							await lookupTable[user][session]["Processes"]["storedata"](curLookupTable);
 						}
 						
 						if(thisData.length > 0 && !(dataType == "environment"))
@@ -6784,7 +6832,17 @@ function fadeOutLightbox()
 		{
 			clearWindow();
 		}
-		var curSlot = lookupTable[username][session][type][timestamp];
+		var curSlot
+		
+		if(type == "Processes")
+		{
+			curSlot = lookupTable[username][session][type];
+			curSlot = ((await (curSlot["data"]())).value)[timestamp];
+		}
+		else
+		{
+			curSlot = lookupTable[username][session][type][timestamp];
+		}
 		
 		curSlot["Hash"] = SHA256(curSlot["User"] + curSlot["Original Session"] + curSlot["Index MS"]);
 		
