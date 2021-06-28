@@ -1124,6 +1124,11 @@ function fadeOutLightbox()
 					//console.log(data);
 					var isAsync = false;
 					var dataSource = dataToFilter[user][session][data];
+					if(!dataSource)
+					{
+						console.log("No data source for " + user + ":" + session + ":" + data)
+						continue;
+					}
 					if(dataToFilter[user][session][data]["data"] && (typeof dataToFilter[user][session][data]["data"]) == "function")
 					{
 						//console.log("Async filter");
@@ -1133,6 +1138,7 @@ function fadeOutLightbox()
 						dataSource = (await dataToFilter[user][session][data]["data"]());
 						if(!dataSource)
 						{
+							console.log("No data source for " + user + ":" + session + ":" + data)
 							continue;
 						}
 						dataSource = dataSource.value;
