@@ -1142,6 +1142,11 @@ function fadeOutLightbox()
 							continue;
 						}
 						dataSource = dataSource.value;
+						if(!dataSource)
+						{
+							console.log("No data source for " + user + ":" + session + ":" + data)
+							continue;
+						}
 						//console.log(dataSource);
 						isAsync = true;
 					}
@@ -1159,6 +1164,11 @@ function fadeOutLightbox()
 					toSplice = [];
 					//console.log(dataToFilter[user][session][data]);
 					entry = 0;
+					if(!dataSource)
+					{
+						console.log("No data source for " + user + ":" + session + ":" + data)
+						continue;
+					}
 					curLength = dataSource.length;
 					while(entry < curLength)
 					//for(entry in dataToFilter[user][session][data])
@@ -1776,7 +1786,7 @@ function fadeOutLightbox()
 	
 	var downloadedSessionProcesses = 0;
 	
-	var maxDownloadingProcesses = 10;
+	var maxDownloadingProcesses = 5;
 	var curDownloadingProcesses = 0;
 	var processDownloadQueue = [];
 	
@@ -1830,12 +1840,21 @@ function fadeOutLightbox()
 		{
 			if(error)
 			{
+				maxDownloadingProcesses = maxDownloadingProcesses / 2;
+				if(maxDownloadingProcesses < 1)
+				{
+					maxDownloadingProcesses = 1;
+				}
 				curDownloadingProcesses--;
 				failed = true;
 				console.log("Error, retrying...");
 				console.log(error);
 				downloadProcesses(userName, sessionName, curCount, sheet);
 				return;
+			}
+			else
+			{
+				maxDownloadingProcesses = maxDownloadingProcesses * 2;
 			}
 			failed = false;
 			//for(user in data)
@@ -1939,7 +1958,7 @@ function fadeOutLightbox()
 	
 	var chunkSize = 50;
 	
-	var maxDownloadingImages = 5;
+	var maxDownloadingImages = 4;
 	var curDownloadingImages = 0;
 	var imageDownloadQueue = [];
 	
@@ -1995,12 +2014,21 @@ function fadeOutLightbox()
 			{
 				if(error)
 				{
+					maxDownloadingImages = maxDownloadingImages / 2;
+					if(maxDownloadingImages < 1)
+					{
+						maxDownloadingImages = 1;
+					}
 					failed = true;
 					console.log("Error, retrying...");
 					console.log(error);
 					curDownloadingImages--;
 					downloadImages(userName, sessionName, imageArray, curCount, sheet);
 					return;
+				}
+				else
+				{
+					maxDownloadingImages = maxDownloadingImages * 2;
 				}
 				//for(user in data)
 				{
