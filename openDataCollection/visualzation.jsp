@@ -1769,9 +1769,22 @@ function fadeOutLightbox()
 	
 	var downloadedSessionProcesses = 0;
 	
+	var maxDownloadingProcesses = 10;
+	var curDownloadingProcesses = 0;
+	var processDownloadQueue = [];
+	
 	async function downloadProcesses(userName, sessionName, nextCount, sheet)
 	{
 		console.log("Downloading process data for: " + userName + ":" + sessionName + ", index " + nextCount);
+		if(curDownloadingProcesses >= maxDownloadingProcesses)
+		{
+			console.log("Already downloading max, put in queue.");
+			var argList = [userName, sessionName, nextCount, sheet];
+			processDownloadQueue.push(argList);
+			return;
+			
+		}
+		curDownloadingProcesses++;
 		if(!sheet)
 		{
 			var hashVal = SHA256(user + session + "_processes");
@@ -1861,10 +1874,12 @@ function fadeOutLightbox()
 							failed = true;
 							console.log(err);
 						}
+						curDownloadingProcesses--;
 						downloadProcesses(userName, sessionName, curCount + processChunkSize, sheet);
 					}
 					else
 					{
+						curDownloadingProcesses--;
 						downloadedProcessSessions++;
 						console.log("Done downloading processes for " + userName + ":" + sessionName);
 						//start(true);
@@ -1885,6 +1900,11 @@ function fadeOutLightbox()
 							sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
 						}
 						refreshData();
+						if(processDownloadQueue.length > 0)
+						{
+							var nextArgs = processDownloadQueue.pop();
+							downloadProcesses(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3]);
+						}
 					}
 					
 				}
@@ -1911,8 +1931,22 @@ function fadeOutLightbox()
 	
 	var chunkSize = 50;
 	
+	var maxDownloadingImages = 5;
+	var curDownloadingImages = 0;
+	var imageDownloadQueue = [];
+	
 	async function downloadImages(userName, sessionName, imageArray, nextCount, sheet)
 	{
+		if(curDownloadingImages >= maxDownloadingImages)
+		{
+			console.log("Already downloading max images, put in queue.");
+			var argList = [userName, sessionName, nextCount, sheet];
+			console.log(argList);
+			imageDownloadQueue.push(argList);
+			return;
+			
+		}
+		curDownloadingImages++;
 		if(!sheet)
 		{
 			var sheet = document.getElementById("style_" + SHA256(userName + sessionName));
@@ -2004,10 +2038,12 @@ function fadeOutLightbox()
 				if(curCount < imageArray.length)
 				{
 					console.log("Continuing screenshots from " + userName + ", " + sessionName + ": " + curCount + " : " + chunkSize + " of " + imageArray.length);
+					curDownloadingImages--;
 					downloadImages(userName, sessionName, imageArray, curCount, sheet);
 				}
 				else
 				{
+					curDownloadingImages--;
 					downloadedSessions++;
 					d3.select("#title")
 					.html(origTitle + "<br />Index data: <b>"
@@ -2020,8 +2056,16 @@ function fadeOutLightbox()
 							+ " screenshot and "
 							+ downloadedProcessSessions + " process sessions of "
 							+ totalSessions
-							+ " total sessions.")
-					sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
+							+ " total sessions.");
+					if(addDownloadCount(userName, sessionName) >= numAsync)
+					{
+						sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
+					}
+					if(imageDownloadQueue.length > 0)
+					{
+						var nextArgs = imageDownloadQueue.pop();
+						downloadImages(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3]);
+					}
 				}
 				
 			})
@@ -2045,6 +2089,7 @@ function fadeOutLightbox()
 		}
 		else
 		{
+			curDownloadingImages--;
 			downloadedSessions++;
 			d3.select("#title")
 			.html(origTitle + "<br />Index data: <b>"
@@ -2061,6 +2106,11 @@ function fadeOutLightbox()
 			if(addDownloadCount(userName, sessionName) >= numAsync)
 			{
 				sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
+			}
+			if(imageDownloadQueue.length > 0)
+			{
+				var nextArgs = imageDownloadQueue.pop();
+				downloadImages(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3]);
 			}
 		}
 	}
