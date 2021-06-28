@@ -1690,7 +1690,7 @@ function fadeOutLightbox()
 						var isDone = false;
 						while(!isDone)
 						{
-							isDone = await persistData("indexdata", data);
+							isDone = await persistDataAndWait("indexdata", data);
 						}
 					}
 					catch(err)
@@ -1703,7 +1703,7 @@ function fadeOutLightbox()
 						var isDone = false;
 						while(!isDone)
 						{
-							isDone = await persistData("data", theNormData);
+							isDone = await persistDataAndWait("data", theNormData);
 						}
 					}
 					catch(err)
