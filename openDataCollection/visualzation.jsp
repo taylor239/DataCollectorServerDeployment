@@ -1481,8 +1481,8 @@ function fadeOutLightbox()
 			var toPersist = {};
 			toPersist["key"] = key;
 			toPersist["value"] = value;
-			console.log("Storing " + key);
-			console.log(value);
+			//console.log("Storing " + key);
+			//console.log(value);
 			var request = objectStore.put(toPersist);
 		})
 	}
