@@ -1342,6 +1342,7 @@ function fadeOutLightbox()
 	
 	async function writePersist()
 	{
+		var myReturn = false;
 		persistWriting = true;
 		console.log("Starting write worker");
 		curWrite = curQueue.pop();
@@ -1349,11 +1350,12 @@ function fadeOutLightbox()
 		{
 			d3.select("body").style("cursor", "wait");
 			//console.log(curWrite);
-			await wrappedPersistData(curWrite["key"], curWrite["value"]);
+			myReturn = await wrappedPersistData(curWrite["key"], curWrite["value"]);
 			curWrite = curQueue.pop();
 		}
 		persistWriting = false;
 		d3.select("body").style("cursor", "");
+		return(myReturn);
 	}
 	
 	function sleep(ms)
@@ -1369,7 +1371,7 @@ function fadeOutLightbox()
 		//console.log(args);
 		curQueue.push(args);
 		//console.log(curQueue);
-		await writePersist();
+		var myReturn = await writePersist();
 		
 		
 		//if(curQueue.length > 0)
@@ -1381,7 +1383,7 @@ function fadeOutLightbox()
 		//}
 		return new Promise(async function (resolve, reject)
 		{
-			resolve(true);
+			resolve(myReturn);
 		})
 	}
 	
@@ -2199,7 +2201,7 @@ function fadeOutLightbox()
 		else
 		{
 			var isDone = false;
-			while(!isDone)
+			//while(!isDone)
 			{
 				var hashVal = SHA256(this.user + this.session + "_processes_map");
 				//console.log(hashVal);
