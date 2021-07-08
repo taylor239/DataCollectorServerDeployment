@@ -1895,7 +1895,7 @@ function fadeOutLightbox()
 	
 	var maxDownloadingProcesses = 5;
 	var curDownloadingProcesses = 0;
-	var maxDownloadingProcessesCeil = 50;
+	var maxDownloadingProcessesCeil = 20;
 	var processDownloadQueue = [];
 	
 	async function downloadProcesses(userName, sessionName, nextCount, sheet)
@@ -2085,14 +2085,14 @@ function fadeOutLightbox()
 		});
 	}
 	
-	var mouseChunkSize = 100000;
+	var mouseChunkSize = 1000000;
 	
 	var downloadedSessionMouse = 0;
 	
 	var maxDownloadingMouse = 5;
 	var curDownloadingMouse = 0;
 	var mouseDownloadQueue = [];
-	var maxDownloadingMouseCeil = 50;
+	var maxDownloadingMouseCeil = 20;
 	
 	async function downloadMouse(userName, sessionName, nextCount, sheet)
 	{
@@ -2281,14 +2281,14 @@ function fadeOutLightbox()
 		});
 	}
 	
-	var keystrokesChunkSize = 100000;
+	var keystrokesChunkSize = 1000000;
 	
 	var downloadedSessionKeystrokes = 0;
 	
 	var maxDownloadingKeystrokes = 5;
 	var curDownloadingKeystrokes = 0;
 	var keystrokesDownloadQueue = [];
-	var maxDownloadingKeystrokesCeil = 50;
+	var maxDownloadingKeystrokesCeil = 20;
 	
 	async function downloadKeystrokes(userName, sessionName, nextCount, sheet)
 	{
@@ -2482,7 +2482,7 @@ function fadeOutLightbox()
 	var maxDownloadingImages = 4;
 	var curDownloadingImages = 0;
 	var imageDownloadQueue = [];
-	var maxDownloadingImagesCeil = 40;
+	var maxDownloadingImagesCeil = 10;
 	
 	async function downloadImages(userName, sessionName, imageArray, nextCount, sheet)
 	{
@@ -2555,9 +2555,9 @@ function fadeOutLightbox()
 					{
 						maxDownloadingImages = maxDownloadingImagesCeil;
 					}
-					if(imagesDownloadQueue.length > 0)
+					if(imageDownloadQueue.length > 0)
 					{
-						var nextArgs = imagesDownloadQueue.pop();
+						var nextArgs = imageDownloadQueue.pop();
 						downloadImages(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3]);
 					}
 				}
