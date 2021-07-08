@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -33,6 +34,8 @@ import com.google.gson.GsonBuilder;
 @WebServlet(name="LogExport", urlPatterns= {"/openDataCollection/logExport.json", "/openDataCollection/logExport.zip"})
 public class DataExportLog extends HttpServlet {
 	private static final long serialVersionUID = 1L;
+	
+	private static WeakHashMap boundsCache = new WeakHashMap();
     
 	//private boolean keepingAlive = true;
 	//private boolean doneKeepingAlive = false;
@@ -388,6 +391,27 @@ public class DataExportLog extends HttpServlet {
 				//userSelectList.add("%");
 			}
 			
+			WeakHashMap eventCache = null;
+			if(boundsCache.containsKey(admin))
+			{
+				eventCache = (WeakHashMap) boundsCache.get(admin);
+			}
+			else
+			{
+				eventCache = new WeakHashMap();
+				boundsCache.put(admin, eventCache);
+			}
+			WeakHashMap typeCache = null;
+			if(eventCache.containsKey(eventName))
+			{
+				typeCache = (WeakHashMap) eventCache.get(eventName);
+			}
+			else
+			{
+				typeCache = new WeakHashMap();
+				eventCache.put(eventName, typeCache);
+			}
+			
 			ArrayList dataTypes = new ArrayList();
 			System.out.println("Starting db read");
 			//ArrayList dataList = myConnector.getCollectedData(eventName, admin);
@@ -407,7 +431,18 @@ public class DataExportLog extends HttpServlet {
 			{
 				System.out.println("Getting event bounds");
 				dataTypes.add("eventbounds");
-				ConcurrentHashMap eventMap = myConnector.getTasksHierarchyBounds(eventName, admin);
+				ConcurrentHashMap eventMap = null;
+				if(typeCache.containsKey("eventbounds"))
+				{
+					System.out.println("Cached: eventbounds");
+					eventMap = (ConcurrentHashMap) typeCache.get("eventbounds");
+				}
+				else
+				{
+					eventMap = myConnector.getTasksHierarchyBounds(eventName, admin);
+					typeCache.put("eventbounds", eventMap);
+				}
+				//eventMap = myConnector.getTasksHierarchyBounds(eventName, admin);
 				//System.out.println(eventMap);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
@@ -422,7 +457,18 @@ public class DataExportLog extends HttpServlet {
 			{
 				System.out.println("Getting window bounds");
 				dataTypes.add("windowbounds");
-				ConcurrentHashMap eventMap = myConnector.getWindowDataHierarchyBounds(eventName, admin);
+				ConcurrentHashMap eventMap = null;
+				if(typeCache.containsKey("windowbounds"))
+				{
+					System.out.println("Cached: windowbounds");
+					eventMap = (ConcurrentHashMap) typeCache.get("windowbounds");
+				}
+				else
+				{
+					eventMap = myConnector.getWindowDataHierarchyBounds(eventName, admin);
+					typeCache.put("windowbounds", eventMap);
+				}
+				//ConcurrentHashMap eventMap = myConnector.getWindowDataHierarchyBounds(eventName, admin);
 				//System.out.println(eventMap);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
@@ -437,7 +483,18 @@ public class DataExportLog extends HttpServlet {
 			{
 				System.out.println("Getting process bounds");
 				dataTypes.add("processbounds");
-				ConcurrentHashMap eventMap = myConnector.getProcessDataHierarchyBounds(eventName, admin);
+				ConcurrentHashMap eventMap = null;
+				if(typeCache.containsKey("processbounds"))
+				{
+					System.out.println("Cached: processbounds");
+					eventMap = (ConcurrentHashMap) typeCache.get("processbounds");
+				}
+				else
+				{
+					eventMap = myConnector.getProcessDataHierarchyBounds(eventName, admin);
+					typeCache.put("processbounds", eventMap);
+				}
+				//ConcurrentHashMap eventMap = myConnector.getProcessDataHierarchyBounds(eventName, admin);
 				//System.out.println(eventMap);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
@@ -458,7 +515,18 @@ public class DataExportLog extends HttpServlet {
 			{
 				System.out.println("Getting keystrokes bounds");
 				dataTypes.add("keystrokesbounds");
-				ConcurrentHashMap eventMap = myConnector.getKeystrokesHierarchyBounds(eventName, admin);
+				ConcurrentHashMap eventMap = null;
+				if(typeCache.containsKey("keystrokesbounds"))
+				{
+					System.out.println("Cached: keystrokesbounds");
+					eventMap = (ConcurrentHashMap) typeCache.get("keystrokesbounds");
+				}
+				else
+				{
+					eventMap = myConnector.getWindowDataHierarchyBounds(eventName, admin);
+					typeCache.put("keystrokesbounds", eventMap);
+				}
+				//ConcurrentHashMap eventMap = myConnector.getKeystrokesHierarchyBounds(eventName, admin);
 				//System.out.println(eventMap);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
@@ -472,7 +540,18 @@ public class DataExportLog extends HttpServlet {
 			{
 				System.out.println("Getting mouse bounds");
 				dataTypes.add("mousebounds");
-				ConcurrentHashMap eventMap = myConnector.getMouseHierarchyBounds(eventName, admin);
+				ConcurrentHashMap eventMap = null;
+				if(typeCache.containsKey("mousebounds"))
+				{
+					System.out.println("Cached: mousebounds");
+					eventMap = (ConcurrentHashMap) typeCache.get("mousebounds");
+				}
+				else
+				{
+					eventMap = myConnector.getWindowDataHierarchyBounds(eventName, admin);
+					typeCache.put("mousebounds", eventMap);
+				}
+				//ConcurrentHashMap eventMap = myConnector.getMouseHierarchyBounds(eventName, admin);
 				//System.out.println(eventMap);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}
@@ -498,7 +577,18 @@ public class DataExportLog extends HttpServlet {
 			{
 				System.out.println("Getting screenshots bounds");
 				dataTypes.add("screenshotsbounds");
-				ConcurrentHashMap eventMap = myConnector.getScreenshotsHierarchyBounds(eventName, admin);
+				ConcurrentHashMap eventMap = null;
+				if(typeCache.containsKey("screenshotsbounds"))
+				{
+					System.out.println("Cached: screenshotsbounds");
+					eventMap = (ConcurrentHashMap) typeCache.get("screenshotsbounds");
+				}
+				else
+				{
+					eventMap = myConnector.getWindowDataHierarchyBounds(eventName, admin);
+					typeCache.put("screenshotsbounds", eventMap);
+				}
+				//ConcurrentHashMap eventMap = myConnector.getScreenshotsHierarchyBounds(eventName, admin);
 				//System.out.println(eventMap);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
 			}

@@ -959,6 +959,102 @@ function fadeOutLightbox()
 		}
 	}
 	
+	async function getMouseData()
+	{
+		if(this.session == "Aggregated")
+		{
+			return [];
+		}
+		else
+		{
+			var hashVal = SHA256(this.user + this.session + "_mouse");
+			var toReturn = (await retrieveData(hashVal));
+			return toReturn;
+		}
+	}
+	
+	async function getMouseDataFiltered()
+	{
+		if(this.session == "Aggregated")
+		{
+			return [];
+		}
+		else
+		{
+			var hashVal = SHA256(this.user + this.session + "_mouse_filtered");
+			var toReturn = (await retrieveData(hashVal));
+			return toReturn;
+		}
+	}
+	
+	async function storeMouseDataFiltered(toStore)
+	{
+		//console.log("Storing for: " + this.session);
+		//console.log(toStore);
+		if(this.session == "Aggregated")
+		{
+			
+		}
+		else
+		{
+			var isDone = false;
+			while(!isDone)
+			{
+				var hashVal = SHA256(this.user + this.session + "_mouse_filtered");
+				isDone = await persistData(hashVal, toStore);
+			}
+		}
+	}
+	
+	async function getKeystrokesData()
+	{
+		if(this.session == "Aggregated")
+		{
+			return [];
+		}
+		else
+		{
+			var hashVal = SHA256(this.user + this.session + "_keystrokes");
+			var toReturn = (await retrieveData(hashVal));
+			return toReturn;
+		}
+	}
+	
+	async function getKeystrokesDataFiltered()
+	{
+		if(this.session == "Aggregated")
+		{
+			return [];
+		}
+		else
+		{
+			var hashVal = SHA256(this.user + this.session + "_keystrokes_filtered");
+			var toReturn = (await retrieveData(hashVal));
+			return toReturn;
+		}
+	}
+	
+	async function storeKeystrokesDataFiltered(toStore)
+	{
+		//console.log("Storing for: " + this.session);
+		//console.log(toStore);
+		if(this.session == "Aggregated")
+		{
+			
+		}
+		else
+		{
+			var isDone = false;
+			while(!isDone)
+			{
+				var hashVal = SHA256(this.user + this.session + "_keystrokes_filtered");
+				isDone = await persistData(hashVal, toStore);
+			}
+		}
+	}
+	
+	
+	
 	var startedDownload = {};
 	
 	function preprocess(dataToModify)
@@ -995,6 +1091,8 @@ function fadeOutLightbox()
 					startedDownload[hashValDownload] = true;
 					downloadImages(user, session, dataToModify[user][session]["screenshots"], 0);
 					downloadProcesses(user, session, 0);
+					downloadMouse(user, session, 0);
+					downloadKeystrokes(user, session, 0);
 				}
 				else
 				{
@@ -1615,6 +1713,8 @@ function fadeOutLightbox()
 	
 	var downloadedImageSize = 0;
 	var downloadedProcessSize = 0;
+	var downloadedMouseSize = 0;
+	var downloadedKeystrokesSize = 0;
 	var downloadedSize = 0;
 	
 	var updating = false;
@@ -1704,7 +1804,8 @@ function fadeOutLightbox()
 			{
 				searchTerms = data;
 			});
-			d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes,mouse,windows,events,environment,screenshotindices&normalize=none", async function(error, data)
+			//d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes,mouse,windows,events,environment,screenshotindices&normalize=none", async function(error, data)
+			d3.json("logExport.json?event=" + eventName + "&datasources=windows,events,environment,screenshotindices&normalize=none", async function(error, data)
 				{
 					try
 					{
@@ -1766,7 +1867,7 @@ function fadeOutLightbox()
 	}
 	
 	var sessionDownloadCount = {};
-	var numAsync = 2;
+	var numAsync = 4;
 	
 	function addDownloadCount(userName, sessionName)
 	{
@@ -1784,6 +1885,8 @@ function fadeOutLightbox()
 	
 	var downloadedSessions = 0;
 	var downloadedProcessSessions = 0;
+	var downloadedMouseSessions = 0;
+	var downloadedKeystrokesSessions = 0;
 	var totalSessions = 0;
 	
 	var processChunkSize = 100000;
@@ -1920,10 +2023,16 @@ function fadeOutLightbox()
 								+ "</b> bytes; new image data: <b>"
 								+ downloadedImageSize
 								+ "</b> bytes; new process data: <b>"
-								+ downloadedProcessSize + "</b> bytes; finished "
+								+ downloadedProcessSize
+								+ "</b> bytes; new keystrokes data: <b>"
+								+ downloadedKeystrokesSize
+								+ "</b> bytes; new mouse data: <b>"
+								+ downloadedMouseSize + "</b> bytes; finished "
 								+ downloadedSessions
-								+ " screenshot and "
-								+ downloadedProcessSessions + " process sessions of "
+								+ " screenshot, "
+								+ downloadedProcessSessions + " process, "
+								+ downloadedKeystrokesSessions + " keystrokes, and "
+								+ downloadedMouseSessions + " mouse sessions of "
 								+ totalSessions
 								+ " total sessions.")
 						if(addDownloadCount(userName, sessionName) >= numAsync)
@@ -1951,10 +2060,388 @@ function fadeOutLightbox()
 					+ "</b> bytes; new image data: <b>"
 					+ downloadedImageSize
 					+ "</b> bytes; new process data: <b>"
-					+ downloadedProcessSize + "</b> bytes; finished "
+					+ downloadedProcessSize
+					+ "</b> bytes; new keystrokes data: <b>"
+					+ downloadedKeystrokesSize
+					+ "</b> bytes; new mouse data: <b>"
+					+ downloadedMouseSize + "</b> bytes; finished "
 					+ downloadedSessions
-					+ " screenshot and "
-					+ downloadedProcessSessions + " process sessions of "
+					+ " screenshot, "
+					+ downloadedProcessSessions + " process, "
+					+ downloadedKeystrokesSessions + " keystrokes, and "
+					+ downloadedMouseSessions + " mouse sessions of "
+					+ totalSessions
+					+ " total sessions.")
+		});
+	}
+	
+	var mouseChunkSize = 100000;
+	
+	var downloadedSessionMouse = 0;
+	
+	var maxDownloadingMouse = 5;
+	var curDownloadingMouse = 0;
+	var mouseDownloadQueue = [];
+	
+	async function downloadMouse(userName, sessionName, nextCount, sheet)
+	{
+		console.log("Downloading mouse data for: " + userName + ":" + sessionName + ", index " + nextCount);
+		if(curDownloadingMouse >= maxDownloadingMouse)
+		{
+			console.log("Already downloading max, put in queue.");
+			var argList = [userName, sessionName, nextCount, sheet];
+			mouseDownloadQueue.push(argList);
+			return;
+			
+		}
+		curDownloadingMouse++;
+		if(!sheet)
+		{
+			var hashVal = SHA256(user + session + "_mouse");
+			var hasStored = ((await hasData(hashVal)))
+			if(hasStored)
+			{
+				var curMouseArray = ((await retrieveData(hashVal)).value);
+				//nextCount = curProcArray.length;
+				//console.log("Already stored: " + nextCount);
+				var isDone = false;
+				while(!isDone)
+				{
+					isDone = await persistData(hashVal, []);
+				}
+				
+			}
+			
+			var sheet = document.getElementById("style_" + SHA256(userName + sessionName));
+			if(!sheet)
+			{
+				var sheet = document.createElement('style');
+				sheet.id = "style_" + SHA256(userName + sessionName);
+			}
+		}
+		
+		sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Yellow;}";
+		document.body.appendChild(sheet);
+		
+		var curCount = nextCount;
+		
+		var curSelect = "&users=" + userName + "&sessions=" + sessionName + "&first=" + curCount + "&count=" + processChunkSize;
+		
+		var failed = true;
+	
+		await d3.json("logExport.json?event=" + eventName + "&datasources=mouse&normalize=none" + curSelect, async function(error, data)
+		{
+			if(error)
+			{
+				maxDownloadingMouse = maxDownloadingMouse / 2;
+				if(maxDownloadingMouse < 1)
+				{
+					maxDownloadingMouse = 1;
+				}
+				curDownloadingMouse--;
+				failed = true;
+				console.log("Error, retrying...");
+				console.log(error);
+				downloadMouse(userName, sessionName, curCount, sheet);
+				return;
+			}
+			else
+			{
+				maxDownloadingMouse = maxDownloadingMouse * 2;
+			}
+			failed = false;
+			//for(user in data)
+			{
+				//for(session in data[user])
+				{
+					
+					var curMouseList = data[userName][sessionName]["mouse"];
+					
+					if(curMouseList)
+					{
+						var hashVal = SHA256(userName + sessionName + "_mouse");
+						
+						for(entry in curMouseList)
+						{
+							curMouseList[entry]["Original Session"] = sessionName;
+						}
+						
+						//console.log("Hash for process: " + hashVal);
+						try
+						{
+							var hasStored = ((await hasData(hashVal)))
+							//console.log("New data for " + user + ":" + session);
+							//console.log(curProcessList);
+							var curMouseArray = curMouseList;
+							if(hasStored)
+							{
+								curMouseArray = ((await retrieveData(hashVal)).value);
+								//console.log("This array stored for " + user + ":" + session);
+								//console.log(curProcArray);
+								curMouseArray = curMouseArray.concat(curMouseList);
+							}
+							
+							var isDone = false;
+							//console.log("Storing for " + user + ":" + session + ": ");
+							//console.log(curProcArray);
+							while(!isDone)
+							{
+								isDone = await persistData(hashVal, curMouseArray);
+							}
+						}
+						catch(err)
+						{
+							failed = true;
+							console.log(err);
+						}
+						curDownloadingMouse--;
+						downloadMouse(userName, sessionName, curCount + mouseChunkSize, sheet);
+					}
+					else
+					{
+						curDownloadingMouse--;
+						downloadedMouseSessions++;
+						console.log("Done downloading mouse for " + userName + ":" + sessionName);
+						//start(true);
+						d3.select("#title")
+						.html(origTitle + "<br />Index data: <b>"
+								+ downloadedSize
+								+ "</b> bytes; new image data: <b>"
+								+ downloadedImageSize
+								+ "</b> bytes; new process data: <b>"
+								+ downloadedProcessSize
+								+ "</b> bytes; new keystrokes data: <b>"
+								+ downloadedKeystrokesSize
+								+ "</b> bytes; new mouse data: <b>"
+								+ downloadedMouseSize + "</b> bytes; finished "
+								+ downloadedSessions
+								+ " screenshot, "
+								+ downloadedProcessSessions + " process, "
+								+ downloadedKeystrokesSessions + " keystrokes, and "
+								+ downloadedMouseSessions + " mouse sessions of "
+								+ totalSessions
+								+ " total sessions.")
+						if(addDownloadCount(userName, sessionName) >= numAsync)
+						{
+							sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
+						}
+						refreshData();
+						if(mouseDownloadQueue.length > 0)
+						{
+							var nextArgs = mouseDownloadQueue.pop();
+							downloadMouse(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3]);
+						}
+					}
+					
+				}
+			}
+		})
+		.on("progress", async function(d, i)
+		{
+			//downloadedSize = d["loaded"];
+			downloadedMouseSize += d["loaded"];
+			d3.select("#title")
+			.html(origTitle + "<br />Index data: <b>"
+					+ downloadedSize
+					+ "</b> bytes; new image data: <b>"
+					+ downloadedImageSize
+					+ "</b> bytes; new process data: <b>"
+					+ downloadedProcessSize
+					+ "</b> bytes; new keystrokes data: <b>"
+					+ downloadedKeystrokesSize
+					+ "</b> bytes; new mouse data: <b>"
+					+ downloadedMouseSize + "</b> bytes; finished "
+					+ downloadedSessions
+					+ " screenshot, "
+					+ downloadedProcessSessions + " process, "
+					+ downloadedKeystrokesSessions + " keystrokes, and "
+					+ downloadedMouseSessions + " mouse sessions of "
+					+ totalSessions
+					+ " total sessions.")
+		});
+	}
+	
+	var keystrokesChunkSize = 100000;
+	
+	var downloadedSessionKeystrokes = 0;
+	
+	var maxDownloadingKeystrokes = 5;
+	var curDownloadingKeystrokes = 0;
+	var keystrokesDownloadQueue = [];
+	
+	async function downloadKeystrokes(userName, sessionName, nextCount, sheet)
+	{
+		console.log("Downloading keystrokes data for: " + userName + ":" + sessionName + ", index " + nextCount);
+		if(curDownloadingKeystrokes >= maxDownloadingKeystrokes)
+		{
+			console.log("Already downloading max, put in queue.");
+			var argList = [userName, sessionName, nextCount, sheet];
+			keystrokesDownloadQueue.push(argList);
+			return;
+			
+		}
+		curDownloadingKeystrokes++;
+		if(!sheet)
+		{
+			var hashVal = SHA256(user + session + "_keystrokes");
+			var hasStored = ((await hasData(hashVal)))
+			if(hasStored)
+			{
+				var curKeystrokesArray = ((await retrieveData(hashVal)).value);
+				//nextCount = curProcArray.length;
+				//console.log("Already stored: " + nextCount);
+				var isDone = false;
+				while(!isDone)
+				{
+					isDone = await persistData(hashVal, []);
+				}
+				
+			}
+			
+			var sheet = document.getElementById("style_" + SHA256(userName + sessionName));
+			if(!sheet)
+			{
+				var sheet = document.createElement('style');
+				sheet.id = "style_" + SHA256(userName + sessionName);
+			}
+		}
+		
+		sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Yellow;}";
+		document.body.appendChild(sheet);
+		
+		var curCount = nextCount;
+		
+		var curSelect = "&users=" + userName + "&sessions=" + sessionName + "&first=" + curCount + "&count=" + processChunkSize;
+		
+		var failed = true;
+	
+		await d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes&normalize=none" + curSelect, async function(error, data)
+		{
+			if(error)
+			{
+				maxDownloadingKeystrokes = maxDownloadingKeystrokes / 2;
+				if(maxDownloadingKeystrokes < 1)
+				{
+					maxDownloadingKeystrokes = 1;
+				}
+				curDownloadingKeystrokes--;
+				failed = true;
+				console.log("Error, retrying...");
+				console.log(error);
+				downloadKeystrokes(userName, sessionName, curCount, sheet);
+				return;
+			}
+			else
+			{
+				maxDownloadingKeystrokes = maxDownloadingKeystrokes * 2;
+			}
+			failed = false;
+			//for(user in data)
+			{
+				//for(session in data[user])
+				{
+					
+					var curKeystrokesList = data[userName][sessionName]["keystrokes"];
+					
+					if(curKeystrokesList)
+					{
+						var hashVal = SHA256(userName + sessionName + "_keystrokes");
+						
+						for(entry in curKeystrokesList)
+						{
+							curKeystrokesList[entry]["Original Session"] = sessionName;
+						}
+						
+						//console.log("Hash for process: " + hashVal);
+						try
+						{
+							var hasStored = ((await hasData(hashVal)))
+							//console.log("New data for " + user + ":" + session);
+							//console.log(curProcessList);
+							var curKeystrokesArray = curKeystrokesList;
+							if(hasStored)
+							{
+								curKeystrokesArray = ((await retrieveData(hashVal)).value);
+								//console.log("This array stored for " + user + ":" + session);
+								//console.log(curProcArray);
+								curKeystrokesArray = curKeystrokesArray.concat(curKeystrokesList);
+							}
+							
+							var isDone = false;
+							//console.log("Storing for " + user + ":" + session + ": ");
+							//console.log(curProcArray);
+							while(!isDone)
+							{
+								isDone = await persistData(hashVal, curKeystrokesArray);
+							}
+						}
+						catch(err)
+						{
+							failed = true;
+							console.log(err);
+						}
+						curDownloadingKeystrokes--;
+						downloadKeystrokes(userName, sessionName, curCount + keystrokesChunkSize, sheet);
+					}
+					else
+					{
+						curDownloadingKeystrokes--;
+						downloadedKeystrokesSessions++;
+						console.log("Done downloading mouse for " + userName + ":" + sessionName);
+						//start(true);
+						d3.select("#title")
+						.html(origTitle + "<br />Index data: <b>"
+								+ downloadedSize
+								+ "</b> bytes; new image data: <b>"
+								+ downloadedImageSize
+								+ "</b> bytes; new process data: <b>"
+								+ downloadedProcessSize
+								+ "</b> bytes; new keystrokes data: <b>"
+								+ downloadedKeystrokesSize
+								+ "</b> bytes; new mouse data: <b>"
+								+ downloadedMouseSize + "</b> bytes; finished "
+								+ downloadedSessions
+								+ " screenshot, "
+								+ downloadedProcessSessions + " process, "
+								+ downloadedKeystrokesSessions + " keystrokes, and "
+								+ downloadedMouseSessions + " mouse sessions of "
+								+ totalSessions
+								+ " total sessions.")
+						if(addDownloadCount(userName, sessionName) >= numAsync)
+						{
+							sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
+						}
+						refreshData();
+						if(keystrokesDownloadQueue.length > 0)
+						{
+							var nextArgs = keystrokesDownloadQueue.pop();
+							downloadKeystrokes(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3]);
+						}
+					}
+					
+				}
+			}
+		})
+		.on("progress", async function(d, i)
+		{
+			//downloadedSize = d["loaded"];
+			downloadedKeystrokesSize += d["loaded"];
+			d3.select("#title")
+			.html(origTitle + "<br />Index data: <b>"
+					+ downloadedSize
+					+ "</b> bytes; new image data: <b>"
+					+ downloadedImageSize
+					+ "</b> bytes; new process data: <b>"
+					+ downloadedProcessSize
+					+ "</b> bytes; new keystrokes data: <b>"
+					+ downloadedKeystrokesSize
+					+ "</b> bytes; new mouse data: <b>"
+					+ downloadedMouseSize + "</b> bytes; finished "
+					+ downloadedSessions
+					+ " screenshot, "
+					+ downloadedProcessSessions + " process, "
+					+ downloadedKeystrokesSessions + " keystrokes, and "
+					+ downloadedMouseSessions + " mouse sessions of "
 					+ totalSessions
 					+ " total sessions.")
 		});
@@ -2068,10 +2555,16 @@ function fadeOutLightbox()
 						+ "</b> bytes; new image data: <b>"
 						+ downloadedImageSize
 						+ "</b> bytes; new process data: <b>"
-						+ downloadedProcessSize + "</b> bytes; finished "
+						+ downloadedProcessSize
+						+ "</b> bytes; new keystrokes data: <b>"
+						+ downloadedKeystrokesSize
+						+ "</b> bytes; new mouse data: <b>"
+						+ downloadedMouseSize + "</b> bytes; finished "
 						+ downloadedSessions
-						+ " screenshot and "
-						+ downloadedProcessSessions + " process sessions of "
+						+ " screenshot, "
+						+ downloadedProcessSessions + " process, "
+						+ downloadedKeystrokesSessions + " keystrokes, and "
+						+ downloadedMouseSessions + " mouse sessions of "
 						+ totalSessions
 						+ " total sessions.")
 				
@@ -2092,12 +2585,18 @@ function fadeOutLightbox()
 							+ "</b> bytes; new image data: <b>"
 							+ downloadedImageSize
 							+ "</b> bytes; new process data: <b>"
-							+ downloadedProcessSize + "</b> bytes; finished "
+							+ downloadedProcessSize
+							+ "</b> bytes; new keystrokes data: <b>"
+							+ downloadedKeystrokesSize
+							+ "</b> bytes; new mouse data: <b>"
+							+ downloadedMouseSize + "</b> bytes; finished "
 							+ downloadedSessions
-							+ " screenshot and "
-							+ downloadedProcessSessions + " process sessions of "
+							+ " screenshot, "
+							+ downloadedProcessSessions + " process, "
+							+ downloadedKeystrokesSessions + " keystrokes, and "
+							+ downloadedMouseSessions + " mouse sessions of "
 							+ totalSessions
-							+ " total sessions.");
+							+ " total sessions.")
 					if(addDownloadCount(userName, sessionName) >= numAsync)
 					{
 						sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
@@ -2120,10 +2619,16 @@ function fadeOutLightbox()
 								+ "</b> bytes; new image data: <b>"
 								+ downloadedImageSize
 								+ "</b> bytes; new process data: <b>"
-								+ downloadedProcessSize + "</b> bytes; finished "
+								+ downloadedProcessSize
+								+ "</b> bytes; new keystrokes data: <b>"
+								+ downloadedKeystrokesSize
+								+ "</b> bytes; new mouse data: <b>"
+								+ downloadedMouseSize + "</b> bytes; finished "
 								+ downloadedSessions
-								+ " screenshot and "
-								+ downloadedProcessSessions + " process sessions of "
+								+ " screenshot, "
+								+ downloadedProcessSessions + " process, "
+								+ downloadedKeystrokesSessions + " keystrokes, and "
+								+ downloadedMouseSessions + " mouse sessions of "
 								+ totalSessions
 								+ " total sessions.")
 					});
@@ -2138,12 +2643,18 @@ function fadeOutLightbox()
 					+ "</b> bytes; new image data: <b>"
 					+ downloadedImageSize
 					+ "</b> bytes; new process data: <b>"
-					+ downloadedProcessSize + "</b> bytes; finished "
+					+ downloadedProcessSize
+					+ "</b> bytes; new keystrokes data: <b>"
+					+ downloadedKeystrokesSize
+					+ "</b> bytes; new mouse data: <b>"
+					+ downloadedMouseSize + "</b> bytes; finished "
 					+ downloadedSessions
-					+ " screenshot and "
-					+ downloadedProcessSessions + " process sessions of "
+					+ " screenshot, "
+					+ downloadedProcessSessions + " process, "
+					+ downloadedKeystrokesSessions + " keystrokes, and "
+					+ downloadedMouseSessions + " mouse sessions of "
 					+ totalSessions
-					+ " total sessions.");
+					+ " total sessions.")
 			if(addDownloadCount(userName, sessionName) >= numAsync)
 			{
 				sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
@@ -2294,6 +2805,22 @@ function fadeOutLightbox()
 					processDataObject["getfiltered"] = getProcessDataFiltered;
 					processDataObject["storefiltered"] = storeProcessDataFiltered;
 					theNormDataInit[user][session]["processes"] = processDataObject;
+					
+					var mouseDataObject = {};
+					mouseDataObject["user"] = user;
+					mouseDataObject["session"] = session;
+					mouseDataObject["data"] = getMouseData;
+					mouseDataObject["getfiltered"] = getMouseDataFiltered;
+					mouseDataObject["storefiltered"] = storeMouseDataFiltered;
+					theNormDataInit[user][session]["mouse"] = mouseDataObject;
+					
+					var keystrokesDataObject = {};
+					keystrokesDataObject["user"] = user;
+					keystrokesDataObject["session"] = session;
+					keystrokesDataObject["data"] = getKeystrokesData;
+					keystrokesDataObject["getfiltered"] = getKeystrokesDataFiltered;
+					keystrokesDataObject["storefiltered"] = storeKeystrokesDataFiltered;
+					theNormDataInit[user][session]["keystrokes"] = keystrokesDataObject;
 				}
 			}
 			//console.log("Data:");
@@ -4301,417 +4828,7 @@ function fadeOutLightbox()
 		return toReturn;
 	}
 	
-	function startOld()
-	{
-		if(!usersDone || !theNormDataDone || !totalDataDone || !theDataDone || !collectedDataNormDone || !taskDataDone)
-		{
-			return;
-		}
-		svg = d3.selectAll("#mainVisualization")
-				.append("svg")
-				.attr("width", visWidth-1)
-				.attr("height", visHeight)
-				.attr("class", "svg");
-		//console.log(users);
-		theNormData[x]["Start Time MS"]
-		theNormData[x]["Username"]
-		
-		lookupTable = {};
-		for(x=0; x<theNormData.length; x++)
-		{
-			if(!(theNormData[x]["Username"] in lookupTable))
-			{
-				lookupTable[theNormData[x]["Username"]] = {};
-			}
-			lookupTable[theNormData[x]["Username"]][theNormData[x]["Start Time MS"]] = theNormData[x];
-		}
-		
-		var timeMax = d3.max(totalNormData, function(d){ return d["Input Time MS"]; });
-		var keyTime = timeMax / keySlots;
-		keyMap = {};
-		
-		for(x=0; x<totalNormData.length; x++)
-		{
-			
-			if(!(totalNormData[x]["Username"] in keyMap))
-			{
-				keyMap[totalNormData[x]["Username"]] = {};
-				keyMap[totalNormData[x]["Username"]]["max"] = 0;
-			}
-			var curSlot = Math.round(totalNormData[x]["Input Time MS"] / keyTime) * keyTime;
-			
-			if(curSlot in keyMap[totalNormData[x]["Username"]])
-			{
-				keyMap[totalNormData[x]["Username"]][curSlot]++;
-			}
-			else
-			{
-				keyMap[totalNormData[x]["Username"]][curSlot] = 1;
-			}
-			if(keyMap[totalNormData[x]["Username"]][curSlot] > keyMap[totalNormData[x]["Username"]]["max"])
-			{
-				keyMap[totalNormData[x]["Username"]]["max"] = keyMap[totalNormData[x]["Username"]][curSlot];
-			}
-		}
-		
-		timeScale = d3.scaleLinear();
-		timeScale.domain
-					(
-						[0,
-						timeMax]
-					)
-		timeScale.range([0, visWidth - xAxisPadding]);
-		
-		userOrdering = {};
-		for(x=0; x<users.length; x++)
-		{
-			userOrdering[users[x]] = x;
-		}
-		
-		
-		barHeight = visHeight / (users.length * 2);
-		
-		var backgroundRects = svg.append("g")
-				.selectAll("rect")
-				.data(users)
-				.enter()
-				.append("rect")
-				.attr("x",  1)
-				.attr("y", function(d, i)
-						{
-							//console.log(d);
-							return barHeight * 2 * userOrdering[d];
-						})
-				.attr("width", visWidth - 2)
-				.attr("height", barHeight * 2)
-				.attr("stroke", "#000000")
-				.attr("fill", function(d)
-						{
-							if(userOrdering[d] % 2 == 0)
-							{
-								return "#ffffff"
-							}
-							else
-							{
-								return "#b7d2ff"
-							}
-						})
-				.attr("opacity", 0.2)
-				.attr("z", 0);
-		
-		
-		var colorScale = d3.scaleOrdinal(d3.schemeCategory20);
-		var colorNumberMap = {};
-		var count = 0;
-		var numberCount = 0;
-		
-		var finalLegendArray = [];
-		
-		for(x=0; x<theNormData.length; x++)
-		{
-			if(x > 0 && theNormData[x]["Username"] != theNormData[x - 1]["Username"])
-			{
-				numberCount = 0;
-			}
-			theNormData[x]["Number"] = numberCount;
-			numberCount ++;
-			if(!(theNormData[x]["Window Class 2"] in colorNumberMap))
-			{
-				colorNumberMap[theNormData[x]["Window Class 2"]] = count;
-				
-				count++;
-			}
-		}
-		
-		for(key in colorNumberMap)
-		{
-			//console.log(key);
-			//console.log(colorNumberMap[key]);
-			finalLegendArray[colorNumberMap[key]] = key;
-		}
-		
-		
-		//console.log(finalLegendArray);
-		
-		//console.log(colorNumberMap);
-		var legendSVG = d3.selectAll("#legend")
-				.append("svg")
-				.attr("width", "100%")
-				//.style("height", visHeight)
-				.attr("class", "svg");
-		
-		
-		var legend = legendSVG.append("g")
-				.selectAll("rect")
-				.data(finalLegendArray)
-				.enter()
-				.append("rect")
-				.attr("x", 0)
-				.attr("width", legendWidth)
-				.attr("y", function(d, i)
-						{
-							return legendHeight * (i);
-						})
-				.attr("height", legendHeight)
-				.attr("stroke", "none")
-				.attr("fill", function(d, i)
-						{
-							//console.log(d);
-							return colorScale(d);
-						});
-		
-		var legendText = legendSVG.append("g")
-				.selectAll("text")
-				.data(finalLegendArray)
-				.enter()
-				.append("text")
-				.style("pointer-events", "none")
-				.attr("font-size", 11)
-				.attr("x", legendWidth)
-				.attr("y", function(d, i)
-						{
-							return legendHeight * (i + .5);
-						})
-				.text(function(d, i)
-						{
-							return d;
-						});
-		
-		var foregroundWindowRects = svg.append("g")
-				.selectAll("rect")
-				.data(theNormData)
-				.enter()
-				.append("rect")
-				.attr("x", function(d, i)
-						{
-							return timeScale(d["Start Time MS"]) + xAxisPadding;
-						})
-				.attr("width", function(d, i)
-						{
-							return timeScale(d["End Time MS"] - d["Start Time MS"]) -1;
-						})
-				.attr("y", function(d, i)
-						{
-							return userOrdering[d["Username"]] * barHeight * 2 + .25 * barHeight;
-						})
-				.attr("height", .75 * barHeight)
-				.attr("stroke", "black")
-				.attr("stroke-width", 3)
-				.attr("fill", function(d, i)
-						{
-							return colorScale(d["Window Class 2"]);
-						})
-				.attr("opacity", 1)
-				.on("click", function(d, i)
-						{
-							d3.select(curStroke).attr("stroke", "none");
-							if(curStroke == this)
-							{
-								clearWindow(); curStroke = null;
-								showDefault();
-								return;
-							}
-							d3.select(this).attr("stroke", "#ffff00");
-							curStroke = this;
-							showWindow(d["Username"], d["Start Time MS"]);
-						})
-				.classed("clickableBar", true)
-				.attr("z", 2);
-		
-		var foregroundWindowRectText = svg.append("g")
-			.selectAll("text")
-			.data(theNormData)
-			.enter()
-			.append("text")
-			.text(function(d)
-					{
-						return d["Window Class 2"]
-					})
-			.attr("x", function(d, i)
-						{
-							return timeScale((d["End Time MS"] + d["Start Time MS"])/2) + xAxisPadding;
-						})
-			.attr("y", function(d, i)
-						{
-							var toAdd = 0;
-							if(d["Number"] % 2 == 1)
-							{
-								toAdd += 12;
-							}
-							return userOrdering[d["Username"]] * barHeight * 2 + .25 * barHeight - 2 + toAdd;
-						})
-			.attr("font-size", 11)
-			.attr("text-anchor", "middle")
-			.attr("class", function(d, i)
-						{
-							if(d["Number"] % 2 == 1)
-							{
-								return "textShadow";
-							}
-							else
-							{
-								return "none";
-							}
-						})
-			.attr("fill", function(d, i)
-						{
-							if(d["Number"] % 2 == 1)
-							{
-								return "#fff";
-							}
-							return "#000";
-						})
-			.attr("opacity", function(d, i)
-						{
-							if(overlayText)
-							{
-								return 1;
-							}
-							return 0;
-						});
-			
-		
-		var yAxisLabels = svg.append("g")
-				.selectAll("text")
-				.data(users)
-				.enter()
-				.append("text")
-				.text(function(d)
-						{
-							return d;
-						})
-				.attr("x", function(d)
-						{
-							return xAxisPadding / 2;
-						})
-				.attr("y", function(d)
-						{
-							return barHeight * 2 * userOrdering[d] + barHeight;
-						})
-				.attr("font-size", 14)
-				.attr("text-anchor", "middle");
-		
-		var taskRects = svg.append("g")
-				.selectAll("rect")
-				.data(taskData)
-				.enter()
-				.append("rect")
-				.attr("x", function(d, i)
-						{
-							return timeScale(d["Event Time MS"]) + xAxisPadding - tickWidth/2;
-						})
-				.attr("width", function(d, i)
-						{
-							return tickWidth;
-						})
-				.attr("y", function(d, i)
-						{
-							return userOrdering[d["Username"]] * barHeight * 2 + barHeight;
-						})
-				.attr("height", .75 * barHeight)
-				.attr("stroke", "none")
-				.attr("fill", function(d, i)
-						{
-							if(d["Event"] == "end")
-							{
-								return "#0011ff";
-							}
-							if(d["Event"] == "start")
-							{
-								return "#ff0010";
-							}
-							return "#000";
-						})
-				.attr("opacity", 1)
-				.attr("z", 2);
-		
-		var taskRects = svg.append("g")
-				.selectAll("text")
-				.data(taskData)
-				.enter()
-				.append("text")
-				.attr("x", function(d, i)
-						{
-							return timeScale(d["Event Time MS"]) + xAxisPadding + tickWidth/2;
-						})
-				.attr("y", function(d, i)
-						{
-							if(d["Event"] == "end")
-							{
-								return userOrdering[d["Username"]] * barHeight * 2 + 1.75 * barHeight;
-							}
-							return userOrdering[d["Username"]] * barHeight * 2 + 1.25 * barHeight;
-						})
-				.text(function(d)
-						{
-							if(d["Event"] == "end")
-							{
-								return d["Event"] + ": " + d["Completion"];
-							}
-							if(d["Event"] == "start")
-							{
-								return d["Event"] + ": " + d["Task Name"];
-							}
-							return d["Event"];
-						})
-				.attr("font-size", 14)
-				.attr("text-anchor", "left")
-				.attr("opacity", 1)
-				.attr("class", "textShadowWhite")
-				.attr("z", 6);
-		
-		
-		
-		
-		for(x=0; x<users.length; x++)
-		{
-			var current = keyMap[users[x]];
-			var maxClicks = current["max"];
-			var currentArray = [];
-			var count = 0;
-			for(var key in current)
-			{
-				if(current.hasOwnProperty(key) && key != "max")
-				{
-					var newObj = {};
-					newObj["slot"] = parseInt(key);
-					newObj["value"] = current[key];
-					currentArray[count] = newObj;
-					count++;
-				}
-			}
-			
-			var clickGraph = svg.append("g")
-					.selectAll("rect")
-					.data(currentArray)
-					.enter()
-					.append("rect")
-					.attr("x", function(d, i)
-							{
-								return timeScale(d["slot"] - (keyTime / 4)) + xAxisPadding;
-							})
-					.attr("width", function(d, i)
-							{
-								return timeScale(keyTime) -1;
-							})
-					.attr("y", function(d, i)
-							{
-								return userOrdering[users[x]] * barHeight * 2 + barHeight - .375 * barHeight * (d["value"] / maxClicks);
-							})
-					.attr("height", function(d, i)
-							{
-								return .375 * barHeight * (d["value"] / maxClicks);
-							})
-					.attr("stroke", "none")
-					.attr("fill", function(d, i)
-							{
-								return "#000000";
-							})
-					.attr("opacity", .75)
-					.attr("z", 2);
-		}
-		
-	}
+	
 	
 	var lastHighlighted;
 	
@@ -4922,7 +5039,7 @@ function fadeOutLightbox()
 	
 	var degradeCoefficient = 60000;
 	
-	function playAnimation(owningUser, owningSession)
+	async function playAnimation(owningUser, owningSession)
 	{
 		showLightbox("<tr><td id=\"animationRow\"><div id=\"animationDiv\" width=\"100%\" height=\"100%\"></div></td></tr>");
 		
@@ -4937,8 +5054,8 @@ function fadeOutLightbox()
 		
 		
 		var screenshots = theNormData[owningUser][owningSession]["screenshots"];
-		var keystrokes = theNormData[owningUser][owningSession]["keystrokes"];
-		var mouse = theNormData[owningUser][owningSession]["mouse"];
+		var keystrokes = (await theNormData[owningUser][owningSession]["keystrokes"]["getfiltered"]()).value;
+		var mouse = (await theNormData[owningUser][owningSession]["mouse"]["getfiltered"]()).value;
 		var windows = theNormData[owningUser][owningSession]["windows"];
 		
 		
@@ -5402,24 +5519,24 @@ function fadeOutLightbox()
 			if(curFrame && curFrame["FirstClass"])
 			{
 				activeWindow.text(curFrame["FirstClass"]);
-				activeWindow.attr("textLength", "default")
+				activeWindow.attr("textLength", "")
 				if(activeWindow.node().getBBox()["width"] + textHeight > (divBounds["width"]) / 2)
 				{
 					activeWindow.attr("textLength", (divBounds["width"]) / 2)
 				}
 				else
 				{
-					activeWindow.attr("textLength", "default")
+					activeWindow.attr("textLength", "")
 				}
 				activeWindowName.text(curFrame["Name"]);
-				activeWindowName.attr("textLength", "default")
+				activeWindowName.attr("textLength", "")
 				if(activeWindowName.node().getBBox()["width"] + textHeight > (divBounds["width"]) / 2)
 				{
 					activeWindowName.attr("textLength", (divBounds["width"]) / 2)
 				}
 				else
 				{
-					activeWindowName.attr("textLength", "default")
+					activeWindowName.attr("textLength", "")
 				}
 			}
 			
@@ -5500,6 +5617,14 @@ function fadeOutLightbox()
 				else if(buttonToType == "Forwardslash")
 				{
 					buttonToType = "/";
+				}
+				else if(buttonToType == "Volume Up")
+				{
+					buttonToType = "🔊";
+				}
+				else if(buttonToType == "Volume Dow")
+				{
+					buttonToType = "🔈";
 				}
 				else if(buttonToType == "Enter")
 				{
@@ -6690,8 +6815,20 @@ function fadeOutLightbox()
 		var firstIndex  = 0,
 			lastIndex   = items.length - 1,
 			middleIndex = Math.floor((lastIndex + firstIndex)/2);
-
-		while(items[middleIndex]["Index MS"] != value && firstIndex < lastIndex)
+		
+		var unfound = true;
+		if(middleIndex > lastIndex)
+		{
+			middleIndex = lastIndex;
+			unfound = false;
+		}
+		if(middleIndex < 0)
+		{
+			middleIndex = 0;
+			unfound = false;
+		}
+		
+		while(unfound && items[middleIndex] && items[middleIndex]["Index MS"] != value && firstIndex < lastIndex)
 		{
 		   if (value < items[middleIndex]["Index MS"])
 			{
@@ -6703,6 +6840,18 @@ function fadeOutLightbox()
 			}
 			middleIndex = Math.floor((lastIndex + firstIndex)/2);
 		}
+		
+		if(middleIndex > lastIndex)
+		{
+			middleIndex = lastIndex;
+			unfound = false;
+		}
+		if(middleIndex < 0)
+		{
+			middleIndex = 0;
+			unfound = false;
+		}
+		
 		var curDiff = Math.abs(value - items[middleIndex]["Index MS"]);
 		var nextDiff = Infinity;
 		var prevDiff = Infinity;
@@ -6818,8 +6967,20 @@ function fadeOutLightbox()
 							var firstIndex  = 0,
 								lastIndex   = items.length - 1,
 								middleIndex = Math.floor((lastIndex + firstIndex)/2);
-
-							while(items[middleIndex]["Index MS"] != value && firstIndex < lastIndex)
+							
+							var unfound = true;
+							if(middleIndex > lastIndex)
+							{
+								middleIndex = lastIndex;
+								unfound = false;
+							}
+							if(middleIndex < 0)
+							{
+								middleIndex = 0;
+								unfound = false;
+							}
+							
+							while(unfound && items[middleIndex] && items[middleIndex]["Index MS"] != value && firstIndex < lastIndex)
 							{
 							   if (value < items[middleIndex]["Index MS"])
 								{
@@ -6881,15 +7042,22 @@ function fadeOutLightbox()
 		}
 		var curSlot
 		
-		if(type == "Processes")
+		curSlot = lookupTable[username][session][type]
+		//console.log(curSlot);
+		
+		//if(type == "Processes")
+		if(curSlot["data"])
 		{
-			curSlot = lookupTable[username][session][type];
+			//curSlot = lookupTable[username][session][type];
 			curSlot = ((await (curSlot["data"]())).value)[timestamp];
 		}
 		else
 		{
-			curSlot = lookupTable[username][session][type][timestamp];
+			curSlot = curSlot[timestamp];
+			//curSlot = lookupTable[username][session][type][timestamp];
 		}
+		
+		//console.log(curSlot);
 		
 		curSlot["Hash"] = SHA256(curSlot["User"] + curSlot["Original Session"] + curSlot["Index MS"]);
 		
@@ -7022,8 +7190,18 @@ function fadeOutLightbox()
 		var firstIndex  = 0,
 			lastIndex   = items.length - 1,
 			middleIndex = Math.floor((lastIndex + firstIndex)/2);
-
-		while(items[middleIndex]["Index MS"] != value && firstIndex < lastIndex)
+		var unfound = true;
+		if(middleIndex > lastIndex)
+		{
+			middleIndex = lastIndex;
+			unfound = false;
+		}
+		if(middleIndex < 0)
+		{
+			middleIndex = 0;
+			unfound = false;
+		}
+		while(unfound && items[middleIndex] && items[middleIndex]["Index MS"] != value && firstIndex < lastIndex)
 		{
 		   if (value < items[middleIndex]["Index MS"])
 			{
