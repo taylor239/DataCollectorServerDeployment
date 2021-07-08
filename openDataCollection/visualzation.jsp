@@ -1889,12 +1889,13 @@ function fadeOutLightbox()
 	var downloadedKeystrokesSessions = 0;
 	var totalSessions = 0;
 	
-	var processChunkSize = 100000;
+	var processChunkSize = 500000;
 	
 	var downloadedSessionProcesses = 0;
 	
 	var maxDownloadingProcesses = 5;
 	var curDownloadingProcesses = 0;
+	var maxDownloadingProcessesCeil = 50;
 	var processDownloadQueue = [];
 	
 	async function downloadProcesses(userName, sessionName, nextCount, sheet)
@@ -1962,6 +1963,15 @@ function fadeOutLightbox()
 			else
 			{
 				maxDownloadingProcesses = maxDownloadingProcesses * 2;
+				if(maxDownloadingProcesses > maxDownloadingProcessesCeil)
+				{
+					maxDownloadingProcesses = maxDownloadingProcessesCeil;
+				}
+				if(processDownloadQueue.length > 0)
+				{
+					var nextArgs = processDownloadQueue.pop();
+					downloadProcesses(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3]);
+				}
 			}
 			failed = false;
 			//for(user in data)
@@ -2082,6 +2092,7 @@ function fadeOutLightbox()
 	var maxDownloadingMouse = 5;
 	var curDownloadingMouse = 0;
 	var mouseDownloadQueue = [];
+	var maxDownloadingMouseCeil = 50;
 	
 	async function downloadMouse(userName, sessionName, nextCount, sheet)
 	{
@@ -2148,6 +2159,15 @@ function fadeOutLightbox()
 			else
 			{
 				maxDownloadingMouse = maxDownloadingMouse * 2;
+				if(maxDownloadingMouse > maxDownloadingMouseCeil)
+				{
+					maxDownloadingMouse = maxDownloadingMouseCeil;
+				}
+				if(mouseDownloadQueue.length > 0)
+				{
+					var nextArgs = mouseDownloadQueue.pop();
+					downloadMouse(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3]);
+				}
 			}
 			failed = false;
 			//for(user in data)
@@ -2268,6 +2288,7 @@ function fadeOutLightbox()
 	var maxDownloadingKeystrokes = 5;
 	var curDownloadingKeystrokes = 0;
 	var keystrokesDownloadQueue = [];
+	var maxDownloadingKeystrokesCeil = 50;
 	
 	async function downloadKeystrokes(userName, sessionName, nextCount, sheet)
 	{
@@ -2334,6 +2355,15 @@ function fadeOutLightbox()
 			else
 			{
 				maxDownloadingKeystrokes = maxDownloadingKeystrokes * 2;
+				if(maxDownloadingKeystrokes > maxDownloadingKeystrokesCeil)
+				{
+					maxDownloadingKeystrokes = maxDownloadingKeystrokesCeil;
+				}
+				if(keystrokesDownloadQueue.length > 0)
+				{
+					var nextArgs = keystrokesDownloadQueue.pop();
+					downloadKeystrokes(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3]);
+				}
 			}
 			failed = false;
 			//for(user in data)
@@ -2452,6 +2482,7 @@ function fadeOutLightbox()
 	var maxDownloadingImages = 4;
 	var curDownloadingImages = 0;
 	var imageDownloadQueue = [];
+	var maxDownloadingImagesCeil = 40;
 	
 	async function downloadImages(userName, sessionName, imageArray, nextCount, sheet)
 	{
@@ -2520,6 +2551,15 @@ function fadeOutLightbox()
 				else
 				{
 					maxDownloadingImages = maxDownloadingImages * 2;
+					if(maxDownloadingImages > maxDownloadingImagesCeil)
+					{
+						maxDownloadingImages = maxDownloadingImagesCeil;
+					}
+					if(imagesDownloadQueue.length > 0)
+					{
+						var nextArgs = imagesDownloadQueue.pop();
+						downloadImages(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3]);
+					}
 				}
 				//for(user in data)
 				{
