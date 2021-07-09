@@ -3045,6 +3045,8 @@ public class DatabaseConnector
 		
 		try
 		{
+			System.out.println("Getting mouse query:");
+			System.out.println(mouseQuery);
 			PreparedStatement myStatement = myConnector.prepareStatement(mouseQuery);
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
@@ -3052,6 +3054,7 @@ public class DatabaseConnector
 			int sessionOffset = 0;
 			for(int x=0; x < sessionsToSelect.size(); x++)
 			{
+				System.out.println(sessionsToSelect.get(x));
 				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
 				sessionOffset = x + 1;
 			}
@@ -3059,12 +3062,14 @@ public class DatabaseConnector
 			int secondSessionOffset = 0;
 			for(int x=0; x < usersToSelect.size(); x++)
 			{
+				System.out.println(usersToSelect.get(x));
 				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
 				secondSessionOffset = x + 1;
 			}
 			
 			if(!start.isEmpty() && !end.isEmpty())
 			{
+				System.out.println(start + ", " + end);
 				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
 				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
 			}

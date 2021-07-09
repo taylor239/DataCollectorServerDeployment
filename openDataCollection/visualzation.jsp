@@ -2092,7 +2092,7 @@ function fadeOutLightbox()
 	var maxDownloadingMouse = 5;
 	var curDownloadingMouse = 0;
 	var mouseDownloadQueue = [];
-	var maxDownloadingMouseCeil = 20;
+	var maxDownloadingMouseCeil = 5;
 	
 	async function downloadMouse(userName, sessionName, nextCount, sheet)
 	{
@@ -2136,7 +2136,7 @@ function fadeOutLightbox()
 		
 		var curCount = nextCount;
 		
-		var curSelect = "&users=" + userName + "&sessions=" + sessionName + "&first=" + curCount + "&count=" + processChunkSize;
+		var curSelect = "&users=" + userName + "&sessions=" + sessionName + "&first=" + curCount + "&count=" + mouseChunkSize;
 		
 		var failed = true;
 	
@@ -2288,7 +2288,7 @@ function fadeOutLightbox()
 	var maxDownloadingKeystrokes = 5;
 	var curDownloadingKeystrokes = 0;
 	var keystrokesDownloadQueue = [];
-	var maxDownloadingKeystrokesCeil = 20;
+	var maxDownloadingKeystrokesCeil = 5;
 	
 	async function downloadKeystrokes(userName, sessionName, nextCount, sheet)
 	{
@@ -2332,7 +2332,7 @@ function fadeOutLightbox()
 		
 		var curCount = nextCount;
 		
-		var curSelect = "&users=" + userName + "&sessions=" + sessionName + "&first=" + curCount + "&count=" + processChunkSize;
+		var curSelect = "&users=" + userName + "&sessions=" + sessionName + "&first=" + curCount + "&count=" + keystrokesChunkSize;
 		
 		var failed = true;
 	
