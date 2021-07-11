@@ -1895,7 +1895,7 @@ function fadeOutLightbox()
 	
 	var maxDownloadingProcesses = 5;
 	var curDownloadingProcesses = 0;
-	var maxDownloadingProcessesCeil = 20;
+	var maxDownloadingProcessesCeil = 10;
 	var processDownloadQueue = [];
 	
 	async function downloadProcesses(userName, sessionName, nextCount, sheet)
@@ -2048,8 +2048,9 @@ function fadeOutLightbox()
 						if(addDownloadCount(userName, sessionName) >= numAsync)
 						{
 							sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
+							refreshData();
 						}
-						refreshData();
+						
 						if(processDownloadQueue.length > 0)
 						{
 							var nextArgs = processDownloadQueue.pop();
@@ -2244,8 +2245,9 @@ function fadeOutLightbox()
 						if(addDownloadCount(userName, sessionName) >= numAsync)
 						{
 							sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
+							//refreshData();
 						}
-						refreshData();
+						
 						if(mouseDownloadQueue.length > 0)
 						{
 							var nextArgs = mouseDownloadQueue.pop();
@@ -2441,7 +2443,7 @@ function fadeOutLightbox()
 						{
 							sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
 						}
-						refreshData();
+						//refreshData();
 						if(keystrokesDownloadQueue.length > 0)
 						{
 							var nextArgs = keystrokesDownloadQueue.pop();
@@ -2838,29 +2840,36 @@ function fadeOutLightbox()
 			{
 				for(session in theNormDataInit[user])
 				{
-					var processDataObject = {};
-					processDataObject["user"] = user;
-					processDataObject["session"] = session;
-					processDataObject["data"] = getProcessData;
-					processDataObject["getfiltered"] = getProcessDataFiltered;
-					processDataObject["storefiltered"] = storeProcessDataFiltered;
-					theNormDataInit[user][session]["processes"] = processDataObject;
-					
-					var mouseDataObject = {};
-					mouseDataObject["user"] = user;
-					mouseDataObject["session"] = session;
-					mouseDataObject["data"] = getMouseData;
-					mouseDataObject["getfiltered"] = getMouseDataFiltered;
-					mouseDataObject["storefiltered"] = storeMouseDataFiltered;
-					theNormDataInit[user][session]["mouse"] = mouseDataObject;
-					
-					var keystrokesDataObject = {};
-					keystrokesDataObject["user"] = user;
-					keystrokesDataObject["session"] = session;
-					keystrokesDataObject["data"] = getKeystrokesData;
-					keystrokesDataObject["getfiltered"] = getKeystrokesDataFiltered;
-					keystrokesDataObject["storefiltered"] = storeKeystrokesDataFiltered;
-					theNormDataInit[user][session]["keystrokes"] = keystrokesDataObject;
+					if(!theNormDataInit[user][session]["processes"])
+					{
+						var processDataObject = {};
+						processDataObject["user"] = user;
+						processDataObject["session"] = session;
+						processDataObject["data"] = getProcessData;
+						processDataObject["getfiltered"] = getProcessDataFiltered;
+						processDataObject["storefiltered"] = storeProcessDataFiltered;
+						theNormDataInit[user][session]["processes"] = processDataObject;
+					}
+					if(!theNormDataInit[user][session]["mouse"])
+					{
+						var mouseDataObject = {};
+						mouseDataObject["user"] = user;
+						mouseDataObject["session"] = session;
+						mouseDataObject["data"] = getMouseData;
+						mouseDataObject["getfiltered"] = getMouseDataFiltered;
+						mouseDataObject["storefiltered"] = storeMouseDataFiltered;
+						theNormDataInit[user][session]["mouse"] = mouseDataObject;
+					}
+					if(!theNormDataInit[user][session]["keystrokes"])
+					{
+						var keystrokesDataObject = {};
+						keystrokesDataObject["user"] = user;
+						keystrokesDataObject["session"] = session;
+						keystrokesDataObject["data"] = getKeystrokesData;
+						keystrokesDataObject["getfiltered"] = getKeystrokesDataFiltered;
+						keystrokesDataObject["storefiltered"] = storeKeystrokesDataFiltered;
+						theNormDataInit[user][session]["keystrokes"] = keystrokesDataObject;
+					}
 				}
 			}
 			//console.log("Data:");
