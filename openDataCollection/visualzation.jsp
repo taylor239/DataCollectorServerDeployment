@@ -2834,7 +2834,7 @@ function fadeOutLightbox()
 			//d3.select("#legend").html("");
 			clearWindow();
 			
-			var theNormDataInit = ((await retrieveData("data")).value);
+			let theNormDataInit = ((await retrieveData("data")).value);
 			
 			for(user in theNormDataInit)
 			{
@@ -5905,7 +5905,7 @@ function fadeOutLightbox()
 							{
 								console.log("Downloaded")
 								console.log(data);
-								var theNormDataInit = ((await retrieveData("indexdata")).value);
+								let theNormDataInit = ((await retrieveData("indexdata")).value);
 								console.log("Adding to")
 								console.log(theNormDataInit);
 								
