@@ -1893,9 +1893,9 @@ function fadeOutLightbox()
 	
 	var downloadedSessionProcesses = 0;
 	
-	var maxDownloadingProcesses = 5;
+	var maxDownloadingProcesses = 4;
 	var curDownloadingProcesses = 0;
-	var maxDownloadingProcessesCeil = 10;
+	var maxDownloadingProcessesCeil = 8;
 	var processDownloadQueue = [];
 	
 	async function downloadProcesses(userName, sessionName, nextCount, sheet)
@@ -2048,7 +2048,7 @@ function fadeOutLightbox()
 						if(addDownloadCount(userName, sessionName) >= numAsync)
 						{
 							sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
-							refreshData();
+							//refreshData();
 						}
 						
 						if(processDownloadQueue.length > 0)
@@ -2090,10 +2090,10 @@ function fadeOutLightbox()
 	
 	var downloadedSessionMouse = 0;
 	
-	var maxDownloadingMouse = 5;
+	var maxDownloadingMouse = 2;
 	var curDownloadingMouse = 0;
 	var mouseDownloadQueue = [];
-	var maxDownloadingMouseCeil = 5;
+	var maxDownloadingMouseCeil = 4;
 	
 	async function downloadMouse(userName, sessionName, nextCount, sheet)
 	{
@@ -2287,10 +2287,10 @@ function fadeOutLightbox()
 	
 	var downloadedSessionKeystrokes = 0;
 	
-	var maxDownloadingKeystrokes = 5;
+	var maxDownloadingKeystrokes = 2;
 	var curDownloadingKeystrokes = 0;
 	var keystrokesDownloadQueue = [];
-	var maxDownloadingKeystrokesCeil = 5;
+	var maxDownloadingKeystrokesCeil = 4;
 	
 	async function downloadKeystrokes(userName, sessionName, nextCount, sheet)
 	{
@@ -2484,7 +2484,7 @@ function fadeOutLightbox()
 	var maxDownloadingImages = 4;
 	var curDownloadingImages = 0;
 	var imageDownloadQueue = [];
-	var maxDownloadingImagesCeil = 10;
+	var maxDownloadingImagesCeil = 4;
 	
 	async function downloadImages(userName, sessionName, imageArray, nextCount, sheet)
 	{
