@@ -1057,12 +1057,37 @@ function fadeOutLightbox()
 	
 	var startedDownload = {};
 	
+	async function downloadUser(user)
+	{
+		let theNormDataInit = ((await retrieveData("indexdata")).value);
+		console.log(theNormDataInit);
+		console.log(user);
+		for(session in theNormDataInit[user])
+		{
+			if(Object.keys(theNormDataInit[user][session]).length < 3)
+			{
+				delete theNormDataInit[user][session];
+				continue;
+			}
+			
+			var hashValDownload = SHA256(user + session + "_download");
+			if(!startedDownload[hashValDownload])
+			{
+				console.log("Starting first download " + user + ":" + session);
+				startedDownload[hashValDownload] = true;
+				downloadImages(user, session, theNormDataInit[user][session]["screenshots"], 0);
+				downloadProcesses(user, session, 0);
+				downloadMouse(user, session, 0);
+				downloadKeystrokes(user, session, 0);
+			}
+		}
+	}
+	
 	function preprocess(dataToModify)
 	{
 		totalSessions = 0;
 		for(user in dataToModify)
 		{
-			//console.log(dataToModify);
 			aggregateSession = {}
 			listsToAdd = {}
 			newSession = {}
@@ -1080,19 +1105,12 @@ function fadeOutLightbox()
 				{
 					var hashVal = SHA256(user + session + dataToModify[user][session]["screenshots"][entry]["Index MS"]);
 					dataToModify[user][session]["screenshots"][entry]["ImageHash"] = hashVal;
-					//dataToModify[user][session]["screenshots"][entry]["Screenshot"] = getScreenshotData;
-					//dataToModify[user][session]["screenshots"][entry]["HasScreenshot"] = hasScreenshot;
 				}
 				
 				var hashValDownload = SHA256(user + session + "_download");
 				if(!startedDownload[hashValDownload])
 				{
-					console.log("Starting first download " + user + ":" + session);
-					startedDownload[hashValDownload] = true;
-					downloadImages(user, session, dataToModify[user][session]["screenshots"], 0);
-					downloadProcesses(user, session, 0);
-					downloadMouse(user, session, 0);
-					downloadKeystrokes(user, session, 0);
+					colorButtons(user, session);
 				}
 				else
 				{
@@ -1728,48 +1746,6 @@ function fadeOutLightbox()
 			return;
 		}
 		updating = true;
-		
-		/*
-		var initData = ((await retrieveData("indexdata")).value);
-		for(user in initData)
-		{
-			for(session in initData[user])
-			{
-				var processDataObject = {};
-				processDataObject["user"] = user;
-				processDataObject["session"] = session;
-				processDataObject["data"] = getProcessData;
-				initData[user][session]["processes"] = processDataObject;
-			}
-		}
-		
-		try
-		{
-			var isDone = false;
-			while(!isDone)
-			{
-				isDone = await persistData("indexdata", initData);
-			}
-		}
-		catch(err)
-		{
-			console.log(err);
-		}
-		
-		theNormData = preprocess(initData);
-		try
-		{
-			var isDone = false;
-			while(!isDone)
-			{
-				isDone = await persistData("data", theNormData);
-			}
-		}
-		catch(err)
-		{
-			console.log(err);
-		}
-		*/
 		start(true);
 		
 		updating = false;
@@ -2477,6 +2453,14 @@ function fadeOutLightbox()
 					+ totalSessions
 					+ " total sessions.")
 		});
+	}
+	
+	async function colorButtons(userName, sessionName)
+	{
+		var sheet = document.createElement('style');
+		sheet.id = "style_" + SHA256(userName + sessionName);
+		sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Yellow;}";
+		document.body.appendChild(sheet);
 	}
 	
 	var chunkSize = 50;
@@ -3503,6 +3487,78 @@ function fadeOutLightbox()
 		.attr("dominant-baseline", "middle")
 		.attr("text-anchor", "middle")
 		.text("Filter")
+		.attr("initText", "Filter")
+		.style("pointer-events", "none")
+		.attr("id", function(d, i)
+				{
+					return("filterbuttonuser_label_" + SHA256(userOrderMap[d]));
+				})
+		.classed("clickableBar", true);
+		
+		var downloadButtonsUser = svg.append("g")
+		.selectAll("rect")
+		.data(userOrderArray)
+		.enter()
+		.append("rect")
+		.attr("x", visWidth - (xAxisPadding / 1.75 - xAxisPadding / 20) - (barHeight - (xAxisPadding / 25)) * 2)
+		.attr("width", xAxisPadding / 1.5 - xAxisPadding / 20)
+		.attr("height", barHeight - (xAxisPadding / 25))
+		.attr("y", function(d, i)
+				{
+					if(i == 0)
+					{
+						curSessionCount = 0;
+					}
+					numSessions = Object.keys(theNormData[userOrderMap[d]]["Session Ordering"]["Order List"]).length;
+					toReturn = barHeight * i + barHeight * 2 * curSessionCount;
+					curSessionCount += numSessions;
+					return toReturn;
+				})
+		.attr("fill", "Pink")
+		.attr("initFill", "Pink")
+		.attr("stroke", "black")
+		.attr("initStroke", "black")
+		.attr("stroke-width", "0")
+		.attr("initStrokeWidth", "0")
+		.attr("z", 2)
+		.classed("clickableBar", true)
+		.attr("id", function(d, i)
+				{
+					return("downloadbuttonuser_" + SHA256(userOrderMap[d]));
+				})
+		.on("click", function(d, i)
+				{
+					downloadUser(userOrderMap[d]);
+				});
+		
+		
+		var downloadLabelsUser = svg.append("g")
+		.selectAll("text")
+		.data(userOrderArray)
+		.enter()
+		.append("text")
+		.attr("x", visWidth - (xAxisPadding / 2 - xAxisPadding / 20) + xAxisPadding / 4 - xAxisPadding / 40 - (barHeight - (xAxisPadding / 25)) * 2)
+		.attr("width", xAxisPadding / 2)
+		.attr("height", barHeight - 2 * (xAxisPadding / 25))
+		.attr("y", function(d, i)
+				{
+					if(i == 0)
+					{
+						curSessionCount = 0;
+					}
+					numSessions = Object.keys(theNormData[userOrderMap[d]]["Session Ordering"]["Order List"]).length;
+					toReturn = barHeight * i + barHeight * 2 * curSessionCount + barHeight / 2 - (xAxisPadding / 50);
+					curSessionCount += numSessions;
+					return toReturn;
+				})
+		.attr("fill", "#000")
+		.attr("z", 2)
+		.attr("font-weight", "bolder")
+		.attr("font-family", "monospace")
+		.attr("alignment-baseline", "central")
+		.attr("dominant-baseline", "middle")
+		.attr("text-anchor", "middle")
+		.text("Download")
 		.attr("initText", "Filter")
 		.style("pointer-events", "none")
 		.attr("id", function(d, i)
@@ -7762,7 +7818,6 @@ function fadeOutLightbox()
 		}
 		
 		
-		
 		//Iterate through tasks.  If the task starts or ends during
 		//this task but not both, it is a concurrent task.  Add it to
 		//list of concurrencies.  If the task starts and ends during
@@ -7783,14 +7838,12 @@ function fadeOutLightbox()
 			var taskHash = SHA256(theTask["User"] + theTask["Original Session"] + theTask["TaskName"]);
 			
 			theTask["Task Hash"] = taskHash;
-			//console.log(theTask);
 			if(taskHash in hasTask)
 			{
 				
 			}
 			else
 			{
-				//buildTaskMap(user, session, task, onlySession, colissionMap)
 				hasTask[taskHash] = true;
 				if(theTask["Description"] == "end" || !(theTask["Next"]) || theTask["Next"]["Index MS"] > task["Next"]["Index MS"])
 				{
@@ -7808,17 +7861,12 @@ function fadeOutLightbox()
 				}
 			}
 			
-			//console.log(theTask);
 			theTask = nextTask();
 		}
 		
-		//colissionMap[thisHash] = toReturn;
-		//console.log("Finally got:");
-		//console.log(toReturn);
 		return toReturn;
 		
 	}
-	//var curFocus;
 	
 	function viewPetriNets()
 	{
@@ -7857,13 +7905,11 @@ function fadeOutLightbox()
 		var finalNodesEdges = {};
 		finalNodesEdges["links"] = [];
 		finalNodesEdges["nodes"] = [];
-		//For each top level attack:
 		var usedPlaces = {};
 		
 		var numUnused = 0;
 		
 		var finalAttackGraphs = JSON.parse(JSON.stringify(attackGraphs));
-		//var finalAttackGraphs = angular.copy(attackGraphs;
 		
 		
 		for(var entry in finalAttackGraphs)
@@ -7881,20 +7927,13 @@ function fadeOutLightbox()
 				}
 			}
 			finalNodesEdges["links"] = finalNodesEdges["links"].concat(JSON.parse(JSON.stringify(finalAttackGraphs[entry]["links"])));
-			//finalNodesEdges["nodes"] = finalNodesEdges["nodes"].concat(attackGraphs[entry]["nodes"]);
 		}
 		
 		for(var entry in finalNodesEdges["links"])
 		{
-			//console.log(finalNodesEdges["links"][entry]);
-			//console.log(finalNodesEdges["links"][entry]["source"]);
-			//console.log(finalNodesEdges["links"][entry]["source"]["id"]);
 			usedPlaces[finalNodesEdges["links"][entry]["source"]["id"]] = false;
 			usedPlaces[finalNodesEdges["links"][entry]["source"]] = false;
 		}
-		//console.log(usedPlaces);
-		//finalNodesEdges = attackGraphs[0];
-		//console.log(finalNodesEdges);
 		
 		
 		
@@ -7905,8 +7944,6 @@ function fadeOutLightbox()
 			.force("charge", d3.forceManyBody().strength(-250))
 			.force("x", d3.forceX())
 			.force("y", d3.forceY());
-			//.force("center", d3.forceCenter(divBounds["width"] / 2, divBounds["height"] / 2));
-		
 		
 		var link = petriG.append("g")
 			.selectAll("line")
@@ -8020,7 +8057,6 @@ function fadeOutLightbox()
 			.attr("width", transitionWidth)
 			.attr("height", transitionHeight)
 			.attr("fill", "blue");
-			//.call(drag(simulation));
 		
 		
 		var labels = node.filter(d => d.type === "Place")
@@ -8043,7 +8079,6 @@ function fadeOutLightbox()
 				});
 		
 		node = transitions.merge(places).merge(labels);
-		//node.call(drag(simulation));
 		
 		simulation.on("tick", () => {
 			link
@@ -8066,7 +8101,6 @@ function fadeOutLightbox()
 								d.x = divBounds["width"] / 2;
 								return divBounds["width"] / 2;
 							}
-							//return d.x;
 						})
 				.attr("fy", function(d)
 						{
@@ -8080,22 +8114,15 @@ function fadeOutLightbox()
 								d.y = ((this.getAttribute("endpointNum") / (numUnused + 1)) * (divBounds["height"])) - (divBounds["height"] / 2);
 								return d.y;
 							}
-							//return d.x;
 						})
-				//.attr("x", d => d.x + (transitionWidth / 2))
 				.attr("cy", d => d.y);
-				//.attr("y", d => d.y + (transitionHeight / 2));
 			
 			transitions
-				//.attr("cx", d => d.x)
 				.attr("x", d => d.x - (transitionWidth / 2))
-				//.attr("cy", d => d.y);
 				.attr("y", d => d.y - (transitionHeight / 2));
 			
 			labels
-				//.attr("cx", d => d.x)
 				.attr("x", d => d.x - (transitionWidth / 2))
-				//.attr("cy", d => d.y);
 				.attr("y", d => d.y - (transitionHeight / 2));
 		});
 		
@@ -8105,9 +8132,6 @@ function fadeOutLightbox()
 			.attr("fy", 0)
 			.attr("cy", 0);
 		
-		//simulation.alphaTarget(0.3).restart();
-			
-		//invalidation.then(() => simulation.stop());
 	}
 	
 
