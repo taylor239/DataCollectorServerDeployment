@@ -666,34 +666,39 @@ public class DataExportLog extends HttpServlet {
 				
 				headMap = newMap;
 			}
-			/*
+			
+			if((usersToSelect != null && !usersToSelect.isEmpty()) || (sessionSelectList != null && !sessionSelectList.isEmpty()))
 			{
-			Iterator userIterator = headMap.entrySet().iterator();
-			while(userIterator.hasNext())
-			{
-				Entry userEntry = (Entry) userIterator.next();
-				String curUser = (String) userEntry.getKey();
-				ArrayList sessionList = new ArrayList();
-				//System.out.println("User: " + curUser);
-				//System.out.println(userEntry.getValue().getClass());
-				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userEntry.getValue();
-				//System.out.println(sessionMap.size());
-				Iterator sessionIterator = (Iterator) sessionMap.entrySet().iterator();
-				while(sessionIterator.hasNext())
+				Iterator userIterator = headMap.entrySet().iterator();
+				while(userIterator.hasNext())
 				{
-					Entry sessionEntry = (Entry) sessionIterator.next();
-					String curSession = (String) sessionEntry.getKey();
-					sessionList.add(curSession);
-					//System.out.println("Sess: " + curSession);
-					//System.out.println(sessionEntry.getValue().getClass());
-					ConcurrentHashMap dataMap = (ConcurrentHashMap) sessionEntry.getValue();
-					System.out.println(((ArrayList) dataMap.get("bounds")).size());
-					System.out.println(dataMap.get("bounds"));
-					dataMap.remove("bounds");
+					Entry userEntry = (Entry) userIterator.next();
+					String curUser = (String) userEntry.getKey();
+					
+					if(usersToSelect.isEmpty() || usersToSelect.contains(curUser))
+					{
+						ConcurrentHashMap sessionMap = (ConcurrentHashMap) userEntry.getValue();
+						Iterator sessionIterator = (Iterator) sessionMap.entrySet().iterator();
+						while(sessionIterator.hasNext())
+						{
+							Entry sessionEntry = (Entry) sessionIterator.next();
+							String curSession = (String) sessionEntry.getKey();
+							if(sessionSelectList.isEmpty() || sessionSelectList.contains(curSession))
+							{
+								
+							}
+							else
+							{
+								sessionMap.remove(curSession);
+							}
+						}
+					}
+					else
+					{
+						headMap.remove(curUser);
+					}
 				}
 			}
-			}
-			*/
 			
 			if(normalize != null && !normalize.equals("none"))
 			{

@@ -1751,6 +1751,27 @@ function fadeOutLightbox()
 		updating = false;
 	}
 	
+	var usersToQuery = [];
+	var sessionsToQuery = [];
+	var autoDownload = false;
+	
+	function processParameters()
+	{
+		var theUrl = window.location.href;
+		var url = new URL(theUrl);
+		var usersString = url.searchParams.get("users");
+		if(usersString)
+		{
+			usersToQuery = usersString.split(",");
+		}
+		var sessionsString = url.searchParams.get("sessions");
+		if(sessionsString)
+		{
+			sessionsToQuery = sessionsString.split(",");
+		}
+		autoDownload = (url.searchParams.get("autodownload") == "true");
+	}
+	
 	var searchTerms = [];
 	
 	async function downloadData()
@@ -1780,8 +1801,42 @@ function fadeOutLightbox()
 			{
 				searchTerms = data;
 			});
-			//d3.json("logExport.json?event=" + eventName + "&datasources=keystrokes,mouse,windows,events,environment,screenshotindices&normalize=none", async function(error, data)
-			d3.json("logExport.json?event=" + eventName + "&datasources=windows,events,environment,screenshotindices&normalize=none", async function(error, data)
+			
+			processParameters();
+			var userSessionFilter = "";
+			
+			if(usersToQuery && usersToQuery.length > 0)
+			{
+				var first = true;
+				userSessionFilter += "&users=";
+				for(userEntry in usersToQuery)
+				{
+					if(!first)
+					{
+						userSessionFilter += ",";
+					}
+					userSessionFilter += usersToQuery[userEntry];
+					first = false;
+				}
+			}
+			
+			if(sessionsToQuery && sessionsToQuery.length > 0)
+			{
+				var first = true;
+				userSessionFilter += "&sessions=";
+				for(sessionEntry in sessionsToQuery)
+				{
+					if(!first)
+					{
+						userSessionFilter += ",";
+					}
+					userSessionFilter += sessionsToQuery[sessionEntry];
+					first = false;
+				}
+			}
+			
+			
+			d3.json("logExport.json?event=" + eventName + "&datasources=windows,events,environment,screenshotindices&normalize=none" + userSessionFilter, async function(error, data)
 				{
 					try
 					{
@@ -1808,15 +1863,7 @@ function fadeOutLightbox()
 					{
 						console.log(err);
 					}
-					//theNormDataClone = JSON.parse(JSON.stringify(theNormData));
-					//try
-					//{
-					//	theNormDataClone = (await retrieveData("data")).value;
-					//}
-					//catch(err)
-					//{
-					//	console.log(err);
-					//}
+					
 					theNormDataDone = true;
 					
 					d3.select("#title")
@@ -3524,6 +3571,11 @@ function fadeOutLightbox()
 		.classed("clickableBar", true)
 		.attr("id", function(d, i)
 				{
+					if(autoDownload)
+					{
+						downloadUser(userOrderMap[d]);
+					}
+					
 					return("downloadbuttonuser_" + SHA256(userOrderMap[d]));
 				})
 		.on("click", function(d, i)
@@ -3734,75 +3786,11 @@ function fadeOutLightbox()
 				return "clickableBar " + "select_" + SHA256(d["FirstClass"]) + " " + "window_process_" + SHA256(d["User"] + d["Start"] + d["PID"]);
 			})
 		
-		//.classed("clickableBar", true)
 		.attr("z", 2);
 		
 		var foregroundTextG = svg.append("g");
 		
-		/*
-		var foregroundText = foregroundTextG
-		.selectAll("text")
-		.data(windowTimeline)
-		.enter()
-		.append("text")
-		.attr("x", function(d, i)
-				{
-					if(timeMode == "Session")
-					{
-						return d["Time Scale Session"](d["Index MS Session"]) + xAxisPadding;
-					}
-					else if(timeMode == "User")
-					{
-						return d["Time Scale User"](d["Index MS User"]) + xAxisPadding;
-					}
-					else if(timeMode == "Universal")
-					{
-						return d["Time Scale Universal"](d["Index MS Universal"]) + xAxisPadding;
-					}
-					return 0;
-				})
-		.attr("y", function(d, i)
-				{
-					
-					return d["Session Order"] * barHeight * 2 + d["User Order"] * barHeight + barHeight + xAxisPadding / 50;
-				})
-		.attr("fill", function(d, i)
-				{
-					if(windowColorNumber[d["FirstClass"]] % 2 == 1)
-					{
-						return "Black"
-					}
-					return "White"
-				})
-		.attr("textLength", function(d, i)
-				{
-					if(timeMode == "Session")
-					{
-						return d["Time Scale Session"](d["End MS Session"] - d["Index MS Session"]) + "px";
-					}
-					else if(timeMode == "User")
-					{
-						return d["Time Scale User"](d["End MS User"] - d["Index MS User"]) + "px";
-					}
-					else if(timeMode == "Universal")
-					{
-						return d["Time Scale Universal"](d["End MS Universal"] - d["Index MS Universal"]) + "px";
-					}
-					return (timeScale(d["End Time MS"] - d["Start Time MS"]) -1) + "px";
-				})
-		.attr("font-size", barHeight / 4)
-		.attr("dominant-baseline", "hanging")
-		.style("pointer-events", "none")
-		.attr("clip-path", function(d, i)
-				{
-					return "url(#ellipse-clip)";
-				})
-		.attr("opacity", 1)
-		.text(function(d, i)
-				{
-					return d["Name"];
-				});
-		*/
+		
 		
 		var eventTimeline;
 		var eventTypeNumbers = {};
