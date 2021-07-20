@@ -2520,6 +2520,18 @@ function fadeOutLightbox()
 	async function downloadImages(userName, sessionName, imageArray, nextCount, sheet)
 	{
 		console.log("Downloading image data for: " + userName + ":" + sessionName + ", index " + nextCount);
+		
+		if(!imageArray)
+		{
+			console.log("No images: " + userName + ": " + sessionName);
+			if(imageDownloadQueue.length > 0)
+			{
+				var nextArgs = imageDownloadQueue.pop();
+				downloadImages(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3]);
+			}
+			return;
+		}
+		
 		if(curDownloadingImages >= maxDownloadingImages)
 		{
 			console.log("Already downloading max images, put in queue.");
