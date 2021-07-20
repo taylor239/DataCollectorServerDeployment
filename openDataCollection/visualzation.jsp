@@ -2802,10 +2802,6 @@ function fadeOutLightbox()
 	{
 		//console.log("Storing for: " + this.session);
 		//console.log(toStore);
-		if(!toStore)
-		{
-			return;
-		}
 		if(this.session == "Aggregated")
 		{
 			
