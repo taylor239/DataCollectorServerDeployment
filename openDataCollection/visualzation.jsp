@@ -2519,6 +2519,7 @@ function fadeOutLightbox()
 	
 	async function downloadImages(userName, sessionName, imageArray, nextCount, sheet)
 	{
+		console.log("Downloading image data for: " + userName + ":" + sessionName + ", index " + nextCount);
 		if(curDownloadingImages >= maxDownloadingImages)
 		{
 			console.log("Already downloading max images, put in queue.");
@@ -2547,8 +2548,14 @@ function fadeOutLightbox()
 		
 		while(curCount < imageArray.length)
 		{
+			//console.log("Checking image");
+			//console.log(imageArray[curCount]);
+			if(!imageArray[curCount]["ImageHash"])
+			{
+				imageArray[curCount]["ImageHash"] = SHA256(user + session + imageArray[curCount]["Index MS"]);
+			}
 			var entry = curCount;
-			var curScreenshot = (await hasScreenshot(imageArray[entry]));
+			var curScreenshot = (await hasScreenshot(imageArray[curCount]));
 			//console.log(entry + ": " + curScreenshot)
 			if(curScreenshot)
 			{
