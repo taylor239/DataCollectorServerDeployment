@@ -2521,26 +2521,31 @@ function fadeOutLightbox()
 	{
 		console.log("Downloading image data for: " + userName + ":" + sessionName + ", index " + nextCount);
 		
+		if(curDownloadingImages >= maxDownloadingImages)
+		{
+			console.log("Already downloading max images, put in queue.");
+			var argList = [userName, sessionName, imageArray, nextCount, sheet];
+			console.log(argList);
+			imageDownloadQueue.push(argList);
+			return;
+			
+		}
+		
 		if(!imageArray)
 		{
 			console.log("No images: " + userName + ": " + sessionName);
 			if(imageDownloadQueue.length > 0)
 			{
 				var nextArgs = imageDownloadQueue.pop();
-				downloadImages(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3]);
+				downloadImages(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3], nextArgs[4]);
+			}
+			else
+			{
+				curDownloadingImages--;
 			}
 			return;
 		}
 		
-		if(curDownloadingImages >= maxDownloadingImages)
-		{
-			console.log("Already downloading max images, put in queue.");
-			var argList = [userName, sessionName, nextCount, sheet];
-			console.log(argList);
-			imageDownloadQueue.push(argList);
-			return;
-			
-		}
 		curDownloadingImages++;
 		if(!sheet)
 		{
@@ -2610,7 +2615,7 @@ function fadeOutLightbox()
 					if(imageDownloadQueue.length > 0)
 					{
 						var nextArgs = imageDownloadQueue.pop();
-						downloadImages(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3]);
+						downloadImages(nextArgs[0], nextArgs[1], nextArgs[2], nextArgs[3], nextArgs[4]);
 					}
 				}
 				//for(user in data)
