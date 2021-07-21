@@ -6212,7 +6212,7 @@ function fadeOutLightbox()
 			.html("<td><div align=\"center\">Add Task</div></td>");
 		
 		var selectEntries = "";
-		for(var x = 0; x < searchTerms.length; x++)
+		for(var x = 0; searchTerms && x < searchTerms.length; x++)
 		{
 			selectEntries = selectEntries + "<option value=\"" + searchTerms[x] + "\">" + searchTerms[x] + "</option>";
 		}
