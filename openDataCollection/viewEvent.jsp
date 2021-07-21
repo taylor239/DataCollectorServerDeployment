@@ -486,7 +486,7 @@ catch(Exception e)
 	<tr>
 	<td>
 	<h4>
-	<a href="visualzation.jsp?event=<%=eventName %>">Visualization (Coming Soon)</a>
+	<a href="vissplash.jsp?event=<%=eventName %>">Visualization</a>
 	</h4>
 	</td>
 	</tr>
