@@ -3124,6 +3124,8 @@ function fadeOutLightbox()
 						{
 							if(curUserSessionMap)
 							{
+								console.log(user + ": " + session);
+								console.log(curUserSessionMap);
 								await processMap[user][session]["storedata"](curUserSessionMap);
 							}
 							await lookupTable[user][session]["Processes"]["storedata"](curLookupTable);
