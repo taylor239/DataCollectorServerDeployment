@@ -1376,7 +1376,7 @@ function fadeOutLightbox()
 			}
 			
 			
-			d3.json("logExport.json?event=" + eventName + "&datasources=windows,events,environment,screenshotindices,processsummary&normalize=none" + userSessionFilter, async function(error, data)
+			d3.json("logExport.json?event=" + eventName + "&datasources=windows,events,environment,processsummary&normalize=none" + userSessionFilter, async function(error, data)
 				{
 					try
 					{
