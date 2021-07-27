@@ -105,6 +105,13 @@ public class DatabaseConnector
 			"GROUP BY `Process`.`event`, `Process`.`adminEmail`, `Process`.`username`, `Process`.`session`, `Process`.`user`, `Process`.`pid`, `Process`.`start`\n" + 
 			"ORDER BY `mintime` ASC";
 	
+	private String summaryProcessQueryLimited = "SELECT `Process`.*, a.* FROM `Process` LEFT JOIN \n" + 
+			"(\n" + 
+			"SELECT `event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`, GROUP_CONCAT(`arg` ORDER BY `numbered` ASC SEPARATOR ' ') AS `arguments` FROM `ProcessArgs` GROUP BY `ProcessArgs`.`event`, `ProcessArgs`.`adminEmail`, `ProcessArgs`.`username`, `ProcessArgs`.`session`, `ProcessArgs`.`user`, `ProcessArgs`.`pid`, `ProcessArgs`.`start`\n" + 
+			") a\n" + 
+			"USING (`event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`)\n" + 
+			"WHERE `Process`.`event` = ? AND `Process`.`adminEmail` = ?\n";
+	
 	private String allProcessQueryFix = "SELECT * FROM `Process` LEFT JOIN \n" + 
 			"(\n" + 
 			"SELECT `event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`, GROUP_CONCAT(`arg` ORDER BY `numbered` ASC SEPARATOR ' ') AS `arguments` FROM `ProcessArgs` GROUP BY `ProcessArgs`.`event`, `ProcessArgs`.`adminEmail`, `ProcessArgs`.`username`, `ProcessArgs`.`session`, `ProcessArgs`.`user`, `ProcessArgs`.`pid`, `ProcessArgs`.`start`\n" + 
@@ -2474,7 +2481,7 @@ public class DatabaseConnector
 		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
 		conn = myConnector;
 		
-		String allProcessQuery = this.summaryProcessQuery;
+		String allProcessQuery = this.summaryProcessQueryLimited;
 		String userSelectString = "";
 		if(!usersToSelect.isEmpty())
 		{
@@ -2551,8 +2558,8 @@ public class DatabaseConnector
 				//nextRow.put("Session", myResults.getString("session"));
 				String sessionName = myResults.getString("session");
 				
-				Timestamp minTimeString = myResults.getTimestamp("mintime", cal);
-				Timestamp maxTimeString = myResults.getTimestamp("maxtime", cal);
+				//Timestamp minTimeString = myResults.getTimestamp("mintime", cal);
+				//Timestamp maxTimeString = myResults.getTimestamp("maxtime", cal);
 				//System.out.println(timeString);
 				
 				nextRow.put("User", myResults.getString("user"));
@@ -2577,28 +2584,28 @@ public class DatabaseConnector
 				}
 				lastMap.put(rowKey, nextRow);
 				
-				if(minTimeString.toString().contains("0000-00-00"))
-				{
-					nextRow.put("MinTime", new Timestamp(0));
-				}
-				else
-				{
-					nextRow.put("MinTime", myResults.getTimestamp("mintime", cal));
-				}
-				if(maxTimeString.toString().contains("0000-00-00"))
-				{
-					nextRow.put("MaxTime", new Timestamp(0));
-				}
-				else
-				{
-					nextRow.put("MaxTime", myResults.getTimestamp("maxtime", cal));
-				}
+				//if(minTimeString.toString().contains("0000-00-00"))
+				//{
+				//	nextRow.put("MinTime", new Timestamp(0));
+				//}
+				//else
+				//{
+				//	nextRow.put("MinTime", myResults.getTimestamp("mintime", cal));
+				//}
+				//if(maxTimeString.toString().contains("0000-00-00"))
+				//{
+				//	nextRow.put("MaxTime", new Timestamp(0));
+				//}
+				//else
+				//{
+				//	nextRow.put("MaxTime", myResults.getTimestamp("maxtime", cal));
+				//}
 				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
-				nextRow.put("Index", nextRow.get("MinTime"));
+				//nextRow.put("Index", nextRow.get("MinTime"));
 				
 				
-				nextRow.put("MaxCPU", myResults.getString("maxcpu"));
-				nextRow.put("MaxMem", myResults.getString("maxmem"));
+				//nextRow.put("MaxCPU", myResults.getString("maxcpu"));
+				//nextRow.put("MaxMem", myResults.getString("maxmem"));
 				
 				
 				
