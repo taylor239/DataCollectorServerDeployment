@@ -95,6 +95,16 @@ public class DatabaseConnector
 			"LEFT JOIN `ProcessAttributes` ON `Process`.`event` = `ProcessAttributes`.`event` AND `Process`.`adminEmail` = `ProcessAttributes`.`adminEmail` AND `Process`.`username` = `ProcessAttributes`.`username` AND `Process`.`session` = `ProcessAttributes`.`session` AND `Process`.`user` = `ProcessAttributes`.`user` AND `Process`.`pid` = `ProcessAttributes`.`pid` AND `Process`.`start` = `ProcessAttributes`.`start`\n" + 
 			"WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? ORDER BY `ProcessAttributes`.`timestamp`, `ProcessAttributes`.`insertTimestamp` ASC";
 	
+	private String summaryProcessQuery = "SELECT `Process`.*, a.*, MAX(`ProcessAttributes`.`cpu`) AS `maxcpu`, MAX(`ProcessAttributes`.`mem`) AS `maxmem`, MAX(`ProcessAttributes`.`timestamp`) AS `maxtime`, MIN(`ProcessAttributes`.`timestamp`) AS `mintime` FROM `Process` LEFT JOIN \n" + 
+			"(\n" + 
+			"SELECT `event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`, GROUP_CONCAT(`arg` ORDER BY `numbered` ASC SEPARATOR ' ') AS `arguments` FROM `ProcessArgs` GROUP BY `ProcessArgs`.`event`, `ProcessArgs`.`adminEmail`, `ProcessArgs`.`username`, `ProcessArgs`.`session`, `ProcessArgs`.`user`, `ProcessArgs`.`pid`, `ProcessArgs`.`start`\n" + 
+			") a\n" + 
+			"USING (`event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`)\n" + 
+			"LEFT JOIN `ProcessAttributes` ON `Process`.`event` = `ProcessAttributes`.`event` AND `Process`.`adminEmail` = `ProcessAttributes`.`adminEmail` AND `Process`.`username` = `ProcessAttributes`.`username` AND `Process`.`session` = `ProcessAttributes`.`session` AND `Process`.`user` = `ProcessAttributes`.`user` AND `Process`.`pid` = `ProcessAttributes`.`pid` AND `Process`.`start` = `ProcessAttributes`.`start`\n" + 
+			"WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ?\n" + 
+			"GROUP BY `Process`.`event`, `Process`.`adminEmail`, `Process`.`username`, `Process`.`session`, `Process`.`user`, `Process`.`pid`, `Process`.`start`\n" + 
+			"ORDER BY `mintime` ASC";
+	
 	private String allProcessQueryFix = "SELECT * FROM `Process` LEFT JOIN \n" + 
 			"(\n" + 
 			"SELECT `event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`, GROUP_CONCAT(`arg` ORDER BY `numbered` ASC SEPARATOR ' ') AS `arguments` FROM `ProcessArgs` GROUP BY `ProcessArgs`.`event`, `ProcessArgs`.`adminEmail`, `ProcessArgs`.`username`, `ProcessArgs`.`session`, `ProcessArgs`.`user`, `ProcessArgs`.`pid`, `ProcessArgs`.`start`\n" + 
@@ -1749,6 +1759,7 @@ public class DatabaseConnector
 				nextRow.put("UploadTime", myResults.getTimestamp("insertTimestamp", cal));
 				//nextRow.put("Index", myResults.getTimestamp("insertTimestamp", cal));
 				nextRow.put("Environment", myResults.getString("sessionEnvironment"));
+				nextRow.put("Notes", myResults.getString("notes"));
 				
 				
 				if(!myReturn.containsKey(userName))
@@ -2446,6 +2457,189 @@ public class DatabaseConnector
 				dataMap.put("processes", newProcessList);
 			}
 		}
+		
+		
+		return myReturn;
+	}
+	
+	public ConcurrentHashMap getProcessSummaryHierarchy(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	{
+		ConcurrentHashMap lastMap = new ConcurrentHashMap();
+		ConcurrentHashMap myReturn = new ConcurrentHashMap();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		conn = myConnector;
+		
+		String allProcessQuery = this.summaryProcessQuery;
+		String userSelectString = "";
+		if(!usersToSelect.isEmpty())
+		{
+			userSelectString = "AND `ProcessAttributes`.`username` IN (";
+			for(int x=0; x<usersToSelect.size(); x++)
+			{
+				userSelectString += "?";
+				if(!(x + 1 == usersToSelect.size()))
+				{
+					userSelectString += ", ";
+				}
+			}
+			userSelectString += ")";
+			allProcessQuery = allProcessQuery.replace("`ProcessAttributes`.`adminEmail` = ?", "`ProcessAttributes`.`adminEmail` = ? " + userSelectString);
+
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `ProcessAttributes`.`session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			allProcessQuery = allProcessQuery.replace("`ProcessAttributes`.`adminEmail` = ?", "`ProcessAttributes`.`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			allProcessQuery = allProcessQuery + limiter;
+		}
+		
+		try
+		{
+			//System.out.println(allProcessQuery);
+			PreparedStatement myStatement = myConnector.prepareStatement(allProcessQuery);
+			myStatement.setString(1, event);
+			myStatement.setString(2, admin);
+			
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
+			for(int x=0; x < usersToSelect.size(); x++)
+			{
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
+			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
+			
+			ResultSet myResults = myStatement.executeQuery();
+			while(myResults.next())
+			{
+				ConcurrentHashMap nextRow = new ConcurrentHashMap();
+				
+				//nextRow.put("Username", myResults.getString("username"));
+				String userName = myResults.getString("username");
+				//nextRow.put("Session", myResults.getString("session"));
+				String sessionName = myResults.getString("session");
+				
+				Timestamp minTimeString = myResults.getTimestamp("mintime", cal);
+				Timestamp maxTimeString = myResults.getTimestamp("maxtime", cal);
+				//System.out.println(timeString);
+				
+				nextRow.put("User", myResults.getString("user"));
+				nextRow.put("PID", myResults.getString("pid"));
+				nextRow.put("Start", myResults.getString("start"));
+				nextRow.put("Command", myResults.getString("command"));
+				
+				
+				if(myResults.getObject("arguments") != null)
+				{
+					nextRow.put("Arguments", myResults.getString("arguments"));
+				}
+				
+				ConcurrentHashMap rowKey = new ConcurrentHashMap(nextRow);
+				
+				rowKey.put("Username", userName);
+				rowKey.put("Session", sessionName);
+				if(lastMap.containsKey(rowKey))
+				{
+					nextRow.put("Prev", lastMap.get(rowKey));
+					((ConcurrentHashMap)lastMap.get(rowKey)).put("Next", nextRow);
+				}
+				lastMap.put(rowKey, nextRow);
+				
+				if(minTimeString.toString().contains("0000-00-00"))
+				{
+					nextRow.put("MinTime", new Timestamp(0));
+				}
+				else
+				{
+					nextRow.put("MinTime", myResults.getTimestamp("mintime", cal));
+				}
+				if(maxTimeString.toString().contains("0000-00-00"))
+				{
+					nextRow.put("MaxTime", new Timestamp(0));
+				}
+				else
+				{
+					nextRow.put("MaxTime", myResults.getTimestamp("maxtime", cal));
+				}
+				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
+				nextRow.put("Index", nextRow.get("MinTime"));
+				
+				
+				nextRow.put("MaxCPU", myResults.getString("maxcpu"));
+				nextRow.put("MaxMem", myResults.getString("maxmem"));
+				
+				
+				
+				if(!myReturn.containsKey(userName))
+				{
+					myReturn.put(userName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap userMap = (ConcurrentHashMap) myReturn.get(userName);
+				
+				if(!userMap.containsKey(sessionName))
+				{
+					userMap.put(sessionName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userMap.get(sessionName);
+				
+				if(!sessionMap.containsKey("processsummary"))
+				{
+					sessionMap.put("processsummary", new ArrayList());
+				}
+				ArrayList eventList = (ArrayList) sessionMap.get("processsummary");
+				
+				eventList.add(nextRow);
+				//myReturn.add(nextRow);
+			}
+			stmt = myStatement;
+			rset = myResults;
+			
+			rset.close();
+			stmt.close();
+			conn.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (rset != null) rset.close(); } catch(Exception e) { }
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
 		
 		
 		return myReturn;

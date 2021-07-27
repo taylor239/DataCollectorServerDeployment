@@ -482,6 +482,13 @@ public class DataExportLog extends HttpServlet {
 				ConcurrentHashMap dataMap = myConnector.getProcessDataHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, dataMap);
 			}
+			if(toSelect.contains("processsummary"))
+			{
+				System.out.println("Reading process summary");
+				dataTypes.add("processsummary");
+				ConcurrentHashMap dataMap = myConnector.getProcessSummaryHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				headMap = myConnector.mergeMaps(headMap, dataMap);
+			}
 			//else
 			{
 				System.out.println("Getting process bounds");

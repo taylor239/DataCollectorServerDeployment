@@ -101,13 +101,7 @@ if(request.getParameter("email") != null)
 									<a class="expandPlus" onclick="toggleCol(this)">➕</a> Start Date
 								</td>
 								<td class="searchCol">
-									<a class="expandPlus" onclick="toggleCol(this)">➕</a> Start Time
-								</td>
-								<td class="searchCol">
 									<a class="expandPlus" onclick="toggleCol(this)">➕</a> End Date
-								</td>
-								<td class="searchCol">
-									<a class="expandPlus" onclick="toggleCol(this)">➕</a> End Time
 								</td>
 								<td class="searchCol">
 									<a class="expandPlus" onclick="toggleCol(this)">➕</a> Tasks
@@ -122,12 +116,18 @@ if(request.getParameter("email") != null)
 									<a class="expandPlus" onclick="toggleCol(this)">➕</a> Screenshot Text
 								</td>
 								<td class="searchCol">
+									<a class="expandPlus" onclick="toggleCol(this)">➕</a> Environment
+								</td>
+								<td class="searchCol">
 									<a class="expandPlus" onclick="toggleCol(this)">➕</a> Notes
+								</td>
+								<td class="searchCol">
+									Select
 								</td>
 							</tr>
 							<tr>
 								<td colspan="11">
-									<div align="center"><input type="button" value="Refresh Search" onclick="refreshSearch()"></div>
+									<div align="center"><input type="button" value="Refresh Search" onclick="refreshSearch()"><input type="button" value="Visualize Selected" onclick="visualize()"></div>
 								</td>
 							</tr>
 							<tr>
@@ -141,13 +141,7 @@ if(request.getParameter("email") != null)
 									<input class="searchField" type="text" id="startDateField">
 								</td>
 								<td>
-									<input class="searchField" type="text" id="startTimeField">
-								</td>
-								<td>
 									<input class="searchField" type="text" id="endDateField">
-								</td>
-								<td>
-									<input class="searchField" type="text" id="endTimeField">
 								</td>
 								<td>
 									<input class="searchField" type="text" id="tasksField">
@@ -162,7 +156,13 @@ if(request.getParameter("email") != null)
 									<input class="searchField" type="text" id="screenshotField">
 								</td>
 								<td>
+									<input class="searchField" type="text" id="environmentField">
+								</td>
+								<td>
 									<input class="searchField" type="text" id="noteField">
+								</td>
+								<td>
+									
 								</td>
 							</tr>
 						</table>
@@ -616,13 +616,26 @@ function fadeOutLightbox()
 
 
 <script>
+
+	var visWidth = window.innerWidth;
+	var visHeight = window.innerHeight;
+	var barHeight = visHeight / 10;
+	var xAxisPadding = 3 * barHeight;
 	
 	var eventName = "<%=eventName %>";
 	var adminName = "<%=request.getParameter("email") %>";
 	
+	var lookupTable = {};
+	var windowColorNumber = {};
+	var curWindowNum = 0;
+	var windowLegend = [];
 	
-	function preprocess(dataToModify)
+	async function preprocess(dataToModify)
 	{
+		processMap = {};
+		lookupTable = {};
+		userOrderMap = {};
+		
 		totalSessions = 0;
 		for(user in dataToModify)
 		{
@@ -703,6 +716,298 @@ function fadeOutLightbox()
 			}
 			dataToModify[user]["Aggregated"] = newSession;
 		}
+		
+		var theNormData = dataToModify;
+		
+		for(user in theNormData)
+		{
+			sessionOrderMap = {};
+			maxTimeUser = 0;
+			minTimeUser = Number.POSITIVE_INFINITY;
+			minTimeUserAbsolute = Number.POSITIVE_INFINITY;
+			maxTimeUserDate = "";
+			minTimeUserDate = "";
+			minTimeUserUniversal = Number.POSITIVE_INFINITY;
+			for(session in theNormData[user])
+			{
+				//console.log("Doing session " + session);
+				maxTimeSession = 0;
+				minTimeSession = Number.POSITIVE_INFINITY;
+				minTimeUserSession = Number.POSITIVE_INFINITY;
+				maxTimeSessionDate = "";
+				minTimeSessionDate = "";
+				theCurData = theNormData[user][session];
+				for(dataType in theCurData)
+				{
+					//console.log("Doing data: " + dataType);
+					thisData = theCurData[dataType];
+					
+					if(!(user in lookupTable))
+					{
+						//console.log("Adding to lookup table: " + user)
+						lookupTable[user] = {};
+					}
+					if(!(session in lookupTable[user]))
+					{
+						//console.log("Adding to lookup table: " + session)
+						lookupTable[user][session] = {};
+					}
+					
+					var isAsync = false;
+					
+					if(thisData["data"] && (typeof thisData["data"]) == "function")
+					{
+						thisData = (await thisData["getfiltered"]());
+						if(!thisData)
+						{
+							console.log("No data for " + user + ":" + session + ":" + dataType)
+							continue;
+						}
+						thisData = thisData.value;
+						isAsync = true;
+					}
+					
+					if(!thisData)
+					{
+						console.log("No data for " + user + ":" + session + ":" + dataType)
+						continue;
+					}
+					
+					var curUserSessionMap;
+					if(dataType == "processes")
+					{
+						var curLookupTable = {};
+						if(!("Processes" in lookupTable[user][session]))
+						{
+							lookupTable[user][session]["Processes"] = {};
+							lookupTable[user][session]["Processes"]["data"] = getProcessLookupData;
+							lookupTable[user][session]["Processes"]["storedata"] = storeProcessDataLookup;
+							await lookupTable[user][session]["Processes"]["storedata"](curLookupTable);
+						}
+						curLookupTable = (await (lookupTable[user][session]["Processes"]["data"]())).value;
+						
+						if(!(user in processMap))
+						{
+							processMap[user] = {};
+						}
+						//console.log("Checking proc map for " + session);
+						if(!(session in processMap[user]))
+						{
+							//console.log("Adding proc map for " + session);
+							//processMap[user][session] = {};
+							var processMapDataObject = {};
+							processMapDataObject["user"] = user;
+							processMapDataObject["session"] = session;
+							processMapDataObject["data"] = getProcessMapData;
+							processMapDataObject["storedata"] = storeProcessDataMap;
+							//console.log("Storing")
+							//console.log(processMapDataObject)
+							//console.log(processMap);
+							await processMapDataObject["storedata"]({});
+							processMap[user][session] = processMapDataObject;
+						}
+						//console.log("Getting proc map");
+						curUserSessionMap = (await (processMap[user][session]["data"]())).value;
+						//console.log("Got");
+						//console.log(curUserSessionMap);
+					}
+					
+					for(x=0; x<thisData.length; x++)
+					{
+						
+						if(dataType == "windows")
+						{
+							if(!(thisData[x]["FirstClass"] in windowColorNumber))
+							{
+								windowColorNumber[thisData[x]["FirstClass"]] = curWindowNum % 20;
+								curWindowNum++;
+								windowLegend.push(thisData[x]["FirstClass"])
+							}
+						}
+						
+						if(dataType == "processes")
+						{
+							
+							
+							thisData[x]["Owning User"] = user;
+							thisData[x]["Owning Session"] = session;
+							thisData[x]["Hash"] = SHA256(thisData[x]["User"] + thisData[x]["Start"] + thisData[x]["PID"])
+							
+							
+							curLookupTable[thisData[x]["Hash"]] = thisData[x];
+							//lookupTable[user][session]["Processes"][thisData[x]["Hash"]] = thisData[x];
+							
+							
+							
+							
+							curPid = thisData[x]["PID"]
+							curOSUser = thisData[x]["User"]
+							curStart = thisData[x]["Start"]
+							thisData[x]["CPU"] = Number(thisData[x]["CPU"])
+							curCPU = thisData[x]["CPU"]
+							thisData[x]["Mem"] = Number(thisData[x]["Mem"])
+							curMem = thisData[x]["Mem"]
+							
+							if(!(curOSUser in curUserSessionMap))
+							{
+								curUserSessionMap[curOSUser] = {};
+							}
+							if(!(curStart in curUserSessionMap[curOSUser]))
+							{
+								curUserSessionMap[curOSUser][curStart] = {};
+							}
+							if(!(curPid in curUserSessionMap[curOSUser][curStart]))
+							{
+								thisData[x]["Aggregate CPU"] = curCPU
+								thisData[x]["Aggregate Mem"] = curMem
+								curUserSessionMap[curOSUser][curStart][curPid] = [];
+								curUserSessionMap[curOSUser][curStart][curPid].push(thisData[x]);
+							}
+							else
+							{
+								curList = curUserSessionMap[curOSUser][curStart][curPid];
+								thisData[x]["Aggregate CPU"] = curCPU + curList[curList.length - 1]["Aggregate CPU"]
+								thisData[x]["Aggregate Mem"] = curMem + curList[curList.length - 1]["Aggregate Mem"]
+								thisData[x]["Prev"] = curList[curList.length - 1];
+								curList[curList.length - 1]["Next"] = thisData[x];
+								curList.push(thisData[x]);
+							}
+							
+						}
+						
+						thisData[x]["Index MS Universal"] = Number(thisData[x]["Index MS Universal"]);
+						thisData[x]["Index MS"] = Number(thisData[x]["Index MS"]);
+						thisData[x]["Index MS User"] = Number(thisData[x]["Index MS User"]);
+						thisData[x]["Index MS Session"] = Number(thisData[x]["Index MS Session"]);
+					}
+					
+					if(dataType == "processes")
+					{
+						if(curUserSessionMap)
+						{
+							console.log(user + ": " + session);
+							console.log(curUserSessionMap);
+							await processMap[user][session]["storedata"](curUserSessionMap);
+						}
+						await lookupTable[user][session]["Processes"]["storedata"](curLookupTable);
+					}
+					
+					if(thisData.length > 0 && !(dataType == "environment"))
+					{
+						lastTimeSession = thisData[thisData.length - 1]["Index MS Session"];
+						lastTimeUser = thisData[thisData.length - 1]["Index MS User"];
+						lastTimeDate = thisData[thisData.length - 1]["Index"];
+						firstTimeSession = thisData[0]["Index MS Session"];
+						firstTimeUser = thisData[0]["Index MS User"];
+						firstTimeUserAbsolute = thisData[0]["Index MS"];
+						firstTimeDate = thisData[0]["Index"];
+						
+						if(lastTimeSession > maxTimeSession)
+						{
+							maxTimeSession = lastTimeSession;
+							maxTimeSessionDate = lastTimeDate;
+						}
+						if(firstTimeSession < minTimeSession)
+						{
+							minTimeSession = firstTimeSession;
+							minTimeSessionDate = firstTimeDate;
+						}
+						if(firstTimeUser < minTimeUserSession)
+						{
+							minTimeUserSession = firstTimeUser;
+						}
+						if(lastTimeUser > maxTimeUser)
+						{
+							maxTimeUser = lastTimeUser;
+							maxTimeUserDate = lastTimeDate;
+						}
+						if(firstTimeUser < minTimeUser)
+						{
+							minTimeUser = firstTimeUser;
+							minTimeUserAbsolute = firstTimeUserAbsolute;
+							minTimeUserDate = firstTimeDate;
+							
+						}
+						firstTimeUniversal = thisData[0]["Index MS Universal"];
+						if(firstTimeUniversal < minTimeUserUniversal)
+						{
+							minTimeUserUniversal = firstTimeUniversal;
+						}
+					}
+					
+					if(isAsync)
+					{
+						await theCurData[dataType]["storefiltered"](thisData);
+					}
+					
+				}
+				theCurData["Index MS Session Max"] = maxTimeSession;
+				theCurData["Index MS Session Min"] = minTimeSession;
+				theCurData["Index MS Session Max Date"] = maxTimeSessionDate;
+				theCurData["Index MS Session Min Date"] = minTimeSessionDate;
+				
+				theCurData["Index MS User Session Min"] = minTimeUserSession;
+				
+				theCurData["Time Adjustment"] = 0;
+				if(session == "Aggregated")
+				{
+					theCurData["Time Adjustment"] = theCurData["Time Adjustment"] - 1;
+					minTimeUserSession = -1;
+				}
+				while(minTimeUserSession in sessionOrderMap)
+				{
+					if(session == "Aggregated")
+					{
+						theCurData["Time Adjustment"] = theCurData["Time Adjustment"] - 1;
+						minTimeUserSession--;
+					}
+					else
+					{
+						theCurData["Time Adjustment"] = theCurData["Time Adjustment"] + 1;
+						minTimeUserSession++;
+					}
+				}
+				
+				sessionOrderMap[minTimeUserSession] = session;
+				
+				timeScale = d3.scaleLinear();
+				timeScale.domain
+							(
+								[0, maxTimeSession]
+							)
+				timeScale.range
+							(
+								[0, visWidth - xAxisPadding]
+							);
+				theCurData["Time Scale"] = timeScale;
+			}
+			
+			theNormData[user]["Index MS Universal Min"] = minTimeUserUniversal;
+			userOrderMap[minTimeUserUniversal] = user;
+			
+			sessionOrderArray = Object.keys(sessionOrderMap).sort(function(a, b) {return a - b;});
+			sessionOrderMap["Order List"] = sessionOrderArray;
+			theNormData[user]["Session Ordering"] = sessionOrderMap;
+			
+			theNormData[user]["Index MS User Max"] = maxTimeUser;
+			theNormData[user]["Index MS User Min"] = minTimeUser;
+			theNormData[user]["Index MS User Max Date"] = maxTimeUserDate;
+			theNormData[user]["Index MS User Min Date"] = minTimeUserDate;
+			theNormData[user]["Index MS User Min Absolute"] = minTimeUserAbsolute;
+			
+			timeScale = d3.scaleLinear();
+			timeScale.domain
+						(
+							[0, maxTimeUser]
+						)
+			timeScale.range
+						(
+							[0, visWidth - xAxisPadding]
+						);
+			theNormData[user]["Time Scale"] = timeScale;
+		}
+		userOrderArray = Object.keys(userOrderMap).sort(function(a, b) {return a - b;});
+		userOrderMap["Order List"] = userOrderArray;
 		
 		return dataToModify;
 	}
@@ -1071,7 +1376,7 @@ function fadeOutLightbox()
 			}
 			
 			
-			d3.json("logExport.json?event=" + eventName + "&datasources=windows,events,environment,screenshotindices&normalize=none" + userSessionFilter, async function(error, data)
+			d3.json("logExport.json?event=" + eventName + "&datasources=windows,events,environment,screenshotindices,processsummary&normalize=none" + userSessionFilter, async function(error, data)
 				{
 					try
 					{
@@ -1085,7 +1390,8 @@ function fadeOutLightbox()
 					{
 						console.log(err);
 					}
-					theNormData = preprocess(data);
+					theNormData = await preprocess(data);
+					/*
 					try
 					{
 						var isDone = false;
@@ -1098,7 +1404,7 @@ function fadeOutLightbox()
 					{
 						console.log(err);
 					}
-					
+					*/
 					theNormDataDone = true;
 					
 					d3.select("#title")
@@ -1106,6 +1412,7 @@ function fadeOutLightbox()
 					
 					
 					d3.select("body").style("cursor", "");
+					buildTable();
 					
 				})
 				.on("progress", function(d, i)
@@ -1121,6 +1428,163 @@ function fadeOutLightbox()
 			theNormDataDone = true;
 			d3.select("body").style("cursor", "");
 		}
+		
+	}
+	
+	function buildTable()
+	{
+		var tbodyRef = document.getElementById('searchTable').getElementsByTagName('tbody')[0];
+		for(user in theNormData)
+		{
+			for(session in theNormData[user]["Session Ordering"]["Order List"])
+			{
+				let sessionName = theNormData[user]["Session Ordering"][theNormData[user]["Session Ordering"]["Order List"][session]];
+				console.log("Searching " + user + ": " + sessionName);
+				var newRow = tbodyRef.insertRow();
+				newRow.id = SHA256(user+sessionName);
+				var newCell = newRow.insertCell();
+				newCell.innerHTML = user;
+				newCell = newRow.insertCell();
+				newCell.innerHTML = sessionName;
+				
+				newCell = newRow.insertCell();
+				newCell.innerHTML = theNormData[user][sessionName]["Index MS Session Min Date"];
+				
+				newCell = newRow.insertCell();
+				newCell.innerHTML = theNormData[user][sessionName]["Index MS Session Max Date"];
+				
+				newCell = newRow.insertCell();
+				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+session + "_tasks") + "' id='" + SHA256(user+session + "_tasks") + "'>";
+				for(entry in theNormData[user][sessionName]["events"])
+				{
+					var curEvent = theNormData[user][sessionName]["events"][entry];
+					if(curEvent["Description"] == "start")
+					{
+						var curOption = "<option value=" + curEvent["TaskName"] + ">" + curEvent["TaskName"] + "</option>";
+						newCellHTML += curOption;
+					}
+				}
+				newCellHTML += "</select>"
+				newCell.innerHTML = newCellHTML;
+				
+				newCell = newRow.insertCell();
+				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+session + "_windows") + "' id='" + SHA256(user+session + "_windows") + "'>";
+				var doneMap = {};
+				for(entry in theNormData[user][sessionName]["windows"])
+				{
+					var curEvent = theNormData[user][sessionName]["windows"][entry];
+					if(curEvent["Name"] in doneMap)
+					{
+						
+					}
+					else
+					{
+						doneMap[curWindow["Name"]] = true;
+						var curOption = "<option value=" + curEvent["FirstClass"] + "_" + curEvent["Name"] + ">" + curEvent["FirstClass"] + ": " + curEvent["Name"] + "</option>";
+						newCellHTML += curOption;
+					}
+				}
+				newCellHTML += "</select>"
+				newCell.innerHTML = newCellHTML;
+				
+				newCell = newRow.insertCell();
+				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+session + "_processsummary") + "' id='" + SHA256(user+session + "_processsummary") + "'>";
+				for(entry in theNormData[user][sessionName]["processsummary"])
+				{
+					var curEvent = theNormData[user][sessionName]["processsummary"][entry];
+					
+					var curOption = "<option value=" + curEvent["Command"] + "_" + curEvent["Arguments"] + ">" + curEvent["Command"] + ": " + curEvent["Arguments"] + "</option>";
+					newCellHTML += curOption;
+					
+				}
+				newCellHTML += "</select>"
+				newCell.innerHTML = newCellHTML;
+				
+				newCell = newRow.insertCell();
+				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+session + "_screenshots") + "' id='" + SHA256(user+session + "_screenshots") + "'>";
+				for(entry in theNormData[user][sessionName]["screenshots"])
+				{
+					var curEvent = theNormData[user][sessionName]["screenshots"][entry];
+					
+					//var curOption = "<option value=" + curEvent["Command"] + "_" + curEvent["Arguments"] + ">" + curEvent["Command"] + ": " + curEvent["Arguments"] + "</option>";
+					//newCellHTML += curOption;
+					
+				}
+				var curOption = "<option value=" + "soon" + ">" + "Coming Soon" + "</option>";
+				newCellHTML += curOption;
+				newCellHTML += "</select>"
+				newCell.innerHTML = newCellHTML;
+				
+				newCell = newRow.insertCell();
+				var envLines = theNormData[user][sessionName]["environment"][0]["Environment"].split(/\n/);
+				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+session + "_environment") + "' id='" + SHA256(user+session + "_environment") + "'>";
+				for(entry in envLines)
+				{
+					var curOption = "<option value=" + envLines[entry] + ">" + envLines[entry] + "</option>";
+					newCellHTML += curOption;
+					
+				}
+				newCellHTML += "</select>"
+				newCell.innerHTML = newCellHTML;
+				
+				newCell = newRow.insertCell();
+				newCell.innerHTML = "<textarea style=\"width:100%\" multiple name='" + SHA256(user+session + "_notes") + "' id='" + SHA256(user+session + "_notes") + "'>" + theNormData[user][sessionName]["environment"][0]["Notes"] + "</textarea>" +
+				"<input type=\"button\" value=\"Save\">";
+				
+				newCell = newRow.insertCell();
+				var onclickAddition = "";
+				if(sessionName == "Aggregated")
+				{
+					onclickAddition = " onclick=\"selectAll('" + user + "')\"";
+				}
+				newCell.innerHTML = "<input type=\"checkbox\" id=\"session_" + user + "_" + sessionName + "\" name=\"session_" + sessionName + "\" value=\"" + sessionName + "\"" + onclickAddition + ">";
+				
+			}
+		}
+	}
+	
+	function visualize()
+	{
+		var baseURL = "visualzation.jsp?event=" + eventName + "&autodownload=true&sessions=";
+		var sessionArgs = "";
+		var usersArgs = "";
+		var usersUsed = {};
+		for(user in theNormData)
+		{
+			for(session in theNormData[user])
+			{
+				var curCheck = document.getElementById("session_" + user + "_" + session);
+				if(curCheck && curCheck.checked)
+				{
+					if(session == "Aggregated")
+					{
+						continue;
+					}
+					if(sessionArgs != "")
+					{
+						sessionArgs += "," + session;
+					}
+					else
+					{
+						sessionArgs += session;
+					}
+					if(!usersUsed[user])
+					{
+						usersUsed[user] = true;
+						if(usersArgs != "")
+						{
+							usersArgs += "," + user;
+						}
+						else
+						{
+							usersArgs += user;
+						}
+					}
+				}
+			}
+		}
+		baseURL += sessionArgs + "&users=" + usersArgs;
+		window.location.replace(baseURL);
 	}
 	
 	
@@ -1132,7 +1596,121 @@ function fadeOutLightbox()
 	}
 	
 	
+	function selectAll(userName)
+	{
+		var toCheck = document.getElementById("session_" + userName + "_Aggregated").checked;
+		for(session in theNormData[userName])
+		{
+			var curCheck = document.getElementById("session_" + userName + "_" + session);
+			if(curCheck)
+			{
+				curCheck.checked = toCheck;
+			}
+		}
+	}
 	
+	function refreshSearch()
+	{
+		var userSearch = document.getElementById("userField").value;
+		var sessionSearch = document.getElementById("sessionField").value;
+		var startSearch = document.getElementById("startDateField").value;
+		var endSearch = document.getElementById("endDateField").value;
+		var tasksSearch = document.getElementById("tasksField").value;
+		var windowSearch = document.getElementById("windowField").value;
+		var processSearch = document.getElementById("processField").value;
+		var screenshotSearch = document.getElementById("screenshotField").value;
+		var environmentSearch = document.getElementById("environmentField").value;
+		var noteSearch = document.getElementById("noteField").value;
+		
+		
+		for(user in theNormData)
+		{
+			for(session in theNormData[user])
+			{
+				var curHash = SHA256(user+session)
+				var curRow = document.getElementById(curHash)
+				if(curRow)
+				{
+					curRow.style.display = "";
+					if(!(user.includes(userSearch)))
+					{
+						curRow.style.display = "none";
+					}
+					if(!(session.includes(sessionSearch)))
+					{
+						curRow.style.display = "none";
+					}
+					if(!(theNormData[user][session]["Index MS Session Min Date"].includes(startSearch)))
+					{
+						curRow.style.display = "none";
+					}
+					if(!(theNormData[user][session]["Index MS Session Max Date"].includes(endSearch)))
+					{
+						curRow.style.display = "none";
+					}
+					
+					var hasTask = false;
+					for(entry in theNormData[user][session]["events"])
+					{
+						var curEvent = theNormData[user][session]["events"][entry];
+						if(curEvent["Description"] == "start")
+						{
+							var curOption = curEvent["TaskName"];
+							if(curOption.includes(tasksSearch))
+							{
+								hasTask = true;
+								break;
+							}
+						}
+					}
+					if(!hasTask)
+					{
+						curRow.style.display = "none";
+					}
+					
+					var hasTask = false;
+					for(entry in theNormData[user][session]["windows"])
+					{
+						var curEvent = theNormData[user][session]["windows"][entry];
+						var curOption = curEvent["FirstClass"] + ": " + curEvent["Name"];
+						if(curOption.includes(windowSearch))
+						{
+							hasTask = true;
+						}
+					}
+					if(!hasTask)
+					{
+						curRow.style.display = "none";
+					}
+					
+					var hasTask = false;
+					for(entry in theNormData[user][session]["processsummary"])
+					{
+						var curEvent = theNormData[user][session]["processsummary"][entry];
+						var curOption = curEvent["Command"] + ": " + curEvent["Arguments"];
+						if(curOption.includes(processSearch))
+						{
+							hasTask = true;
+						}
+					}
+					if(!hasTask)
+					{
+						curRow.style.display = "none";
+					}
+					
+					if(!(theNormData[user][session]["environment"][0]["Environment"].includes(environmentSearch)))
+					{
+						curRow.style.display = "none";
+					}
+					
+					if(!(theNormData[user][session]["environment"][0]["Notes"].includes(noteSearch)))
+					{
+						curRow.style.display = "none";
+					}
+				}
+			}
+		}
+	}
 	
 	downloadData();
 
