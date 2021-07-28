@@ -84,7 +84,7 @@ if(request.getParameter("email") != null)
 		</td>
 		<td class="layoutTableSide" style="border:0">
 		<div align="right">
-			Lost? <button type="button" onclick="tutorial()">Info</button>
+			Lost? <button type="button" onclick="tutorial()">Info</button><button type="button" onclick="back()">Back</button>
 		</div>
 		</td>
 	</tr>
@@ -719,6 +719,7 @@ function fadeOutLightbox()
 	
 	var eventName = "<%=eventName %>";
 	var adminName = "<%=request.getParameter("email") %>";
+	var eventAdmin = "<%=eventAdmin %>";
 	
 	var svg;
 	var userOrdering;
@@ -3015,6 +3016,8 @@ function fadeOutLightbox()
 							if(!("Processes" in lookupTable[user][session]))
 							{
 								lookupTable[user][session]["Processes"] = {};
+								lookupTable[user][session]["Processes"]["user"] = user;
+								lookupTable[user][session]["Processes"]["session"] = session;
 								lookupTable[user][session]["Processes"]["data"] = getProcessLookupData;
 								lookupTable[user][session]["Processes"]["storedata"] = storeProcessDataLookup;
 								await lookupTable[user][session]["Processes"]["storedata"](curLookupTable);
@@ -7156,13 +7159,14 @@ function fadeOutLightbox()
 	
 	async function showWindow(username, session, type, timestamp)
 	{
+		//console.log(username + ": " + session + ": " + type + ": " + timestamp);
 		if(username != curSelectUser || session != curSelectSession)
 		{
 			clearWindow();
 		}
 		var curSlot
 		
-		curSlot = lookupTable[username][session][type]
+		curSlot = lookupTable[username][session][type];
 		//console.log(curSlot);
 		
 		//if(type == "Processes")
@@ -8149,6 +8153,11 @@ function fadeOutLightbox()
 		
 	}
 	
+	function back()
+	{
+		var baseURL = "vissplash.jsp?event=" + eventName + "&eventAdmin=" + eventAdmin;
+		window.location.replace(baseURL);
+	}
 
 </script>
 </html>

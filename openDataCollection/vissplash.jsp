@@ -624,6 +624,7 @@ function fadeOutLightbox()
 	
 	var eventName = "<%=eventName %>";
 	var adminName = "<%=request.getParameter("email") %>";
+	var eventAdmin = "<%=eventAdmin %>";
 	
 	var lookupTable = {};
 	var windowColorNumber = {};
@@ -1545,7 +1546,7 @@ function fadeOutLightbox()
 	
 	function visualize()
 	{
-		var baseURL = "visualzation.jsp?event=" + eventName + "&autodownload=true&sessions=";
+		var baseURL = "visualzation.jsp?event=" + eventName + "&eventAdmin=" + eventAdmin + "&autodownload=true&sessions=";
 		var sessionArgs = "";
 		var usersArgs = "";
 		var usersUsed = {};
