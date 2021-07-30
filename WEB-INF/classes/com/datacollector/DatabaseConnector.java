@@ -153,6 +153,8 @@ public class DatabaseConnector
 	
 	private String deleteFilter = "DELETE FROM `VisualizationFilters` WHERE `event` = ? AND `adminEmail` = ? AND `saveName` = ?";
 	
+	private String setNote = "UPDATE `User` SET `notes`= ? WHERE `event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ?";
+	
 	private String insertTask = "INSERT INTO `Task`(`event`, `adminEmail`, `username`, `session`, `taskName`, `completion`, `startTimestamp`) VALUES (?,?,?,?,?,?, FROM_UNIXTIME(? / 1000))";
 	private String insertTaskEvent = "INSERT INTO `TaskEvent`(`event`, `adminEmail`, `username`, `session`, `taskName`, `eventTime`, `eventDescription`, `startTimestamp`, `source`) VALUES (?,?,?,?,?,FROM_UNIXTIME(? / 1000),?,FROM_UNIXTIME(? / 1000),?)";
 	private String insertTaskTag = "INSERT INTO `TaskTags`(`event`, `adminEmail`, `username`, `session`, `taskName`, `startTimestamp`, `tag`) VALUES (?,?,?,?,?, FROM_UNIXTIME(? / 1000), ?)";
@@ -1074,6 +1076,61 @@ public class DatabaseConnector
 			
 			myStatement.execute();
 			
+			
+			stmt = myStatement;
+			
+			stmt.close();
+			conn.close();
+			myReturn.put("result", "okay");
+			
+			//ArrayList thisUser = new ArrayList();
+			//thisUser.add(user);
+			//ArrayList thisSession = new ArrayList();
+			//thisUser.add(session);
+			
+			//myReturn.put("newEvents", normalizeAllTime(getTasksHierarchy(event, admin, thisUser, thisSession, "", "")));
+			
+		}
+		catch(Exception e)
+		{
+			myReturn.put("result", "nokay");
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		return myReturn;
+	}
+	
+	public ConcurrentHashMap setNote(String event, String user, String session, String admin, String note, String tagger)
+	{
+		ConcurrentHashMap myReturn = new ConcurrentHashMap();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		conn = myConnector;
+		try
+		{
+			//String curStatement = insertFilter;
+			String curStatement = setNote;
+			PreparedStatement myStatement = myConnector.prepareStatement(curStatement);
+			//`event`, `adminEmail`, `username`, `session`, `taskName`, `completion`, `startTimestamp`
+			myStatement.setString(1, note);
+			myStatement.setString(2, event);
+			myStatement.setString(3, admin);
+			myStatement.setString(4, user);
+			myStatement.setString(5, session);
+			
+			//System.out.println(myStatement);
+			
+			myStatement.execute();
+			myStatement.close();
 			
 			stmt = myStatement;
 			

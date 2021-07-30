@@ -2073,7 +2073,11 @@ function fadeOutLightbox()
 						if(addDownloadCount(userName, sessionName) >= numAsync)
 						{
 							sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
-							//refreshData();
+							if(downloadedMouseSessions == totalSessions && downloadedKeystrokesSessions == totalSessions && downloadedProcessSessions == totalSessions && downloadedSessions == totalSessions)
+							{
+								removeFilter(1);
+								refreshData();
+							}
 						}
 						
 						if(processDownloadQueue.length > 0)
@@ -2270,7 +2274,11 @@ function fadeOutLightbox()
 						if(addDownloadCount(userName, sessionName) >= numAsync)
 						{
 							sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
-							//refreshData();
+							if(downloadedMouseSessions == totalSessions && downloadedKeystrokesSessions == totalSessions && downloadedProcessSessions == totalSessions && downloadedSessions == totalSessions)
+							{
+								removeFilter(1);
+								refreshData();
+							}
 						}
 						
 						if(mouseDownloadQueue.length > 0)
@@ -2467,8 +2475,13 @@ function fadeOutLightbox()
 						if(addDownloadCount(userName, sessionName) >= numAsync)
 						{
 							sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
+							if(downloadedMouseSessions == totalSessions && downloadedKeystrokesSessions == totalSessions && downloadedProcessSessions == totalSessions && downloadedSessions == totalSessions)
+							{
+								removeFilter(1);
+								refreshData();
+							}
 						}
-						//refreshData();
+						
 						if(keystrokesDownloadQueue.length > 0)
 						{
 							var nextArgs = keystrokesDownloadQueue.pop();
@@ -2699,6 +2712,11 @@ function fadeOutLightbox()
 					if(addDownloadCount(userName, sessionName) >= numAsync)
 					{
 						sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
+						if(downloadedMouseSessions == totalSessions && downloadedKeystrokesSessions == totalSessions && downloadedProcessSessions == totalSessions && downloadedSessions == totalSessions)
+						{
+							removeFilter(1);
+							refreshData();
+						}
 					}
 					if(imageDownloadQueue.length > 0)
 					{
@@ -2757,6 +2775,11 @@ function fadeOutLightbox()
 			if(addDownloadCount(userName, sessionName) >= numAsync)
 			{
 				sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Chartreuse;}";
+				if(downloadedMouseSessions == totalSessions && downloadedKeystrokesSessions == totalSessions && downloadedProcessSessions == totalSessions && downloadedSessions == totalSessions)
+				{
+					removeFilter(1);
+					refreshData();
+				}
 			}
 			if(imageDownloadQueue.length > 0)
 			{
@@ -5500,7 +5523,8 @@ function fadeOutLightbox()
 				
 				textHeight = curScreenshot.attr("width") / 50;
 				
-				startY = finalRatio * lastImg["height"];
+				//startY = finalRatio * lastImg["height"];
+				startY = (divBounds["height"] * .8);
 				
 				if(!typedText)
 				{
@@ -5534,6 +5558,7 @@ function fadeOutLightbox()
 		
 		async function runAnimationWrapped()
 		{
+			startY = (divBounds["height"] * .8)
 			var curFrame = nextFrame();
 			
 			//console.log(curFrame);
@@ -5609,7 +5634,8 @@ function fadeOutLightbox()
 				
 				textHeight = curScreenshot.attr("width") / 50;
 				
-				startY = finalRatio * lastImg["height"];
+				//startY = finalRatio * lastImg["height"];
+				startY = (divBounds["height"] * .8);
 				
 				if(!typedText)
 				{
@@ -6015,92 +6041,6 @@ function fadeOutLightbox()
 								}
 								
 							});
-							/*
-							var sessEvents = theNormData[userName][sessionName]["events"];
-							var aggEvents = theNormData[userName]["Aggregated"]["events"];
-							
-							var userSessDiff = theNormData[userName][sessionName]["Index MS User Session Min"];
-							var absUserDiff = theNormData[userName]["Index MS User Min Absolute"];
-							
-							var newEvents = data["newEvents"][userName][sessionName]["events"];
-							
-							function binarySearchEvents(items, value){
-								var firstIndex  = 0,
-									lastIndex   = items.length - 1,
-									middleIndex = Math.floor((lastIndex + firstIndex)/2);
-
-								while(items[middleIndex]["Index MS"] != value && firstIndex < lastIndex)
-								{
-								   if (value < items[middleIndex]["Index MS"])
-									{
-										lastIndex = middleIndex - 1;
-									} 
-								  else if (value > items[middleIndex]["Index MS"])
-									{
-										firstIndex = middleIndex + 1;
-									}
-									middleIndex = Math.floor((lastIndex + firstIndex)/2);
-								}
-
-							 return middleIndex;
-							}
-							
-							//newEvents = theNormDataClone[userName][sessionName]["events"];
-							
-							var aggEventList = theNormData[userName]["Aggregated"]["events"];
-							
-							for(entry in newEvents)
-							{
-								newEvents[entry]["Original Session"] = sessionName;
-								newEvents[entry]["Index MS Session"] = newEvents[entry]["Index MS"] - absUserDiff - userSessDiff;
-								newEvents[entry]["Index MS User"] = newEvents[entry]["Index MS"] - absUserDiff;
-								if(newEvents[entry]["TaskName"] == taskName)
-								{
-									aggEntry = binarySearchEvents(aggEventList, newEvents[entry]["Index MS"]);
-									newEntryClone = JSON.parse(JSON.stringify(newEvents[entry]));
-									newEntryClone["Owning Session"] = "Aggregated";
-									if(aggEventList[aggEntry]["Index MS"] < newEvents[entry]["Index MS"])
-									{
-										aggEventList.splice(aggEntry, 0, newEntryClone);
-									}
-									else
-									{
-										aggEventList.splice(aggEntry - 1, 0, newEntryClone);
-									}
-								}
-							}
-							//console.log(newEvents);
-							theNormData[userName][sessionName]["events"] = newEvents;
-							*/
-							
-							
-							//var lastAggIndex = 0;
-							//for(newEntry in newEvents)
-							//{
-							//	var curEntry = newEvents[newEntry];
-							//	var curIndex = newEntry["Index MS"];
-							//	if(curEntry["TaskName"] != taskName)
-							//	{
-							//		continue;
-							//	}
-							//	if(lastAggIndex >= aggEventList.length)
-							//	{
-							//		aggEventList.push(curEntry);
-							//		lastAggIndex++;
-							//		continue;
-							//	}
-							//	while(lastAggIndex < aggEventList.length)
-							//	{
-							//		if(aggEventList[lastAggIndex]["Index MS"] <= curIndex)
-							//		{
-							//			aggEventList.splice(lastAggIndex - 1, 0, curEntry);
-							//			break;
-							//		}
-							//		lastAggIndex++;
-							//	}
-							//}
-							//preprocess();
-							//start(true);
 						}
 						
 					});

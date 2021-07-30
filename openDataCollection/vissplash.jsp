@@ -1455,7 +1455,7 @@ function fadeOutLightbox()
 				newCell.innerHTML = theNormData[user][sessionName]["Index MS Session Max Date"];
 				
 				newCell = newRow.insertCell();
-				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+session + "_tasks") + "' id='" + SHA256(user+session + "_tasks") + "'>";
+				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+sessionName + "_tasks") + "' id='" + SHA256(user+sessionName + "_tasks") + "'>";
 				for(entry in theNormData[user][sessionName]["events"])
 				{
 					var curEvent = theNormData[user][sessionName]["events"][entry];
@@ -1469,7 +1469,7 @@ function fadeOutLightbox()
 				newCell.innerHTML = newCellHTML;
 				
 				newCell = newRow.insertCell();
-				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+session + "_windows") + "' id='" + SHA256(user+session + "_windows") + "'>";
+				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+sessionName + "_windows") + "' id='" + SHA256(user+sessionName + "_windows") + "'>";
 				var doneMap = {};
 				for(entry in theNormData[user][sessionName]["windows"])
 				{
@@ -1489,7 +1489,7 @@ function fadeOutLightbox()
 				newCell.innerHTML = newCellHTML;
 				
 				newCell = newRow.insertCell();
-				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+session + "_processsummary") + "' id='" + SHA256(user+session + "_processsummary") + "'>";
+				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+sessionName + "_processsummary") + "' id='" + SHA256(user+sessionName + "_processsummary") + "'>";
 				for(entry in theNormData[user][sessionName]["processsummary"])
 				{
 					var curEvent = theNormData[user][sessionName]["processsummary"][entry];
@@ -1502,7 +1502,7 @@ function fadeOutLightbox()
 				newCell.innerHTML = newCellHTML;
 				
 				newCell = newRow.insertCell();
-				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+session + "_screenshots") + "' id='" + SHA256(user+session + "_screenshots") + "'>";
+				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+sessionName + "_screenshots") + "' id='" + SHA256(user+sessionName + "_screenshots") + "'>";
 				for(entry in theNormData[user][sessionName]["screenshots"])
 				{
 					var curEvent = theNormData[user][sessionName]["screenshots"][entry];
@@ -1518,7 +1518,7 @@ function fadeOutLightbox()
 				
 				newCell = newRow.insertCell();
 				var envLines = theNormData[user][sessionName]["environment"][0]["Environment"].split(/\n/);
-				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+session + "_environment") + "' id='" + SHA256(user+session + "_environment") + "'>";
+				var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+sessionName + "_environment") + "' id='" + SHA256(user+sessionName + "_environment") + "'>";
 				for(entry in envLines)
 				{
 					var curOption = "<option value=" + envLines[entry] + ">" + envLines[entry] + "</option>";
@@ -1529,8 +1529,12 @@ function fadeOutLightbox()
 				newCell.innerHTML = newCellHTML;
 				
 				newCell = newRow.insertCell();
-				newCell.innerHTML = "<textarea style=\"width:100%\" multiple name='" + SHA256(user+session + "_notes") + "' id='" + SHA256(user+session + "_notes") + "'>" + theNormData[user][sessionName]["environment"][0]["Notes"] + "</textarea>" +
-				"<input type=\"button\" value=\"Save\">";
+				
+				if(sessionName != "Aggregated")
+				{
+					newCell.innerHTML = "<textarea style=\"width:100%\" multiple name='" + SHA256(user+sessionName + "_notes") + "' id='" + SHA256(user+sessionName + "_notes") + "'>" + theNormData[user][sessionName]["environment"][0]["Notes"] + "</textarea>" +
+					"<input type=\"button\" value=\"Save\" onclick=\"setNote('" + user + "', '" + sessionName + "')\">";
+				}
 				
 				newCell = newRow.insertCell();
 				var onclickAddition = "";
@@ -1542,6 +1546,25 @@ function fadeOutLightbox()
 				
 			}
 		}
+	}
+	
+	var toTest;
+	function setNote(user, session)
+	{
+		var theNote = document.getElementById(SHA256(user+session + "_notes")).value;
+		var noteUrl = "setNote.json?event=" + eventName + "&userName=" + user + "&sessionName=" + session + "&note=" + theNote;
+		
+		d3.json(noteUrl, function(error, data)
+					{
+						if(data["result"] == "okay")
+						{
+							
+						}
+						else
+						{
+							document.getElementById(SHA256(user+session + "_notes")).value = "Error: " + data + "\n" + error;
+						}
+					});
 	}
 	
 	function visualize()
