@@ -1440,8 +1440,9 @@ function fadeOutLightbox()
 			for(session in theNormData[user]["Session Ordering"]["Order List"])
 			{
 				let sessionName = theNormData[user]["Session Ordering"][theNormData[user]["Session Ordering"]["Order List"][session]];
-				console.log("Searching " + user + ": " + sessionName);
+				//console.log("Searching " + user + ": " + sessionName);
 				var newRow = tbodyRef.insertRow();
+				newRow.style.wordBreak = "break-all";
 				newRow.id = SHA256(user+sessionName);
 				var newCell = newRow.insertCell();
 				newCell.innerHTML = user;
