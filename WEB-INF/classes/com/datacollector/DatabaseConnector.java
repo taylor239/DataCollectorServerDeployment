@@ -30,6 +30,9 @@ import com.google.gson.GsonBuilder;
 
 public class DatabaseConnector
 {
+	private static OCRProcessor ocrProc = null;
+	private int numOcrThreads = 2;
+	
 	private java.util.Calendar cal = Calendar.getInstance();
 	
 	private String totalQuery = "SELECT *, 'keyboard' AS `fromInput`, `MouseInput`.`xLoc` AS `xLoc`, `MouseInput`.`yLoc` AS `yLoc`, `KeyboardInput`.`type` AS `type`, `KeyboardInput`.`button` AS `button`, `KeyboardInput`.`inputTime` AS `overallTime`, `KeyboardInput`.`timeChanged` AS `overallTimeChanged`, `Window`.`username` AS `overallUser`, `Window`.`session`  AS `overallSession`, `Window`.`pid` AS `overallPid`, `Window`.`xid` AS `overallXid` FROM `openDataCollectionServer`.`KeyboardInput`\n" + 
@@ -159,8 +162,12 @@ public class DatabaseConnector
 	private String insertTaskEvent = "INSERT INTO `TaskEvent`(`event`, `adminEmail`, `username`, `session`, `taskName`, `eventTime`, `eventDescription`, `startTimestamp`, `source`) VALUES (?,?,?,?,?,FROM_UNIXTIME(? / 1000),?,FROM_UNIXTIME(? / 1000),?)";
 	private String insertTaskTag = "INSERT INTO `TaskTags`(`event`, `adminEmail`, `username`, `session`, `taskName`, `startTimestamp`, `tag`) VALUES (?,?,?,?,?, FROM_UNIXTIME(? / 1000), ?)";
 	
-	private String deleteTaskEvents = "DELETE FROM `TaskEvent` WHERE `event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ? AND `taskName` = ? AND `source` = ? AND `startTimestamp` = FROM_UNIXTIME(? / 1000)";
+	private String deleteTaskEvents = "DELETE `Task` FROM `Task` "
+			+ "INNER JOIN `TaskEvent` ON `Task`.`event` = `TaskEvent`.`event` AND `Task`.`adminEmail` = `TaskEvent`.`adminEmail` AND `Task`.`username` = `TaskEvent`.`username` AND `Task`.`session` = `TaskEvent`.`session` AND `Task`.`taskName` = `TaskEvent`.`taskName` AND `Task`.`startTimestamp` = `TaskEvent`.`startTimestamp` "
+			+ "WHERE `TaskEvent`.`event` = ? AND `TaskEvent`.`adminEmail` = ? AND `TaskEvent`.`username` = ? AND `TaskEvent`.`session` = ? AND `TaskEvent`.`taskName` = ? AND `TaskEvent`.`source` = ? AND `TaskEvent`.`startTimestamp` = FROM_UNIXTIME(? / 1000)";
+	
 	private String selectTaskEvents = "SELECT * FROM `TaskEvent` WHERE `event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ? AND `taskName` = ? AND `startTimestamp` = FROM_UNIXTIME(? / 1000)";
+	
 	private String deleteTask = "DELETE FROM `Task` WHERE `event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ? AND `taskName` = ? AND `startTimestamp` = FROM_UNIXTIME(? / 1000)";
 	
 	private String sessionDetailsQuery = "SELECT * FROM `openDataCollectionServer`.`User` WHERE `event` = ? AND `adminEmail` = ? ORDER BY `insertTimestamp` ASC";
@@ -1174,20 +1181,21 @@ public class DatabaseConnector
 		{
 			String curStatement = deleteTaskEvents;
 			PreparedStatement myStatement = myConnector.prepareStatement(curStatement);
+			//System.out.println(curStatement);
 			//`event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ? AND `taskName` = ? AND `source` = ?
 			myStatement.setString(1, event);
 			myStatement.setString(2, admin);
 			myStatement.setString(3, user);
 			myStatement.setString(4, session);
 			myStatement.setString(5, taskName);
-			myStatement.setString(6, admin);
+			myStatement.setString(6, source);
 			myStatement.setLong(7, startTime);
 			
 			//System.out.println(myStatement);
 			
 			myStatement.execute();
 			myStatement.close();
-			
+			/*
 			curStatement = selectTaskEvents;
 			myStatement = myConnector.prepareStatement(curStatement);
 			//`event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ? AND `taskName` = ?
@@ -1224,6 +1232,7 @@ public class DatabaseConnector
 				
 				myResults.close();
 			}
+			*/
 			
 			stmt = myStatement;
 			
@@ -1231,13 +1240,13 @@ public class DatabaseConnector
 			conn.close();
 			myReturn.put("result", "okay");
 			
-			ArrayList thisUser = new ArrayList();
-			thisUser.add(user);
+			//ArrayList thisUser = new ArrayList();
+			//thisUser.add(user);
 			
-			ArrayList thisSession = new ArrayList();
-			thisUser.add(session);
+			//ArrayList thisSession = new ArrayList();
+			//thisUser.add(session);
 			
-			myReturn.put("newEvents", normalizeAllTime(getTasksHierarchy(event, admin, thisUser, thisSession, "", "")));
+			//myReturn.put("newEvents", normalizeAllTime(getTasksHierarchy(event, admin, thisUser, thisSession, "", "")));
 			
 			
 		}
@@ -1955,8 +1964,30 @@ public class DatabaseConnector
 				nextRow.put("Taken", myResults.getTimestamp("taken", cal));
 				nextRow.put("Index", myResults.getTimestamp("taken", cal));
 				
+				nextRow.put("Text", myResults.getString("ocrtext"));
+				
 				byte[] image = myResults.getBytes("screenshot");
 				nextRow.put("Size", image.length);
+				
+				
+				/*
+				if(myResults.getInt("doneocr") <= 0)
+				{
+					if(ocrProc == null)
+					{
+						ocrProc = new OCRProcessor(numOcrThreads);
+					}
+					ConcurrentHashMap toProcessImage = new ConcurrentHashMap();
+					toProcessImage.put("AdminEmail", admin);
+					toProcessImage.put("Event", event);
+					toProcessImage.put("Username", userName);
+					toProcessImage.put("Session", sessionName);
+					toProcessImage.put("Taken", nextRow.get("Taken"));
+					toProcessImage.put("image", image);
+					toProcessImage.put("Connector", this);
+					ocrProc.queueImage(toProcessImage);
+				}
+				*/
 				
 				if(!onlyIndex)
 				{

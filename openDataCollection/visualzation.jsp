@@ -7011,82 +7011,58 @@ function fadeOutLightbox()
 		return finalScreenshot;
 	}
 	
-	function deleteTask(userName, sessionName, taskName, startTime)
+	function deleteTask(userName, sessionName, taskName, startTime, tagger)
 	{
-		var taskUrl = "deleteTask.json?event=" + eventName + "&userName=" + userName + "&sessionName=" + sessionName + "&taskName=" + taskName + "&startTime=" + startTime;
+		var taskUrl = "deleteTask.json?event=" + eventName + "&userName=" + userName + "&sessionName=" + sessionName + "&taskName=" + taskName + "&startTime=" + startTime + "&tagger=" + tagger;
 		d3.json(taskUrl, function(error, data)
 				{
 					if(data["result"] == "okay")
 					{
-						var sessEvents = theNormData[userName][sessionName]["events"];
-						var aggEvents = theNormData[userName]["Aggregated"]["events"];
-						
-						var userSessDiff = theNormData[userName][sessionName]["Index MS User Session Min"];
-						var absUserDiff = theNormData[userName]["Index MS User Min Absolute"];
-						
-						var newEvents = data["newEvents"][userName][sessionName]["events"];
-						
-						function binarySearchEvents(items, value){
-							var firstIndex  = 0,
-								lastIndex   = items.length - 1,
-								middleIndex = Math.floor((lastIndex + firstIndex)/2);
-							
-							var unfound = true;
-							if(middleIndex > lastIndex)
-							{
-								middleIndex = lastIndex;
-								unfound = false;
-							}
-							if(middleIndex < 0)
-							{
-								middleIndex = 0;
-								unfound = false;
-							}
-							
-							while(unfound && items[middleIndex] && items[middleIndex]["Index MS"] != value && firstIndex < lastIndex)
-							{
-							   if (value < items[middleIndex]["Index MS"])
-								{
-									lastIndex = middleIndex - 1;
-								} 
-							  else if (value > items[middleIndex]["Index MS"])
-								{
-									firstIndex = middleIndex + 1;
-								}
-								middleIndex = Math.floor((lastIndex + firstIndex)/2);
-							}
-
-						 return middleIndex;
-						}
-						
-						//newEvents = theNormDataClone[userName][sessionName]["events"];
-						
-						var aggEventList = theNormData[userName]["Aggregated"]["events"];
-						
-						for(entry in newEvents)
+						if(data["result"] == "okay")
 						{
-							newEvents[entry]["Original Session"] = sessionName;
-							newEvents[entry]["Index MS Session"] = newEvents[entry]["Index MS"] - absUserDiff - userSessDiff;
-							newEvents[entry]["Index MS User"] = newEvents[entry]["Index MS"] - absUserDiff;
-							if(newEvents[entry]["TaskName"] == taskName)
+							console.log("Added task, now refreshing")
+							var curSelect = "&users=" + userName + "&sessions=" + sessionName;
+							d3.json("logExport.json?event=" + eventName + "&datasources=events&normalize=none" + curSelect, async function(error, data)
 							{
-								aggEntry = binarySearchEvents(aggEventList, newEvents[entry]["Index MS"]);
-								newEntryClone = JSON.parse(JSON.stringify(newEvents[entry]));
-								newEntryClone["Owning Session"] = "Aggregated";
-								if(aggEventList[aggEntry]["Index MS"] < newEvents[entry]["Index MS"])
+								console.log("Downloaded")
+								console.log(data);
+								let theNormDataInit = ((await retrieveData("indexdata")).value);
+								console.log("Adding to")
+								console.log(theNormDataInit);
+								
+								theNormDataInit[userName][sessionName]["events"] = data[userName][sessionName]["events"];
+								try
 								{
-									aggEventList.splice(aggEntry, 0, newEntryClone);
+									var isDone = false;
+									while(!isDone)
+									{
+										isDone = await persistDataAndWait("indexdata", theNormDataInit);
+									}
 								}
-								else
+								catch(err)
 								{
-									aggEventList.splice(aggEntry - 1, 0, newEntryClone);
+									console.log(err);
 								}
-							}
+								
+								theNormData = preprocess(theNormDataInit);
+								console.log("New norm data")
+								console.log(theNormData)
+								try
+								{
+									var isDone = false;
+									while(!(isDone == true))
+									{
+										isDone = (await (persistDataAndWait("data", theNormData)));
+									}
+									start(true);
+								}
+								catch(err)
+								{
+									console.log(err);
+								}
+								
+							});
 						}
-						theNormData[userName][sessionName]["events"] = newEvents;
-						
-						
-						start(true);
 						
 					}
 				});
@@ -7194,7 +7170,7 @@ function fadeOutLightbox()
 			{
 				d3.select("#extraInfoTable")
 					.append("tr")
-					.html("<td colspan=\"4\"><button type=\"button\" onclick=\"deleteTask('cgtboy1988', '" + curSlot["Original Session"] + "', '" + curSlot["TaskName"] + "', '" + curSlot["Index MS"] + "')\">Delete</button></td>");
+					.html("<td colspan=\"4\"><button type=\"button\" onclick=\"deleteTask('" + curSlot["Owning User"] + "', '" + curSlot["Original Session"] + "', '" + curSlot["TaskName"] + "', '" + curSlot["Index MS"] + "','" + curSlot["Source"] + "')\">Delete</button></td>");
 			}
 			
 			
