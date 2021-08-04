@@ -415,7 +415,7 @@ try
 	queryStmt.close();
 	%>
 	<p> A total of <%=totalUsers %> participants downloaded data collection for this event <%=totalDownloads %> times. Those users ran the software for a total of <%=totalSession %> distinct sessions. There are <%=tokensAvailable %> tokens not in use. </p>
-	<p> To get a json of taken tokens with number of times downloaded per token, go <a href="tokensTaken.json?event=<%=eventName %>">here</a>. To get a csv of available tokens, go <a href="tokensAvailable.csv?event=<%=eventName %>">here</a>. To get a json of available tokens, go <a href="tokensAvailable.json?event=<%=eventName %>">here</a>.</p>
+	<p> To get a json of taken tokens with number of times downloaded per token, go <a href="tokensTaken.json?event=<%=eventName %>">here</a>. To get a csv of available tokens, go <a href="tokensAvailable.csv?event=<%=eventName %>">here</a>. To get a json of available tokens, go <a href="tokensAvailable.json?event=<%=eventName %>">here</a>. To get a json with identifying information, go <a href="getUserIdentification.json?event=<%=eventName %>">here</a>, and to see this data in a searchable table go <a href="identitytable.jsp?event=<%=eventName %>">here</a>.</p>
 	<%
 }
 catch(Exception e)
