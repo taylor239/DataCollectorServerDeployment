@@ -2992,6 +2992,7 @@ function fadeOutLightbox()
 					//console.log("Doing session " + session);
 					maxTimeSession = 0;
 					minTimeSession = Number.POSITIVE_INFINITY;
+					minTimeSessionUniversal = Number.POSITIVE_INFINITY;
 					minTimeUserSession = Number.POSITIVE_INFINITY;
 					maxTimeSessionDate = "";
 					minTimeSessionDate = "";
@@ -3176,6 +3177,7 @@ function fadeOutLightbox()
 							if(firstTimeSession < minTimeSession)
 							{
 								minTimeSession = firstTimeSession;
+								minTimeSessionUniversal = firstTimeUserAbsolute;
 								minTimeSessionDate = firstTimeDate;
 							}
 							if(firstTimeUser < minTimeUserSession)
@@ -3209,6 +3211,7 @@ function fadeOutLightbox()
 					}
 					theCurData["Index MS Session Max"] = maxTimeSession;
 					theCurData["Index MS Session Min"] = minTimeSession;
+					theCurData["Index MS Session Min Universal"] = minTimeSessionUniversal;
 					theCurData["Index MS Session Max Date"] = maxTimeSessionDate;
 					theCurData["Index MS Session Min Date"] = minTimeSessionDate;
 					
@@ -5985,8 +5988,8 @@ function fadeOutLightbox()
 	
 	function addTask(userName, sessionName)
 	{
-		var startTask = Number(document.getElementById("addTaskStart").value) + theNormData[userName]["Index MS User Min Absolute"] + theNormData[userName][sessionName]["Index MS User Session Min"];
-		var endTask = Number(document.getElementById("addTaskEnd").value) + theNormData[userName]["Index MS User Min Absolute"] + theNormData[userName][sessionName]["Index MS User Session Min"];
+		var startTask = Number(document.getElementById("addTaskStart").value) + theNormData[userName][sessionName]["Index MS Session Min Universal"];
+		var endTask = Number(document.getElementById("addTaskEnd").value) + theNormData[userName][sessionName]["Index MS Session Min Universal"];
 		var taskName = document.getElementById("addTaskName").value;
 		var taskTags = encodeURIComponent(document.getElementById("tags").value);
 		
