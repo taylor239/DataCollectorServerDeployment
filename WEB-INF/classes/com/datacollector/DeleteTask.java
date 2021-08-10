@@ -185,7 +185,7 @@ public class DeleteTask extends HttpServlet {
 		{
 			userName = (String) inverseUserMap.get(userName);
 		}
-		//System.out.println("Deleting " + eventName + ": " + admin + ": " + userName + ": " + taskName + ": " + tagger);
+		System.out.println("Deleting " + eventName + ": " + admin + ": " + userName + ": " + taskName + ": " + tagger + "; " + startTime);
 		result = myConnector.deleteTask(eventName, admin, userName, sessionName, tagger, taskName, startTime);
 		Gson gson = new GsonBuilder().create();
 		

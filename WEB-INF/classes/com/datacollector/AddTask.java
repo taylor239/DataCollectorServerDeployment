@@ -181,6 +181,7 @@ public class AddTask extends HttpServlet {
 		String sessionName = (String)request.getParameter("sessionName");
 		
 		ConcurrentHashMap result = null;
+		System.out.println("Adding " + eventName + ": " + admin + ": " + userName + ": " + taskName + ": " + tagger + ": " + startTime + ": " + endTime);
 		if(tagger == null)
 		{
 			tagger = admin;
