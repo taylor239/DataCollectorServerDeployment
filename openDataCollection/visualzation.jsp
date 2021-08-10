@@ -7027,13 +7027,18 @@ function fadeOutLightbox()
 							var curSelect = "&users=" + userName + "&sessions=" + sessionName;
 							d3.json("logExport.json?event=" + eventName + "&datasources=events&normalize=none" + curSelect, async function(error, data)
 							{
-								console.log("Downloaded")
-								console.log(data);
+								//console.log("Downloaded")
+								//console.log(data);
 								let theNormDataInit = ((await retrieveData("indexdata")).value);
-								console.log("Adding to")
-								console.log(theNormDataInit);
+								//console.log("Adding to")
+								//console.log(theNormDataInit);
 								
 								theNormDataInit[userName][sessionName]["events"] = data[userName][sessionName]["events"];
+								if(!theNormDataInit[userName][sessionName]["events"])
+								{
+									delete theNormDataInit[userName][sessionName]["events"];
+								}
+								
 								try
 								{
 									var isDone = false;
