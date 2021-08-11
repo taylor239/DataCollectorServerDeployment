@@ -5276,12 +5276,94 @@ function fadeOutLightbox()
 				.style("fill-opacity", ".1")
 				.style("fill", "Chartreuse");
 		
+		var initX = 0;
+		
+		var dragAddTask = d3.drag()
+			.on("drag", dragmoveAddTask)
+			.on("start", function(d)
+					{
+						initX = d3.event.x;
+						if(initX < xAxisPadding)
+						{
+							initX = xAxisPadding;
+						}
+						selectRect.attr("x", initX);
+						selectRect.attr("width", 0);
+						selectRectAni.attr("x", initX);
+						selectRectAni.attr("width", 0);
+						document.getElementById("addTaskStart").value = "Start (MS Session Time)";
+						document.getElementById("addTaskEnd").value = "End (MS Session Time)";
+					});
+		
+		function dragmoveAddTask(d)
+		{
+			var x = d3.event.x;
+			var y = d3.event.y;
+			var startPoint = 0;
+			var endPoint = 0;
+			if(x < initX)
+			{
+				selectRectAni.attr("x", x);
+				selectRectAni.attr("width", initX - x);
+				startPoint = timeScaleAnimation.invert(x);
+				endPoint = timeScaleAnimation.invert(initX);
+			}
+			else
+			{
+				selectRectAni.attr("x", initX);
+				selectRectAni.attr("width", x - initX);
+				startPoint = timeScaleAnimation.invert(initX);
+				endPoint = timeScaleAnimation.invert(x);
+			}
+			selectRect.attr("x", timeScaleAni(startPoint) + xAxisPadding);
+			selectRect.attr("width", timeScaleAni(endPoint - startPoint));
+			document.getElementById("addTaskStart").value = startPoint;
+			document.getElementById("addTaskEnd").value = endPoint;
+		}
+		
+		var dragBarG = animationSvg.append("g")
+				.call(dragAddTask);
+		
+		var dragBar = dragBarG.append("rect")
+				.attr("x", 0)
+				.attr("y", (divBounds["height"] * .8) - textPadding)
+				.attr("height", textPadding)
+				.attr("width", animationSvg.attr("width"))
+				.attr("style", "cursor:pointer;")
+				.style("stroke", "Cyan")
+				.style("fill-opacity", ".25")
+				.style("fill", "Cyan");
+		
+		var selectRectAni = dragBarG
+				.append("rect")
+				.attr("x", 0)
+				.attr("y", (divBounds["height"] * .8) - textPadding)
+				.attr("width", 0)
+				.attr("height", textPadding)
+				.attr("fill", "Pink")
+				.attr("pointer-events", "none");
+		
 		var axisLabelG = animationSvg.append("g");
 		var axisLabel = axisLabelG.append("text")
 				.attr("x", 0)
 				.attr("y", (divBounds["height"] * .8) + textPadding)
 				.style("pointer-events", "none")
+				.text("Seek");
+		
+		var scaleLabelG = animationSvg.append("g");
+		var scaleLabel = scaleLabelG.append("text")
+				.attr("x", divBounds["width"])
+				.attr("y", (divBounds["height"] * .8))
+				.attr("text-anchor", "end")
+				.style("pointer-events", "none")
 				.text("MS");
+				
+		var dragLabelG = animationSvg.append("g");
+		var dragLabel = dragLabelG.append("text")
+				.attr("x", 0)
+				.attr("y", (divBounds["height"] * .8))
+				.style("pointer-events", "none")
+				.text("Add Task");
 		
 		var axisTickG = animationSvg.append("g");
 		var axisTick = axisTickG.append("rect")
@@ -6105,6 +6187,10 @@ function fadeOutLightbox()
 		delBlankLines();
 	}
 	
+	
+	var selectRect;
+	var timeScaleAni;
+	
 	async function showSession(owningUser, owningSession)
 	{
 		//console.log(d3.select("#mainVisContainer").style("height",  "300px").attr("height",  "300px"));
@@ -6182,6 +6268,8 @@ function fadeOutLightbox()
 		
 		var initX = 0;
 		
+		timeScaleAni = timeScale;
+		
 		var dragAddTask = d3.drag()
 			.on("drag", dragmoveAddTask)
 			.on("start", function(d)
@@ -6227,7 +6315,7 @@ function fadeOutLightbox()
 				.attr("height", (barHeight / 1.75) + "px")
 				.call(dragAddTask);
 		
-		var selectRect = addTaskAxisSVG.append("g")
+		selectRect = addTaskAxisSVG.append("g")
 				.append("rect")
 				.attr("x", 0)
 				.attr("y", 0)
