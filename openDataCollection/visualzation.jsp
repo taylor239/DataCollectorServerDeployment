@@ -6457,7 +6457,7 @@ function fadeOutLightbox()
 								return;
 							}
 							lastMouseOver = d;
-						showWindow(owningUser, owningSession, "Processes", d["Hash"]);
+						showWindow(owningUser, owningSession, "Processes", d["Hash"], d["Index MS"]);
 						x = 0;
 						if(timeMode == "Universal")
 						{
@@ -7169,7 +7169,7 @@ function fadeOutLightbox()
 	var curSelectProcess;
 	var curSelElements = [];
 	
-	async function showWindow(username, session, type, timestamp)
+	async function showWindow(username, session, type, timestamp, lookupIndex)
 	{
 		//console.log(username + ": " + session + ": " + type + ": " + timestamp);
 		if(username != curSelectUser || session != curSelectSession)
@@ -7179,21 +7179,27 @@ function fadeOutLightbox()
 		var curSlot
 		
 		curSlot = lookupTable[username][session][type];
-		//console.log(curSlot);
 		
-		//if(type == "Processes")
 		if(curSlot["data"])
 		{
-			//curSlot = lookupTable[username][session][type];
 			curSlot = ((await (curSlot["data"]())).value)[timestamp];
+			//This does a linear search but only on the subset of the data that can be marked "Prev"
+			//IE the previous entries for the same process.  If this needs to be optimized then the
+			//the curSlot entry can be converted to an array of entries rather than the current
+			//linked list style.  Doing so should not incur a memory penalty, though this can also
+			//be further optimized for memory by storing "Prev" and "Next" in persistence as well.
+			if(lookupIndex)
+			{
+				while(lookupIndex != curSlot["Index MS"] && curSlot["Prev"])
+				{
+					curSlot = curSlot["Prev"];
+				}
+			}
 		}
 		else
 		{
 			curSlot = curSlot[timestamp];
-			//curSlot = lookupTable[username][session][type][timestamp];
 		}
-		
-		//console.log(curSlot);
 		
 		curSlot["Hash"] = SHA256(curSlot["User"] + curSlot["Original Session"] + curSlot["Index MS"]);
 		
@@ -7359,13 +7365,9 @@ function fadeOutLightbox()
 	{
 		var curGraph = await buildTaskMap(user, session, task, onlySession, colissionMap)
 		
-		//console.log(curGraph);
-		
 		
 		var toReturn = await analyzeTaskMap(curGraph);
-		//console.log(toReturn);
 		toReturn = await petriToGraph(toReturn);
-		//console.log(toReturn);
 		attackGraphs.push(toReturn);
 		console.log(attackGraphs)
 		return toReturn;
