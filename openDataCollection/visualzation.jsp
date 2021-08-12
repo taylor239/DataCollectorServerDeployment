@@ -5283,10 +5283,6 @@ function fadeOutLightbox()
 			.on("start", function(d)
 					{
 						initX = d3.event.x;
-						if(initX < xAxisPadding)
-						{
-							initX = xAxisPadding;
-						}
 						selectRect.attr("x", initX);
 						selectRect.attr("width", 0);
 						selectRectAni.attr("x", initX);
@@ -5324,6 +5320,21 @@ function fadeOutLightbox()
 		var dragBarG = animationSvg.append("g")
 				.call(dragAddTask);
 		
+		var scaleLabelG = animationSvg.append("g");
+		var scaleLabel = scaleLabelG.append("text")
+				.attr("x", divBounds["width"])
+				.attr("y", (divBounds["height"] * .8))
+				.attr("text-anchor", "end")
+				.style("pointer-events", "none")
+				.text("MS");
+		
+		var dragLabelG = animationSvg.append("g");
+		var dragLabel = dragLabelG.append("text")
+				.attr("x", 0)
+				.attr("y", (divBounds["height"] * .8))
+				.style("pointer-events", "none")
+				.text("Add Task");
+		
 		var dragBar = dragBarG.append("rect")
 				.attr("x", 0)
 				.attr("y", (divBounds["height"] * .8) - textPadding)
@@ -5349,21 +5360,6 @@ function fadeOutLightbox()
 				.attr("y", (divBounds["height"] * .8) + textPadding)
 				.style("pointer-events", "none")
 				.text("Seek");
-		
-		var scaleLabelG = animationSvg.append("g");
-		var scaleLabel = scaleLabelG.append("text")
-				.attr("x", divBounds["width"])
-				.attr("y", (divBounds["height"] * .8))
-				.attr("text-anchor", "end")
-				.style("pointer-events", "none")
-				.text("MS");
-				
-		var dragLabelG = animationSvg.append("g");
-		var dragLabel = dragLabelG.append("text")
-				.attr("x", 0)
-				.attr("y", (divBounds["height"] * .8))
-				.style("pointer-events", "none")
-				.text("Add Task");
 		
 		var axisTickG = animationSvg.append("g");
 		var axisTick = axisTickG.append("rect")
