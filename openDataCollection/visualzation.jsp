@@ -9,6 +9,7 @@
 <script src="./pathFunctions.js"></script>
 <script src="./d3.v4.min.js"></script>
 <script src="./d3-scale-chromatic.v0.3.min.js"></script>
+<script src="./pageFunctions.js"></script>
 <meta charset="UTF-8">
 <title>Data Collection Visualization</title>
 </head>
@@ -385,280 +386,6 @@ if(request.getParameter("email") != null)
 </style>
 
 <script>
-
-function getFullWidth() {
-	  return Math.max(
-		document.body.scrollWidth,
-		document.documentElement.scrollWidth,
-		document.body.offsetWidth,
-		document.documentElement.offsetWidth,
-		document.documentElement.clientWidth
-	  );
-	}
-
-	function getFullHeight() {
-	  return Math.max(
-		document.body.scrollHeight,
-		document.documentElement.scrollHeight,
-		document.body.offsetHeight,
-		document.documentElement.offsetHeight,
-		document.documentElement.clientHeight
-	  );
-	}
-
-var curFunction;
-
-var curTutorialIndex = 0;
-
-var tutorialArray = [];
-
-var titleTutorial = {id: "title", caption: "This is the event you are viewing and the progress of your download.  The visualization first downloads index data and presents that and asynchronously downloads screenshots after.  All data is cached locally."};
-tutorialArray.push(titleTutorial);
-var optionsTutorial1 = {id: "optionFilterTable", caption: "This is the options and filtering table.  'Playback Speed' is the rate animations are played at as a multiplier of real world time."};
-tutorialArray.push(optionsTutorial1);
-var optionsTutorial2 = {id: "optionFilterTable", caption: "'Timeline Zoom' allows you to zoom in and enlarge the data in the timeline window."};
-tutorialArray.push(optionsTutorial2);
-var optionsTutorial3 = {id: "optionFilterTable", caption: "'Filters' evaluate expressions on pieces of data and exclude them based on the result of the evaluation.  By default, the visualization shows only Aggregate sessions due to the default filter.  To remove this filter, click the X next to it.  The Server checkbox allows the expression to be done server side before downloading the data; this can sometimes drastically reduce the data size.  This feature is currently under construction.  If you are logged in, then your set of filters can be saved and loaded.  Features saved as 'Default' will be loaded by default.  Server-side executing filters must be saved as 'Default' to execute."};
-tutorialArray.push(optionsTutorial3);
-var timelineTutorial = {id: "visRow", caption: "This is the timeline view.  This shows what users were doing when they had data collection software open.  The first item you see on top is the username and the total time period they worked across all sessions - a session being a time period from startup to shutdown on a single device.  Below the username bar are individual sessions from that user.  The time scale for all data is relative to the session; that is, if a window is open 5 minutes into the session then that is where it will be on time time scale, which is visible and labeled just above the middle of each session bar.  The very top bar of each session shows the active window at the given time.  You can click on a window to focus on the session (bringing up the session process graph below, more on that in a minute) and info about the active window.  The bar below th active window bar (just above the time scale) shows screenshots.  You can mouse over to highlight and view individual screenshots.  The bottom bar (the bottom half of a session) is reserved for annotation/task/event data.  Both user supplied and analyst generated annotations go there.  Similarly to selecting a window, clicking on a task selects the session and provides the process info and info about the task.  Red bars lebeled Filter will filter out the data it is attached to - clicking Filter next to a username will filter out the user and clicking next to session bars will filter out the session.  The Play button shows the screenshots, keyboard, mouse, and window data from the session in an animation."};
-tutorialArray.push(timelineTutorial);
-var legendTutorial = {id: "legendTable", caption: "The legend shows what the colors on the timelines correspond to.  Note that windows are labeled by their program, not by their current title, which can be confusing when dealing with windows that frequently change titles such as web browsers.  Each separate title appears as a different entry on the timeline but of the same color.  The legend also shows which user(s) entered which tasks through color coding them."};
-tutorialArray.push(legendTutorial);
-var graphTutorial = {id: "graphCell", caption: "This is the graph table.  By default, it shows summary statistics from all of the sessions (after filters have been applied) and shows process CPU usage over time for sessions when selected.  When a session is selected, a timeline will also appear here; that timeline allows you to enter tasks/events/annotations manually.  Drag your mouse on the timeline to select the time period for your annotation and then enter the annotation and push the Submit button to save it.  It will now appear on the timeline for you.  Note that you must have an admin login to use this feature.  Finally, below the graph is a info table.  When you select items on the timeline, the detailed data of your selection will be there."};
-tutorialArray.push(graphTutorial);
-
-function tutorial()
-{
-	console.log("Starting tutorial")
-	curTutorialIndex = 0;
-	nestedTutorial();
-}
-
-function nestedTutorial()
-{
-	if(curTutorialIndex < tutorialArray.length)
-	{
-		dimBackground(document.getElementById(tutorialArray[curTutorialIndex]["id"]), tutorialArray[curTutorialIndex]["caption"], nestedTutorial);
-		curTutorialIndex++;
-	}
-}
-
-function dimBackground(toHighlight, captionText, nextFunction)
-{
-	
-	curFunction = nextFunction;
-	
-	var totalWidth = getFullWidth();
-	var totalHeight = getFullHeight();
-	
-	
-	var eleX = Math.round(toHighlight.getBoundingClientRect()["x"]);
-	var eleY = Math.round(toHighlight.getBoundingClientRect()["y"]);
-	var eleWidth = Math.round(toHighlight.getBoundingClientRect()["width"]);
-	var eleHeight = Math.round(toHighlight.getBoundingClientRect()["height"]);
-	
-	var surroundingRects = [];
-	
-	var leftRect = {x: 0, y: 0, width: eleX, height: totalHeight};
-	var topRect = {x: eleX, y:0, width: eleWidth, height: eleY};
-	var bottomRect = {x: eleX, y: eleY + eleHeight, width: eleWidth, height: totalHeight - (eleY + eleHeight)};
-	var rightRect = {x: eleX + eleWidth, y: 0, width: totalWidth - (eleX + eleWidth), height: totalHeight};
-	surroundingRects.push(leftRect);
-	surroundingRects.push(topRect);
-	surroundingRects.push(bottomRect);
-	surroundingRects.push(rightRect);
-	
-	
-	var newBlackDiv=document.createElement('div');
-	newBlackDiv.className="black_highlight";
-	//newBlackDiv.style.position = "absolute";
-	//newBlackDiv.style.display = "block";
-	//newBlackDiv.style.width = totalWidth + "px";
-	//newBlackDiv.style.height = totalHeight + "px";
-	newBlackDiv.id="fade";
-	document.body.appendChild(newBlackDiv);
-	newBlackDiv.onclick=undimBackground;
-	newBlackDiv.style.opacity=0;
-	
-	var dimSVG = d3.select(newBlackDiv).append("svg")
-	dimSVG.attr("width", "100%")
-		.attr("height", "100%")
-		.selectAll("rect")
-		.data(surroundingRects)
-		.enter()
-		.append("rect")
-		.attr("x", function(d, i)
-				{
-					return d["x"];
-				})
-		.attr("y", function(d, i)
-				{
-					return d["y"];
-				})
-		.attr("width", function(d, i)
-				{
-					return d["width"];
-				})
-		.attr("height", function(d, i)
-				{
-					return d["height"];
-				})
-		.attr("fill", "Black")
-		.attr("opacity", ".8")
-		.on("click", "undimBackground()");
-	
-	dimSVG.append("text")
-		.attr("fill", "white")
-		.text("Click anywhere to continue.")
-		.attr("alignment-baseline", "hanging")
-		.attr("dominant-baseline", "hanging")
-		.attr("text-anchor", "middle")
-		.attr("x", "50%")
-		.attr("y", "1%");
-	
-	var minWidth = totalWidth * .15;
-	if(eleWidth > minWidth)
-	{
-		minWidth = eleWidth;
-	}
-	
-	if(captionText)
-	{
-		var box = document.createElement('span');
-		box.style.position = 'absolute'; 
-		box.style.left = eleX + "px";
-		box.style.right = (totalWidth - (eleX + minWidth)) + "px";
-		if((eleY + eleHeight) > (totalHeight * .75))
-		{
-			
-			box.style.bottom = (totalHeight - eleY) + "px";
-		}
-		else
-		{
-			box.style.top = (eleY + eleHeight) + "px";
-			
-		}
-		box.className="white_dim";
-		box.id="light";
-		box.onclick=undimBackground;
-		box.innerHTML=captionText;
-		document.body.appendChild(box);
-	}
-	
-	dimTimeout=setTimeout("fadeInDim();", 1);
-}
-
-function fadeInDim()
-{
-	var oldBlackDiv=document.getElementById('fade');
-	oldBlackDiv.style.opacity=.8;
-	var oldWhiteDiv=document.getElementById('light');
-	oldWhiteDiv.style.opacity=1;
-}
-
-function undimBackground()
-{
-	clearTimeout(lightBoxTimeout);
-	
-	var oldBlackDiv=document.getElementById('fade');
-	oldBlackDiv.style.opacity=0;
-	var oldWhiteDiv=document.getElementById('light');
-	if(oldWhiteDiv)
-	{
-		oldWhiteDiv.style.opacity=0;
-	}
-	
-	lightBoxTimeout=setTimeout("fadeOutDim();", 300);
-}
-
-function fadeOutDim()
-{
-	var oldBlackDiv=document.getElementById('fade');
-	oldBlackDiv.display="none";
-	
-	var oldWhiteDiv=document.getElementById('light');
-	if(oldWhiteDiv)
-	{
-		oldWhiteDiv.display="none";
-		document.body.removeChild(oldWhiteDiv);
-	}
-	
-	document.body.removeChild(oldBlackDiv);
-	
-	if(curFunction)
-	{
-		curFunction();
-	}
-}
-
-var lightBoxTimeout;
-
-async function showLightbox(theHTML)
-{
-	clearTimeout(lightBoxTimeout);
-	
-	var newWhiteDiv=document.createElement('table');
-	newWhiteDiv.className="white_content";
-	newWhiteDiv.id="light";
-	newWhiteDiv.innerHTML=theHTML;
-	
-	var newBlackDiv=document.createElement('table');
-	newBlackDiv.className="black_overlay";
-	newBlackDiv.id="fade";
-	
-	document.body.appendChild(newWhiteDiv);
-	document.body.appendChild(newBlackDiv);
-	
-	newWhiteDiv.style.display='table';
-	newBlackDiv.style.display='table';
-	
-	//newWhiteDiv.onclick=unshowLightbox;
-	newBlackDiv.onclick=unshowLightbox;
-	
-	newWhiteDiv.style.opacity=0;
-	newBlackDiv.style.opacity=0;
-	lightBoxTimeout=setTimeout("fadeInLightbox();", 1);
-}
-
-function fadeInLightbox()
-{
-	var oldWhiteDiv=document.getElementById('light');
-	oldWhiteDiv.style.opacity=1;
-	
-	var oldBlackDiv=document.getElementById('fade');
-	oldBlackDiv.style.opacity=.8;
-}
-
-function unshowLightbox()
-{
-	clearTimeout(animationTimeout);
-	clearTimeout(lightBoxTimeout);
-	
-	var oldWhiteDiv=document.getElementById('light');
-	oldWhiteDiv.style.opacity=0;
-	
-	var oldBlackDiv=document.getElementById('fade');
-	oldBlackDiv.style.opacity=0;
-	
-	lightBoxTimeout=setTimeout("fadeOutLightbox();", 300);
-}
-
-function fadeOutLightbox()
-{
-	var oldWhiteDiv=document.getElementById('light');
-	oldWhiteDiv.display="none";
-	
-	var oldBlackDiv=document.getElementById('fade');
-	oldBlackDiv.display="none";
-	
-	document.body.removeChild(oldWhiteDiv);
-	document.body.removeChild(oldBlackDiv);
-}
-
-</script>
-
-
-<script>
 	var showLeft = true;
 	function toggleLeft()
 	{
@@ -800,7 +527,6 @@ function fadeOutLightbox()
 		var x=0;
 		for(entry in filters)
 		{
-			//console.log(filters[entry]);
 			urlToPost += "&filterLevel" + x + "=" + filters[entry]["Level"];
 			urlToPost += "&filterValue" + x + "=" + filters[entry]["Value"];
 			urlToPost += "&filterField" + x + "=" + filters[entry]["Field"];
@@ -817,14 +543,12 @@ function fadeOutLightbox()
 					{
 						showLightbox("<tr><td><div width=\"100%\">Error saving filter set.</div></td></tr>");
 					}
-					//console.log(data);
 				});
 	}
 	
 	function rebuildFilters()
 	{
 		var tableData = filtersTitle.concat(filters);
-		//console.log(tableData);
 		d3.select("#optionFilterTable")
 			.selectAll("tr")
 			//.data(tableData)
@@ -943,8 +667,6 @@ function fadeOutLightbox()
 	
 	async function storeProcessDataFiltered(toStore)
 	{
-		//console.log("Storing for: " + this.session);
-		//console.log(toStore);
 		if(this.session == "Aggregated")
 		{
 			
@@ -990,8 +712,6 @@ function fadeOutLightbox()
 	
 	async function storeMouseDataFiltered(toStore)
 	{
-		//console.log("Storing for: " + this.session);
-		//console.log(toStore);
 		if(this.session == "Aggregated")
 		{
 			
@@ -1037,8 +757,6 @@ function fadeOutLightbox()
 	
 	async function storeKeystrokesDataFiltered(toStore)
 	{
-		//console.log("Storing for: " + this.session);
-		//console.log(toStore);
 		if(this.session == "Aggregated")
 		{
 			
@@ -1221,7 +939,6 @@ function fadeOutLightbox()
 				{
 					var userProcFound = {};
 				}
-				//console.log(session);
 				toFilter = filterMap[1];
 				if(toFilter)
 				{
@@ -1238,7 +955,6 @@ function fadeOutLightbox()
 				
 				for(data in dataToFilter[user][session])
 				{
-					//console.log(data);
 					var isAsync = false;
 					var dataSource = dataToFilter[user][session][data];
 					if(!dataSource)
@@ -1248,10 +964,6 @@ function fadeOutLightbox()
 					}
 					if(dataToFilter[user][session][data]["data"] && (typeof dataToFilter[user][session][data]["data"]) == "function")
 					{
-						//console.log("Async filter");
-						//console.log(session);
-						//console.log(dataToFilter[user][session][data]["data"]);
-						//console.log(dataToFilter[user][session][data]["data"]());
 						dataSource = (await dataToFilter[user][session][data]["data"]());
 						if(!dataSource)
 						{
@@ -1264,7 +976,6 @@ function fadeOutLightbox()
 							console.log("No data source for " + user + ":" + session + ":" + data)
 							continue;
 						}
-						//console.log(dataSource);
 						isAsync = true;
 					}
 					toFilter = filterMap[2];
@@ -1279,7 +990,6 @@ function fadeOutLightbox()
 						}
 					}
 					toSplice = [];
-					//console.log(dataToFilter[user][session][data]);
 					entry = 0;
 					if(!dataSource)
 					{
@@ -1300,11 +1010,9 @@ function fadeOutLightbox()
 								{
 									if(!(eval("'" + dataSource[entry][toFilter[curFilter]["Field"]] + "'" + toFilter[curFilter]["Value"])))
 									{
-										//console.log(dataToFilter[user][session][data][entry]);
 										dataSource.splice(entry, 1);
 										entry--;
 										curLength = dataSource.length;
-										//console.log(entry);
 										//toSplice.push(entry);
 										filteredOut = true;
 										break;
@@ -1368,7 +1076,6 @@ function fadeOutLightbox()
 				});
 		summaryProcStats["Max"] = maxProc;
 		summaryProcStats["Min"] = minProc;
-		//console.log(summaryProcStatsArray);
 		return dataToFilter;
 	}
 	
@@ -1420,8 +1127,6 @@ function fadeOutLightbox()
 				.selectAll("tr")
 				.each(function(d, i)
 						{
-							//console.log(d);
-							//console.log(this);
 							filtersTitle.push(this);
 							startFilters = i;
 						});
@@ -1444,9 +1149,7 @@ function fadeOutLightbox()
 		var args = {};
 		args["key"] = key;
 		args["value"] = value;
-		//console.log(args);
 		curQueue.push(args);
-		//console.log(curQueue);
 		if(!persistWriting)
 		{
 			writePersist();
@@ -1466,7 +1169,6 @@ function fadeOutLightbox()
 		while(curWrite)
 		{
 			d3.select("body").style("cursor", "wait");
-			//console.log(curWrite);
 			myReturn = await wrappedPersistData(curWrite["key"], curWrite["value"]);
 			curWrite = curQueue.pop();
 		}
@@ -1485,9 +1187,7 @@ function fadeOutLightbox()
 		var args = {};
 		args["key"] = key;
 		args["value"] = value;
-		//console.log(args);
 		curQueue.push(args);
-		//console.log(curQueue);
 		var myReturn = await writePersist();
 		
 		
@@ -1585,7 +1285,6 @@ function fadeOutLightbox()
 			var transaction = db.transaction(["objects"], "readwrite");
 			transaction.oncomplete = function(event)
 			{
-				//console.log("All done!");
 				resolve(true);
 			};
 	
@@ -1598,9 +1297,6 @@ function fadeOutLightbox()
 			var toPersist = {};
 			toPersist["key"] = key;
 			toPersist["value"] = value;
-			//console.log("Storing " + key);
-			//console.log(value);
-			//console.log(toPersist);
 			var request = objectStore.put(toPersist);
 		})
 	}
@@ -1617,7 +1313,6 @@ function fadeOutLightbox()
 	{
 		d3.select("body").style("cursor", "wait");
 		var toReturn = await nestedCountData(key);
-		//console.log("Count " + toReturn);
 		d3.select("body").style("cursor", "");
 		if(toReturn > 0)
 		{
@@ -1631,7 +1326,6 @@ function fadeOutLightbox()
 		try
 		{
 			var value = await nestedRetrieveData(key);
-			//console.log(value);
 			
 			return await value;
 		}
@@ -1713,20 +1407,14 @@ function fadeOutLightbox()
 	
 	async function getScreenshotData()
 	{
-		//console.log("Getting screenshot:");
-		//console.log(this);
 		var hashVal = this["ImageHash"];
-		//console.log(hashVal);
 		var toReturn = (await retrieveData(hashVal));
-		//console.log(toReturn)
 		return toReturn.value;
 	}
 	
 	async function hasScreenshot(entry)
 	{
-		//console.log("Getting screenshot:");
 		var hashVal = entry["ImageHash"];
-		//console.log(hashVal);
 		var toReturn = (await hasData(hashVal));
 		return toReturn;
 	}
@@ -1880,7 +1568,6 @@ function fadeOutLightbox()
 							downloadedSize = d["loaded"];
 							d3.select("#title")
 									.html(origTitle + "<br />Data Size: <b>" + d["loaded"] + "</b> bytes")
-							//console.log(d);
 						});
 		}
 		else
@@ -1943,7 +1630,6 @@ function fadeOutLightbox()
 			{
 				var curProcArray = ((await retrieveData(hashVal)).value);
 				//nextCount = curProcArray.length;
-				//console.log("Already stored: " + nextCount);
 				var isDone = false;
 				while(!isDone)
 				{
@@ -2015,24 +1701,17 @@ function fadeOutLightbox()
 							curProcessList[entry]["Original Session"] = sessionName;
 						}
 						
-						//console.log("Hash for process: " + hashVal);
 						try
 						{
 							var hasStored = ((await hasData(hashVal)))
-							//console.log("New data for " + user + ":" + session);
-							//console.log(curProcessList);
 							var curProcArray = curProcessList;
 							if(hasStored)
 							{
 								curProcArray = ((await retrieveData(hashVal)).value);
-								//console.log("This array stored for " + user + ":" + session);
-								//console.log(curProcArray);
 								curProcArray = curProcArray.concat(curProcessList);
 							}
 							
 							var isDone = false;
-							//console.log("Storing for " + user + ":" + session + ": ");
-							//console.log(curProcArray);
 							while(!isDone)
 							{
 								isDone = await persistData(hashVal, curProcArray);
@@ -2144,7 +1823,6 @@ function fadeOutLightbox()
 			{
 				var curMouseArray = ((await retrieveData(hashVal)).value);
 				//nextCount = curProcArray.length;
-				//console.log("Already stored: " + nextCount);
 				var isDone = false;
 				while(!isDone)
 				{
@@ -2216,24 +1894,17 @@ function fadeOutLightbox()
 							curMouseList[entry]["Original Session"] = sessionName;
 						}
 						
-						//console.log("Hash for process: " + hashVal);
 						try
 						{
 							var hasStored = ((await hasData(hashVal)))
-							//console.log("New data for " + user + ":" + session);
-							//console.log(curProcessList);
 							var curMouseArray = curMouseList;
 							if(hasStored)
 							{
 								curMouseArray = ((await retrieveData(hashVal)).value);
-								//console.log("This array stored for " + user + ":" + session);
-								//console.log(curProcArray);
 								curMouseArray = curMouseArray.concat(curMouseList);
 							}
 							
 							var isDone = false;
-							//console.log("Storing for " + user + ":" + session + ": ");
-							//console.log(curProcArray);
 							while(!isDone)
 							{
 								isDone = await persistData(hashVal, curMouseArray);
@@ -2345,7 +2016,6 @@ function fadeOutLightbox()
 			{
 				var curKeystrokesArray = ((await retrieveData(hashVal)).value);
 				//nextCount = curProcArray.length;
-				//console.log("Already stored: " + nextCount);
 				var isDone = false;
 				while(!isDone)
 				{
@@ -2417,24 +2087,17 @@ function fadeOutLightbox()
 							curKeystrokesList[entry]["Original Session"] = sessionName;
 						}
 						
-						//console.log("Hash for process: " + hashVal);
 						try
 						{
 							var hasStored = ((await hasData(hashVal)))
-							//console.log("New data for " + user + ":" + session);
-							//console.log(curProcessList);
 							var curKeystrokesArray = curKeystrokesList;
 							if(hasStored)
 							{
 								curKeystrokesArray = ((await retrieveData(hashVal)).value);
-								//console.log("This array stored for " + user + ":" + session);
-								//console.log(curProcArray);
 								curKeystrokesArray = curKeystrokesArray.concat(curKeystrokesList);
 							}
 							
 							var isDone = false;
-							//console.log("Storing for " + user + ":" + session + ": ");
-							//console.log(curProcArray);
 							while(!isDone)
 							{
 								isDone = await persistData(hashVal, curKeystrokesArray);
@@ -2571,7 +2234,6 @@ function fadeOutLightbox()
 				sheet.id = "style_" + SHA256(userName + sessionName);
 			}
 		}
-		//console.log(sheet);
 		sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Yellow;}";
 		document.body.appendChild(sheet);
 		
@@ -2580,15 +2242,12 @@ function fadeOutLightbox()
 		
 		while(curCount < imageArray.length)
 		{
-			//console.log("Checking image");
-			//console.log(imageArray[curCount]);
 			if(!imageArray[curCount]["ImageHash"])
 			{
 				imageArray[curCount]["ImageHash"] = SHA256(user + session + imageArray[curCount]["Index MS"]);
 			}
 			var entry = curCount;
 			var curScreenshot = (await hasScreenshot(imageArray[curCount]));
-			//console.log(entry + ": " + curScreenshot)
 			if(curScreenshot)
 			{
 				curCount = entry + 1;
@@ -2601,8 +2260,6 @@ function fadeOutLightbox()
 		}
 		if(curCount < imageArray.length)
 		{
-			//console.log("Fetching screenshots from " + userName + ", " + sessionName + ": " + curCount + " : " + chunkSize);
-			//console.log(imageArray);
 			var curSelect = "&users=" + userName + "&sessions=" + sessionName + "&first=" + curCount + "&count=" + chunkSize;
 			await d3.json("logExport.json?event=" + eventName + "&datasources=screenshots&normalize=none" + curSelect, async function(error, data)
 			{
@@ -2643,7 +2300,6 @@ function fadeOutLightbox()
 						for(screenshot in curScreenshotList)
 						{
 							var hashVal = SHA256(userName + sessionName + curScreenshotList[screenshot]["Index MS"]);
-							//console.log(imageArray[screenshot]);
 							try
 							{
 								var isDone = false;
@@ -2808,7 +2464,6 @@ function fadeOutLightbox()
 	
 	async function getProcessMapData()
 	{
-		//console.log("Retrieving for: " + this.session);
 		if(this.session == "Aggregated")
 		{
 			return [];
@@ -2816,7 +2471,6 @@ function fadeOutLightbox()
 		else
 		{
 			var hashVal = SHA256(this.user + this.session + "_processes_map");
-			//console.log(hashVal);
 			var toReturn = (await retrieveData(hashVal));
 			return toReturn;
 		}
@@ -2825,8 +2479,6 @@ function fadeOutLightbox()
 	
 	async function storeProcessDataMap(toStore)
 	{
-		//console.log("Storing for: " + this.session);
-		//console.log(toStore);
 		if(this.session == "Aggregated")
 		{
 			
@@ -2837,7 +2489,6 @@ function fadeOutLightbox()
 			//while(!isDone)
 			{
 				var hashVal = SHA256(this.user + this.session + "_processes_map");
-				//console.log(hashVal);
 				isDone = await persistDataAndWait(hashVal, toStore);
 			}
 		}
@@ -2845,7 +2496,6 @@ function fadeOutLightbox()
 	
 	async function getProcessLookupData()
 	{
-		//console.log("Retrieving for: " + this.session);
 		if(this.session == "Aggregated")
 		{
 			return [];
@@ -2853,7 +2503,6 @@ function fadeOutLightbox()
 		else
 		{
 			var hashVal = SHA256(this.user + this.session + "_processes_lookup");
-			//console.log(hashVal);
 			var toReturn = (await retrieveData(hashVal));
 			return toReturn;
 		}
@@ -2862,8 +2511,6 @@ function fadeOutLightbox()
 	
 	async function storeProcessDataLookup(toStore)
 	{
-		//console.log("Storing for: " + this.session);
-		//console.log(toStore);
 		if(this.session == "Aggregated")
 		{
 			
@@ -2874,7 +2521,6 @@ function fadeOutLightbox()
 			while(!isDone)
 			{
 				var hashVal = SHA256(this.user + this.session + "_processes_lookup");
-				//console.log(hashVal);
 				isDone = await persistDataAndWait(hashVal, toStore);
 			}
 		}
@@ -2952,17 +2598,11 @@ function fadeOutLightbox()
 					}
 				}
 			}
-			//console.log("Data:");
-			//console.log(theNormDataInit);
-			//console.log("Filtering...");
 			var filteredData = await filter(theNormDataInit, filters);
 			console.log("Filtered:");
 			console.log(filteredData);
-			//console.log("Awaiting");
-			//console.log((await (filter(theNormDataInit, filters))));
 			
 			theNormData = filteredData//((await filter(theNormDataInit, filters)).value);
-			//console.log(theNormData);
 			showDefault();
 		}
 		console.log("Starting Main Vis")
@@ -2989,7 +2629,6 @@ function fadeOutLightbox()
 				minTimeUserUniversal = Number.POSITIVE_INFINITY;
 				for(session in theNormData[user])
 				{
-					//console.log("Doing session " + session);
 					maxTimeSession = 0;
 					minTimeSession = Number.POSITIVE_INFINITY;
 					minTimeSessionUniversal = Number.POSITIVE_INFINITY;
@@ -2999,17 +2638,14 @@ function fadeOutLightbox()
 					theCurData = theNormData[user][session];
 					for(dataType in theCurData)
 					{
-						//console.log("Doing data: " + dataType);
 						thisData = theCurData[dataType];
 						
 						if(!(user in lookupTable))
 						{
-							//console.log("Adding to lookup table: " + user)
 							lookupTable[user] = {};
 						}
 						if(!(session in lookupTable[user]))
 						{
-							//console.log("Adding to lookup table: " + session)
 							lookupTable[user][session] = {};
 						}
 						
@@ -3052,26 +2688,18 @@ function fadeOutLightbox()
 							{
 								processMap[user] = {};
 							}
-							//console.log("Checking proc map for " + session);
 							if(!(session in processMap[user]))
 							{
-								//console.log("Adding proc map for " + session);
 								//processMap[user][session] = {};
 								var processMapDataObject = {};
 								processMapDataObject["user"] = user;
 								processMapDataObject["session"] = session;
 								processMapDataObject["data"] = getProcessMapData;
 								processMapDataObject["storedata"] = storeProcessDataMap;
-								//console.log("Storing")
-								//console.log(processMapDataObject)
-								//console.log(processMap);
 								await processMapDataObject["storedata"]({});
 								processMap[user][session] = processMapDataObject;
 							}
-							//console.log("Getting proc map");
 							curUserSessionMap = (await (processMap[user][session]["data"]())).value;
-							//console.log("Got");
-							//console.log(curUserSessionMap);
 						}
 						
 						for(x=0; x<thisData.length; x++)
@@ -3888,7 +3516,6 @@ function fadeOutLightbox()
 							var openSpots = [];
 							openSpots.push(0);
 							
-							//console.log("New session");
 							var maxNumActive = 1;
 							var curSession = userSessionOrdering[userSessionList[y]];
 							var userSession = {}
@@ -3944,9 +3571,6 @@ function fadeOutLightbox()
 									//{
 									if(eventsList[z]["Description"] == "start")
 									{
-										//console.log("Got new start");
-										//console.log(openSpots);
-										//console.log("Cur active " + Object.keys(curActiveMap).length);
 									}
 									if(openSpots.length == 0)
 									{
@@ -4013,7 +3637,6 @@ function fadeOutLightbox()
 									{
 										delete curActiveMap[eventsList[z]["TaskName"]];
 										openRow = eventsList[z]["Active Row"];
-										//console.log("Returning " + openRow)
 										if(openSpots.length == 0)
 										{
 											openSpots.push(openRow);
@@ -4591,7 +4214,6 @@ function fadeOutLightbox()
 					{
 						userSessionAxisY[d["User"]][d["Session"]] = {};
 					}
-					//console.log(userSessionAxisY);
 					toReturn = d["User Number"] * barHeight;
 					toReturn += barHeight * 2 * i;
 					toReturn -= barHeight / 2;
@@ -4608,8 +4230,6 @@ function fadeOutLightbox()
 				{
 					var curX = d3.mouse(this)[0];
 					var curY = d3.mouse(this)[1];
-					//console.log(curX + ", " + curY);
-					//console.log(this);
 					timelineTick.attr("x", curX)
 								.attr("y", function()
 										{
@@ -4652,7 +4272,6 @@ function fadeOutLightbox()
 										}
 										updateScreenshot();
 										//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + userName + "&timestamp=" + getScreenshot(userName, sessionName, screenshotIndex)["Index MS"] + "&session=" + sessionName + "&event=" + eventName + "\" style=\"max-height: " + (windowHeight * .9) + "px; max-width:100%\"></div></td></tr>");
-										//console.log(minSession + (scale(curX) * 60000));
 										return scale(curX)
 									});
 					timelineText.raise();
@@ -4952,10 +4571,6 @@ function fadeOutLightbox()
 		
 		d3.select("#optionFilterTable").attr("height", getInnerHeight("optionFilterCell") + "px");
 		
-		//console.log(windowLegend)
-		//console.log(eventTypeArray)
-		//console.log((2 + windowLegend.length + eventTypeArray.length));
-		//console.log(legendSVG.node())
 		d3.select("#legend").select("svg").style("height", (legendHeight * (2 + windowLegend.length + eventTypeArray.length)) + "px");
 		d3.select("#legend").style("height", getInnerHeight("legendCell") + "px");
 		refreshingStart = false;
@@ -4965,15 +4580,10 @@ function fadeOutLightbox()
 	{
 		var toReturn = 0;
 		toReturn = document.getElementById(elementID).getBoundingClientRect().height;
-		//console.log(toReturn);
 		toReturn -= parseInt(getComputedStyle(document.getElementById(elementID), null).getPropertyValue('border-top-width'), 10);
-		//console.log(toReturn);
 		toReturn -= parseInt(getComputedStyle(document.getElementById(elementID), null).getPropertyValue('border-bottom-width'), 10);
-		//console.log(toReturn);
 		toReturn -= parseInt(getComputedStyle(document.getElementById(elementID), null).getPropertyValue('padding-bottom'), 10);
-		//console.log(toReturn);
 		toReturn -= parseInt(getComputedStyle(document.getElementById(elementID), null).getPropertyValue('padding-top'), 10)
-		//console.log(toReturn);
 		return toReturn;
 	}
 	
@@ -5206,9 +4816,8 @@ function fadeOutLightbox()
 		var keystrokes = (await theNormData[owningUser][owningSession]["keystrokes"]["getfiltered"]()).value;
 		var mouse = (await theNormData[owningUser][owningSession]["mouse"]["getfiltered"]()).value;
 		var windows = theNormData[owningUser][owningSession]["windows"];
+		var processes = (await theNormData[owningUser][owningSession]["processes"]["getfiltered"]()).value;
 		
-		
-		//console.log(divBounds);
 		
 		var garbageToRemove = [];
 		
@@ -5264,6 +4873,10 @@ function fadeOutLightbox()
 		var keystrokesIndex = 0;
 		var mouseIndex = 0;
 		var windowsIndex = 0;
+		var processIndex = 0;
+		var numTopProcesses = 5;
+		var topProcesses = [];
+		var curTop = {};
 		
 		var seekBarG = animationSvg.append("g");
 		var seekBar = seekBarG.append("rect")
@@ -5361,6 +4974,13 @@ function fadeOutLightbox()
 				.style("pointer-events", "none")
 				.text("Seek");
 		
+		var timeLog = axisLabelG.append("text")
+				.attr("x", divBounds["width"])
+				.attr("y", (divBounds["height"] * .8) + textPadding)
+				.attr("text-anchor", "end")
+				.style("pointer-events", "none")
+				.text("Time");
+		
 		var axisTickG = animationSvg.append("g");
 		var axisTick = axisTickG.append("rect")
 				.style("pointer-events", "none")
@@ -5370,6 +4990,54 @@ function fadeOutLightbox()
 				.attr("x", 0)
 				.attr("y", (divBounds["height"] * .8));
 		
+		var maxProcCPU = 0;
+		var processGraphAniG = animationSvg.append("g");
+		var processGraphAni = processGraphAniG.append("rect")
+				.attr("width", (2 * divBounds["width"]) / 9)
+				.attr("height", (divBounds["height"] * .2) - textPadding)
+				.attr("fill", "Yellow")
+				.style("fill-opacity", ".25")
+				.attr("stroke", "Black")
+				.attr("x", (4.5 * divBounds["width"]) / 9)
+				.attr("y", (divBounds["height"] * .8) + textPadding);
+		var processGraphAniBarG = processGraphAniG.append("g");
+		var processGraphAniLabel = processGraphAniG.append("text")
+				.style("pointer-events", "none")
+				.attr("text-anchor", "end")
+				.attr("dominant-baseline", "hanging")
+				//.attr("textLength", (2 * divBounds["width"]) / 9)
+				.attr("fill", "Black")
+				.attr("stroke", "Black")
+				.attr("font-size", (divBounds["height"] * .025))
+				//.style("font-weight", "bold")
+				.text("Top Process %CPU")
+				.attr("x", (6.5 * divBounds["width"]) / 9)
+				.attr("y", (divBounds["height"] * .8) + textPadding);
+		var processGraphAniMaxLabel = processGraphAniG.append("text")
+				.style("pointer-events", "none")
+				.attr("text-anchor", "end")
+				.attr("dominant-baseline", "Auto")
+				//.attr("textLength", (2 * divBounds["width"]) / 9)
+				.attr("fill", "Black")
+				.attr("stroke", "Black")
+				.attr("font-size", (divBounds["height"] * .025))
+				//.style("font-weight", "bold")
+				.text("100")
+				.attr("x", (6.5 * divBounds["width"]) / 9)
+				.attr("y", (divBounds["height"]));
+		var processGraphAniMinLabel = processGraphAniG.append("text")
+				.style("pointer-events", "none")
+				.attr("text-anchor", "start")
+				.attr("dominant-baseline", "Auto")
+				//.attr("textLength", (2 * divBounds["width"]) / 9)
+				.attr("fill", "Black")
+				.attr("stroke", "Black")
+				.attr("font-size", (divBounds["height"] * .025))
+				//.style("font-weight", "bold")
+				.text("0")
+				.attr("x", (4.5 * divBounds["width"]) / 9)
+				.attr("y", (divBounds["height"]));
+		
 		var playPauseG = animationSvg.append("g");
 		var playPause = playPauseG.append("rect")
 				.attr("width", divBounds["width"] / 9)
@@ -5377,7 +5045,8 @@ function fadeOutLightbox()
 				.attr("fill", "Chartreuse")
 				.attr("stroke", "Black")
 				.attr("x", (8 * divBounds["width"]) / 9)
-				.attr("y", (divBounds["height"] * .8) + textPadding);
+				.attr("y", (divBounds["height"] * .8) + textPadding)
+				.style("cursor", "pointer");
 		var playPauseLabel = playPauseG.append("text")
 				.style("pointer-events", "none")
 				.attr("text-anchor", "middle")
@@ -5388,6 +5057,7 @@ function fadeOutLightbox()
 				.attr("stroke", "Black")
 				.attr("font-size", (divBounds["height"] * .0375))
 				.text("⏸")
+				.style("cursor", "pointer")
 				.attr("x", (8.5 * divBounds["width"]) / 9)
 				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .03125));
 		var activeWindowTitle = playPauseG.append("text")
@@ -5460,6 +5130,11 @@ function fadeOutLightbox()
 			{
 				windowsTime = Number(windows[windowsIndex]["Index MS Session"]);
 			}
+			var processTime = Infinity;
+			if(processes && processIndex < processes.length)
+			{
+				processTime = Number(processes[processIndex]["Index MS Session"]);
+			}
 			
 			if(screenshotTime < keystrokesTime)
 			{
@@ -5467,26 +5142,58 @@ function fadeOutLightbox()
 				{
 					if(screenshotTime < windowsTime)
 					{
-						screenshotIndex++;
-						return screenshots[screenshotIndex - 1];
+						if(processTime < screenshotTime)
+						{
+							processIndex++;
+							return processes[processIndex - 1];
+						}
+						else
+						{
+							screenshotIndex++;
+							return screenshots[screenshotIndex - 1];
+						}
 					}
 					else
 					{
-						windowsIndex++;
-						return windows[windowsIndex - 1];
+						if(processTime < windowsTime)
+						{
+							processIndex++;
+							return processes[processIndex - 1];
+						}
+						else
+						{
+							windowsIndex++;
+							return windows[windowsIndex - 1];
+						}
 					}
 				}
 				else
 				{
 					if(mouseTime < windowsTime)
 					{
-						mouseIndex++;
-						return mouse[mouseIndex - 1];
+						if(processTime < mouseTime)
+						{
+							processIndex++;
+							return processes[processIndex - 1];
+						}
+						else
+						{
+							mouseIndex++;
+							return mouse[mouseIndex - 1];
+						}
 					}
 					else
 					{
-						windowsIndex++;
-						return windows[windowsIndex - 1];
+						if(processTime < windowsTime)
+						{
+							processIndex++;
+							return processes[processIndex - 1];
+						}
+						else
+						{
+							windowsIndex++;
+							return windows[windowsIndex - 1];
+						}
 					}
 				}
 			}
@@ -5494,26 +5201,57 @@ function fadeOutLightbox()
 			{
 				if(mouseTime < windowsTime)
 				{
-					mouseIndex++;
-					return mouse[mouseIndex - 1];
+					if(processTime < mouseTime)
+					{
+						processIndex++;
+						return processes[processIndex - 1];
+					}
+					else
+					{
+						mouseIndex++;
+						return mouse[mouseIndex - 1];
+					}
 				}
 				else
 				{
-					windowsIndex++;
-					return windows[windowsIndex - 1];
+					if(processTime < windowsTime)
+					{
+						processIndex++;
+						return processes[processIndex - 1];
+					}
+					{
+						windowsIndex++;
+						return windows[windowsIndex - 1];
+					}
 				}
 			}
 			else
 			{
 				if(keystrokesTime < windowsTime)
 				{
-					keystrokesIndex++;
-					return keystrokes[keystrokesIndex - 1];
+					if(processTime < keystrokesTime)
+					{
+						processIndex++;
+						return processes[processIndex - 1];
+					}
+					else
+					{
+						keystrokesIndex++;
+						return keystrokes[keystrokesIndex - 1];
+					}
 				}
 				else
 				{
-					windowsIndex++;
-					return windows[windowsIndex - 1];
+					if(processTime < windowsTime)
+					{
+						processIndex++;
+						return processes[processIndex - 1];
+					}
+					else
+					{
+						windowsIndex++;
+						return windows[windowsIndex - 1];
+					}
 				}
 			}
 		}
@@ -5562,13 +5300,11 @@ function fadeOutLightbox()
 		{
 			var curFrame = screenshots[screenshotIndex];
 			
-			//console.log(curFrame);
 			
 			
 			//lastImg.src = "data:image/jpg;base64," + (await (curFrame["Screenshot"]()));
 			lastImg = await loadImage(curFrame);
 			
-			//console.log(lastImg);
 			
 			curScreenshot = backgroundG.append("image")
 				.attr("width", divBounds["width"])
@@ -5576,8 +5312,6 @@ function fadeOutLightbox()
 				//.attr("preserveAspectRatio", "xMidYMid meet");
 				.attr("preserveAspectRatio", "none");
 			
-			//console.log(lastImg["height"]);
-			//console.log("Done setting initial pane");
 				
 				var xRatio = divBounds["width"] / lastImg["width"];
 				var yRatio = (divBounds["height"] * .8) / lastImg["height"];
@@ -5587,7 +5321,6 @@ function fadeOutLightbox()
 					finalRatio = yRatio;
 				}
 			
-			//console.log("Final ratio is " + finalRatio);
 				
 				var finalWidth = finalRatio * lastImg["width"];
 				var finalX = (divBounds["width"] - finalWidth) / 2;
@@ -5637,12 +5370,13 @@ function fadeOutLightbox()
 			runAnimationWrapped();
 		}
 		
+		var updateProcAni = false;
+		
 		async function runAnimationWrapped()
 		{
 			startY = (divBounds["height"] * .8)
 			var curFrame = nextFrame();
 			
-			//console.log(curFrame);
 			
 			if(curFrame)
 			{
@@ -5654,9 +5388,7 @@ function fadeOutLightbox()
 					{
 						var sessionTime = Number(lastMouseClicks[entry].attr("indexTime"));
 						var curType = lastMouseClicks[entry].attr("Type");
-						//console.log(sessionTime);
 						var timeDiff = Number(curFrame["Index MS Session"]) - sessionTime;
-						//console.log(timeDiff);
 						if(timeDiff > degradeCoefficient)
 						{
 							lastMouseClicks[entry].remove();
@@ -5679,6 +5411,10 @@ function fadeOutLightbox()
 				}
 			}
 			
+			if(curFrame)
+			{
+				timeLog.text(curFrame["Index MS Session"]);
+			}
 			
 			if(curFrame && curFrame["Screenshot"])
 			{
@@ -5750,9 +5486,9 @@ function fadeOutLightbox()
 			{
 				activeWindow.text(curFrame["FirstClass"]);
 				activeWindow.attr("textLength", "")
-				if(activeWindow.node().getBBox()["width"] + textHeight > (divBounds["width"]) / 2)
+				if(activeWindow.node().getBBox()["width"] + textHeight > ((2.5 * divBounds["width"]) / 9))
 				{
-					activeWindow.attr("textLength", (divBounds["width"]) / 2)
+					activeWindow.attr("textLength", (2.5 * divBounds["width"]) / 9)
 				}
 				else
 				{
@@ -5760,9 +5496,9 @@ function fadeOutLightbox()
 				}
 				activeWindowName.text(curFrame["Name"]);
 				activeWindowName.attr("textLength", "")
-				if(activeWindowName.node().getBBox()["width"] + textHeight > (divBounds["width"]) / 2)
+				if(activeWindowName.node().getBBox()["width"] + textHeight > ((2.5 * divBounds["width"]) / 9))
 				{
-					activeWindowName.attr("textLength", (divBounds["width"]) / 2)
+					activeWindowName.attr("textLength", (2.5 * divBounds["width"]) / 9)
 				}
 				else
 				{
@@ -5773,12 +5509,9 @@ function fadeOutLightbox()
 			if(curFrame && curFrame["XLoc"])
 			{
 				var xLoc = Number(curFrame["XLoc"]);
-				//console.log(xLoc);
 				xLoc = xLoc / lastImg["width"];
-				//console.log(xLoc);
 				xLoc = xLoc * curScreenshot.attr("width");
 				xLoc = xLoc + Number(curScreenshot.attr("x"));
-				//console.log(xLoc);
 				var yLoc = Number(curFrame["YLoc"]) / lastImg["height"];
 				yLoc = yLoc * curScreenshot.attr("height");
 				var centerColor = "Black";
@@ -5894,10 +5627,135 @@ function fadeOutLightbox()
 					
 				}
 				
-				//console.log(keyboardInputs);
 				
-				
-				
+			}
+			
+			if(curFrame && curFrame["PID"])
+			{
+				if(curFrame["CPU"] > 0)
+				{
+					if(curTop[curFrame["PID"]])
+					{
+						for(var x = 0; x < topProcesses.length; x++)
+						{
+							if(curFrame["PID"] == topProcesses[x]["PID"])
+							{
+								//if(curFrame["CPU"] != topProcesses[x]["CPU"])
+								{
+									topProcesses.splice(x, 1);
+									delete curTop[curFrame["PID"]];
+									//break;
+								}
+							}
+						}
+					}
+					//else
+					{
+						for(var x = 0; x < numTopProcesses; x++)
+						{
+							if(topProcesses.length <= x)
+							{
+								topProcesses.push(curFrame);
+								curTop[curFrame["PID"]] = true;
+								updateProcAni = true;
+								break;
+							}
+							else
+							{
+								if(curFrame["CPU"] > topProcesses[x]["CPU"])
+								{
+									curTop[curFrame["PID"]] = true;
+									topProcesses.splice(x, 0, curFrame);
+									if(topProcesses[numTopProcesses])
+									{
+										delete curTop[topProcesses[numTopProcesses]["PID"]];
+									}
+									topProcesses = topProcesses.slice(0, numTopProcesses);
+									updateProcAni = true;
+									break;
+								}
+							}
+						}
+					}
+				}
+				{
+					{
+						if(updateProcAni)
+						{
+							
+							if(topProcesses[0])
+							{
+								maxProcCPU = topProcesses[0]["CPU"];
+							}
+							else
+							{
+								maxProcCPU = 0;
+							}
+							processGraphAniMaxLabel.text(maxProcCPU);
+							processGraphAniBarG.selectAll("*")
+									//.data(topProcesses)
+									//.exit()
+									.remove();
+							processGraphAniBarG.selectAll("rect")
+									.data(topProcesses)
+									.enter()
+									.append("rect")
+									//.attr("width", (2 * divBounds["width"]) / 9)
+									.attr("width", function(d, i)
+											{
+												if(maxProcCPU == 0)
+												{
+													return 0;
+												}
+												return ((d["CPU"] / maxProcCPU) * (2 * divBounds["width"]) / 9);
+											})
+									.attr("height", (((divBounds["height"] * .2) - textPadding) / numTopProcesses))
+									.attr("fill", function(d, i)
+											{
+												//var scaleMult = 20 / numTopProcesses;
+												//if(scaleMult > 1)
+												//{
+												//	return colorScale(i * scaleMult);
+												//}
+												//else
+												//{
+													return colorScale(((i % 10) * 2) + 1);
+												//}
+											})
+									.style("fill-opacity", ".9")
+									.attr("stroke", "Black")
+									.attr("x", (4.5 * divBounds["width"]) / 9)
+									.attr("y", function(d, i)
+											{
+												var initReturn =  ((divBounds["height"] * .8) + textPadding);
+												return initReturn + (i * (((divBounds["height"] * .2) - textPadding) / numTopProcesses));
+											});
+							
+							//processGraphAniBarG.selectAll("text")
+							//		.data(topProcesses)
+									//.exit()
+							//		.remove();
+							processGraphAniBarG.selectAll("text")
+									.data(topProcesses)
+									.enter()
+									.append("text")
+									.attr("dominant-baseline", "hanging")
+									.attr("font-size", (((divBounds["height"] * .2) - textPadding) / numTopProcesses) / 2)
+									.attr("stroke", "Black")
+									.text(function(d, i)
+											{
+												return d["Command"] + " " + d["PID"] + ": " + d["CPU"];
+											})
+									.attr("x", (4.5 * divBounds["width"]) / 9)
+									.attr("y", function(d, i)
+											{
+												var initReturn =  ((divBounds["height"] * .8) + textPadding);
+												return initReturn + (i * (((divBounds["height"] * .2) - textPadding) / numTopProcesses));
+											});
+								
+						}
+					}
+				}
 			}
 			
 			for(entry in keyboardInputs)
@@ -5946,34 +5804,37 @@ function fadeOutLightbox()
 		seekBar.on("click", function(d, i)
 				{
 					clearTimeout(animationTimeout);
+					topProcesses = [];
+					curTop = {};
+					updateProcAni = true;
 					var curX = d3.mouse(this)[0];
 					var curY = d3.mouse(this)[1];
 					var selectTime = timeScaleAnimationLookup(curX);
-					//console.log(selectTime);
 					var curDiff = Infinity;
 					if(screenshots)
 					{
 						screenshotIndex = closestIndexMSBinarySession(screenshots, selectTime);
 						var curScreenshot = screenshots[screenshotIndex];
-						//console.log(curScreenshot);
 					}
 					if(keystrokes)
 					{
 						keystrokesIndex = closestIndexMSBinarySession(keystrokes, selectTime);
 						var curKeystrokes = keystrokes[keystrokesIndex];
-						//console.log(curKeystrokes);
 					}
 					if(mouse)
 					{
 						mouseIndex = closestIndexMSBinarySession(mouse, selectTime);
 						var curMouse = mouse[mouseIndex];
-						//console.log(curMouse);
 					}
 					if(windows)
 					{
 						windowsIndex = closestIndexMSBinarySession(windows, selectTime);
 						var curWindows = windows[windowsIndex];
-						//console.log(curMouse);
+					}
+					if(processes)
+					{
+						processIndex = closestIndexMSBinarySession(processes, selectTime);
+						var curProcess = processes[processIndex];
 					}
 					
 					var selectedEntry;
@@ -6014,8 +5875,6 @@ function fadeOutLightbox()
 					{
 						windowsIndex++;
 					}
-					//console.log(selectedEntry);
-					//console.log(nextFrame());
 					d3.event.stopPropagation();
 					lastFrame = selectedEntry;
 					axisTick.style("transition", "none");
@@ -6071,13 +5930,11 @@ function fadeOutLightbox()
 		var taskName = document.getElementById("addTaskName").value;
 		var taskTags = encodeURIComponent(document.getElementById("tags").value);
 		
-		//console.log(taskTags);
 		
 		var taskUrl = "addTask.json?event=" + eventName + "&userName=" + userName + "&sessionName=" + sessionName + "&start=" + startTask + "&end=" + endTask + "&taskName=" + taskName + "&taskTags=" + taskTags;
 		
 		d3.json(taskUrl, function(error, data)
 					{
-						//console.log(data);
 						if(data["result"] == "okay")
 						{
 							console.log("Added task, now refreshing")
@@ -6189,7 +6046,6 @@ function fadeOutLightbox()
 	
 	async function showSession(owningUser, owningSession)
 	{
-		//console.log(d3.select("#mainVisContainer").style("height",  "300px").attr("height",  "300px"));
 		
 		curSelectUser = owningUser;
 		curSelectSession = owningSession;
@@ -7034,7 +6890,11 @@ function fadeOutLightbox()
 		var firstIndex  = 0,
 			lastIndex   = items.length - 1,
 			middleIndex = Math.floor((lastIndex + firstIndex)/2);
-
+		if(!items[middleIndex])
+		{
+			console.log(items);
+			console.log(middleIndex);
+		}
 		while(items[middleIndex]["Index MS Session"] != value && firstIndex < lastIndex)
 		{
 		   if (value < items[middleIndex]["Index MS Session"])
@@ -7111,11 +6971,7 @@ function fadeOutLightbox()
 							var curSelect = "&users=" + userName + "&sessions=" + sessionName;
 							d3.json("logExport.json?event=" + eventName + "&datasources=events&normalize=none" + curSelect, async function(error, data)
 							{
-								//console.log("Downloaded")
-								//console.log(data);
 								let theNormDataInit = ((await retrieveData("indexdata")).value);
-								//console.log("Adding to")
-								//console.log(theNormDataInit);
 								
 								theNormDataInit[userName][sessionName]["events"] = data[userName][sessionName]["events"];
 								if(!theNormDataInit[userName][sessionName]["events"])
@@ -7167,7 +7023,6 @@ function fadeOutLightbox()
 	
 	async function showWindow(username, session, type, timestamp, lookupIndex)
 	{
-		//console.log(username + ": " + session + ": " + type + ": " + timestamp);
 		if(username != curSelectUser || session != curSelectSession)
 		{
 			clearWindow();
@@ -7442,7 +7297,6 @@ function fadeOutLightbox()
 		if(curTask)
 		{
 			var curNode = {};
-			//console.log(curParent);
 			if(nodeCache[curParent["Task Hash"]])
 			{
 				curNode = nodeCache[curParent["Task Hash"]];
@@ -7452,9 +7306,6 @@ function fadeOutLightbox()
 				curNode["Result"] = curParent;
 				curNode["Transitions"] = [];
 				nodeCache[curParent["Task Hash"]] = curNode;
-				//console.log("Adding to cache 1");
-				//console.log(curParent);
-				//console.log(curNode);
 			}
 			
 			var curTransition = [];
@@ -7484,11 +7335,7 @@ function fadeOutLightbox()
 						nextPredNode["Result"] = curTask["Predecessor"]["Parent Task"];
 						nextPredNode["Transitions"] = [];
 						nodeCache[curTask["Predecessor"]["Parent Task"]["Task Hash"]] = nextPredNode;
-						//console.log(curTask["Predecessor"]);
 						analyzeTaskMap(curTask["Predecessor"], nodeCache);
-						//console.log("Adding to cache 3");
-						//console.log(taskToCheck["Parent Task"]["Task Hash"]);
-						//console.log(nextConNode);
 					}
 					curTransition.push(nextPredNode);
 				}
@@ -7509,13 +7356,8 @@ function fadeOutLightbox()
 			{
 				for(var y = x - 1; y >= 0; y--)
 				{
-					//console.log("is this")
-					//console.log(curChildren[y])
-					//console.log("in")
-					//console.log(curChildren[x])
 					if(curChildren[x]["Concurrent Tasks"].indexOf(curChildren[y]) == -1)
 					{
-						//console.log("No, setting...")
 						curChildren[x]["Predecessor"] = curChildren[y];
 						break;
 					}
@@ -7527,7 +7369,6 @@ function fadeOutLightbox()
 				if(!curChildren[x]["Predecessor"])
 				{
 					//defPred = JSON.parse(JSON.stringify(curTask));
-					//console.log(defPred);
 					var defPred = {}
 					defPred["Child Tasks"] = [];
 					defPred["Concurrent Tasks"] = [];
@@ -7540,8 +7381,6 @@ function fadeOutLightbox()
 					//defPred["Parent Task"]["TaskName"] = "Begin " + defPred["Parent Task"]["TaskName"];
 					if(!curChildren[x]["Predecessor"])
 					{
-						//console.log("setting again...");
-						//console.log(curChildren[x]);
 						curChildren[x]["Predecessor"] = defPred;
 						defPred["Successor"] = curChildren[x];
 						var nextSuccessor = curChildren[x]["Successor"];
@@ -7574,14 +7413,10 @@ function fadeOutLightbox()
 						nextNode["Result"] = curChildren[x]["Parent Task"];
 						nextNode["Transitions"] = [];
 						nodeCache[curChildren[x]["Parent Task"]["Task Hash"]] = nextNode;
-						//console.log(curChildren[x]);
 						if(curTask["Predecessor"])
 						{
 							if(curChildren[x]["Predecessor"])
 							{
-								//console.log("conflict:");
-								//console.log(curTask);
-								//console.log(curChildren[x]);
 							}
 							else
 							{
@@ -7589,17 +7424,10 @@ function fadeOutLightbox()
 							}
 						}
 						analyzeTaskMap(curChildren[x], nodeCache);
-						//console.log("Adding to cache 2");
-						//console.log(curChildren[x]["Parent Task"]);
-						//console.log(nextNode);
 					}
 					curTransition.push(nextNode);
 					for(entry in curChildren[x]["Concurrent Tasks"])
 					{
-						//console.log("Looking at:");
-						//console.log(curChildren[x]["Concurrent Tasks"][entry]);
-						//console.log("Is in?");
-						//console.log(childHashes);
 						var taskToCheck = curChildren[x]["Concurrent Tasks"][entry];
 						if(taskToCheck["Parent Task"]["Task Hash"] in childHashes)
 						{
@@ -7615,9 +7443,6 @@ function fadeOutLightbox()
 								nodeCache[taskToCheck["Parent Task"]["Task Hash"]] = nextConNode;
 								console.log(taskToCheck);
 								analyzeTaskMap(taskToCheck, nodeCache);
-								//console.log("Adding to cache 3");
-								//console.log(taskToCheck["Parent Task"]["Task Hash"]);
-								//console.log(nextConNode);
 							}
 							curTransition.push(nextConNode);
 						}
@@ -7639,7 +7464,6 @@ function fadeOutLightbox()
 	
 	async function buildTaskMap(user, session, task, onlySession, colissionMap)
 	{
-		//console.log(task);
 		
 		
 		if(task.constructor.name == "String")
@@ -7647,7 +7471,6 @@ function fadeOutLightbox()
 			task = objectCacheMap[task];
 		}
 		
-		//console.log(task);
 		
 		
 		if(!colissionMap)
@@ -7659,12 +7482,8 @@ function fadeOutLightbox()
 		
 		task["Task Hash"] = thisHash;
 		
-		//console.log("Looking for:")
-		//console.log(task);
 		if(colissionMap[thisHash])
 		{
-			//console.log("Found in cache")
-			//console.log(colissionMap[thisHash])
 			return colissionMap[thisHash];
 		}
 		var concurrentTasks = [];
@@ -7686,9 +7505,6 @@ function fadeOutLightbox()
 		var sessionCurIndices = {};
 		//First we select all of the task arrays.
 		
-		//console.log(theNormData);
-		//console.log(user);
-		//console.log(theNormData[user]);
 		
 		if(onlySession)
 		{
@@ -7699,8 +7515,6 @@ function fadeOutLightbox()
 		{
 			for(entry in theNormData[user]["Session Ordering"]["Order List"])
 			{
-				//console.log(entry);
-				//console.log(theNormData[user]["Session Ordering"]["Order List"][entry])
 				if(theNormData[user]["Session Ordering"]["Order List"][entry] == -1)
 				{
 					continue;
@@ -7723,8 +7537,6 @@ function fadeOutLightbox()
 			}
 		}
 		
-		//console.log(sessions);
-		//console.log(sessionTasks);
 		
 		
 		var sessionsIncluded = [];
@@ -7767,8 +7579,6 @@ function fadeOutLightbox()
 				alreadyIn = true;
 				sessionCurIndices["start_" + sessions[entry]] = startNode;
 				sessionsIncluded.push(sessions[entry]);
-				//console.log("Starting at:");
-				//console.log(curSession[startNode]);
 			}
 			
 			sessionCurIndices["start_" + sessions[entry]] = startNode;
@@ -7799,8 +7609,6 @@ function fadeOutLightbox()
 				{
 					sessionsIncluded.push(sessions[entry]);
 				}
-				//console.log("Ending at:");
-				//console.log(curSession[endNode]);
 			}
 			
 			
@@ -7819,18 +7627,12 @@ function fadeOutLightbox()
 			var toReturn;
 			var minEvent = Infinity;
 			var finalSession = "";
-			//console.log(sessionCurIndices);
-			//console.log(sessionsIncluded);
 			for(entry in sessionsIncluded)
 			{
-				//console.log(sessionsIncluded[entry]);
 				var curSession = sessionTasks[sessionsIncluded[entry]];
-				//console.log("start_" + sessionsIncluded[entry]);
 				var curStart = sessionCurIndices["start_" + sessionsIncluded[entry]];
 				var curEnd = sessionCurIndices["end_" + sessionsIncluded[entry]];
 				
-				//console.log("Start " + curStart);
-				//console.log("End " + curEnd);
 				
 				if(curStart <= curEnd)
 				{
