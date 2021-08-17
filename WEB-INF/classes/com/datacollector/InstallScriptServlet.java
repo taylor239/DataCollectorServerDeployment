@@ -651,7 +651,7 @@ public class InstallScriptServlet extends HttpServlet {
 					"echo start /B C:\\mysql\\mysql-8.0.23-winx64\\bin\\mysqld.exe --defaults-file=\"C:\\\\mysql\\\\config.ini\"> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
 					"echo :wait_for_mysql>> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
 					"echo 	C:\\mysql\\mysql-8.0.23-winx64\\bin\\mysql.exe -uroot -e \";\">> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
-					"echo 	IF ERRORLEVEL 1 GOTO wait_for_mysql>> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"" +
+					"echo 	IF ERRORLEVEL 1 GOTO wait_for_mysql>> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" +
 					"echo start /B java -jar -XX:+IgnoreUnrecognizedVMOptions C:\\datacollector\\DataCollector.jar -user " + curEmail + " -server " + serverName + ":" + port + " -adminemail " + curAdmin + " -event " + curEvent + " " + continuous + " " + taskgui + " -screenshot " + screenshotTime + ">> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
 					"shutdown /R\n" + 
 					"";
