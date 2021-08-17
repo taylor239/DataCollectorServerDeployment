@@ -629,7 +629,7 @@ public class InstallScriptServlet extends HttpServlet {
 					"\n" + 
 					"\n" + 
 					"bitsadmin /transfer myDownloadJob /download /priority high https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.23-winx64.zip C:\\mysql\\mysql-8.0.23-winx64.zip\n" + 
-					"tar -xf C:\\mysql\\mysql-8.0.23-winx64.zip\n" + 
+					"tar -xf C:\\mysql\\mysql-8.0.23-winx64.zip -C C:\\mysql\\\n" + 
 					"\n" + 
 					"bitsadmin /transfer myDownloadJob /download /priority high http://" + serverName + ":" + port + "/DataCollectorServer/openDataCollection/endpointSoftware/config.ini C:\\mysql\\config.ini\n" + 
 					"\"C:\\mysql\\mysql-8.0.23-winx64\\bin\\mysqld.exe\" --defaults-file=\"C:\\\\mysql\\\\config.ini\" --initialize-insecure --console\n" + 
@@ -646,9 +646,12 @@ public class InstallScriptServlet extends HttpServlet {
 					"\n" + 
 					"\n" + 
 					"mkdir C:\\datacollector\n" + 
-					"bitsadmin /transfer myDownloadJob /download /priority high http://" + serverName + ":" + port + "/DataCollectorServer/openDataCollection/endpointSoftware/DataCollector.jar C:\\datacollector\\DataCollector.jar\n" + 
+					"bitsadmin /transfer myDownloadJob /download /priority high http://" + serverName + ":" + port + "/DataCollectorServer/openDataCollection/endpointSoftware/DataCollectorOld.jar C:\\datacollector\\DataCollector.jar\n" + 
 					"\n" + 
 					"echo start /B C:\\mysql\\mysql-8.0.23-winx64\\bin\\mysqld.exe --defaults-file=\"C:\\\\mysql\\\\config.ini\"> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
+					"echo :wait_for_mysql>> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
+					"echo 	C:\\mysql\\mysql-8.0.23-winx64\\bin\\mysql.exe -uroot -e \";\">> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
+					"echo 	IF ERRORLEVEL 1 GOTO wait_for_mysql>> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"" +
 					"echo start /B java -jar -XX:+IgnoreUnrecognizedVMOptions C:\\datacollector\\DataCollector.jar -user " + curEmail + " -server " + serverName + ":" + port + " -adminemail " + curAdmin + " -event " + curEvent + " " + continuous + " " + taskgui + " -screenshot " + screenshotTime + ">> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
 					"shutdown /R\n" + 
 					"";
