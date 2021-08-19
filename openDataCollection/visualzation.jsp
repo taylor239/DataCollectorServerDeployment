@@ -5128,7 +5128,7 @@ if(request.getParameter("email") != null)
 			var processTime = Infinity;
 			if(processes && processIndex < processes.length)
 			{
-				while(processIndex < processes.length && !(processes[processIndex]["Next Index"]))
+				while(processIndex < processes.length && !(processes[processIndex]["Next"]))
 				{
 					processIndex++;
 				}
