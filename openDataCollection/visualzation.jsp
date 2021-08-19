@@ -1755,7 +1755,6 @@ if(request.getParameter("email") != null)
 							if(downloadedMouseSessions == totalSessions && downloadedKeystrokesSessions == totalSessions && downloadedProcessSessions == totalSessions && downloadedSessions == totalSessions)
 							{
 								removeFilter(1);
-								refreshData();
 							}
 						}
 						
@@ -1948,7 +1947,6 @@ if(request.getParameter("email") != null)
 							if(downloadedMouseSessions == totalSessions && downloadedKeystrokesSessions == totalSessions && downloadedProcessSessions == totalSessions && downloadedSessions == totalSessions)
 							{
 								removeFilter(1);
-								refreshData();
 							}
 						}
 						
@@ -2141,7 +2139,6 @@ if(request.getParameter("email") != null)
 							if(downloadedMouseSessions == totalSessions && downloadedKeystrokesSessions == totalSessions && downloadedProcessSessions == totalSessions && downloadedSessions == totalSessions)
 							{
 								removeFilter(1);
-								refreshData();
 							}
 						}
 						
@@ -2371,7 +2368,6 @@ if(request.getParameter("email") != null)
 						if(downloadedMouseSessions == totalSessions && downloadedKeystrokesSessions == totalSessions && downloadedProcessSessions == totalSessions && downloadedSessions == totalSessions)
 						{
 							removeFilter(1);
-							refreshData();
 						}
 					}
 					if(imageDownloadQueue.length > 0)
@@ -2434,7 +2430,6 @@ if(request.getParameter("email") != null)
 				if(downloadedMouseSessions == totalSessions && downloadedKeystrokesSessions == totalSessions && downloadedProcessSessions == totalSessions && downloadedSessions == totalSessions)
 				{
 					removeFilter(1);
-					refreshData();
 				}
 			}
 			if(imageDownloadQueue.length > 0)
