@@ -1675,8 +1675,12 @@ function fadeOutLightbox()
 					}
 					
 					var hasTask = (tasksSearch === "");
-					for(entry in theNormData[user][session]["events"] && !hasTask)
+					for(entry in theNormData[user][session]["events"])
 					{
+						if(hasTask)
+						{
+							break;
+						}
 						var curEvent = theNormData[user][session]["events"][entry];
 						if(curEvent["Description"] == "start")
 						{
@@ -1694,8 +1698,12 @@ function fadeOutLightbox()
 					}
 					
 					var hasTask = (windowSearch === "");
-					for(entry in theNormData[user][session]["windows"] && !hasTask)
+					for(entry in theNormData[user][session]["windows"])
 					{
+						if(hasTask)
+						{
+							break;
+						}
 						var curEvent = theNormData[user][session]["windows"][entry];
 						var curOption = curEvent["FirstClass"] + ": " + curEvent["Name"];
 						if(curOption.includes(windowSearch))
@@ -1709,8 +1717,12 @@ function fadeOutLightbox()
 					}
 					
 					var hasTask = (processSearch === "");
-					for(entry in theNormData[user][session]["processsummary"] && !hasTask)
+					for(entry in theNormData[user][session]["processsummary"])
 					{
+						if(hasTask)
+						{
+							break;
+						}
 						var curEvent = theNormData[user][session]["processsummary"][entry];
 						var curOption = curEvent["Command"] + ": " + curEvent["Arguments"];
 						if(curOption.includes(processSearch))
