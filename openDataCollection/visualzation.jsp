@@ -5128,10 +5128,10 @@ if(request.getParameter("email") != null)
 			var processTime = Infinity;
 			if(processes && processIndex < processes.length)
 			{
-				while(processIndex < processes.length && !(processes[processIndex]["Next"]))
-				{
-					processIndex++;
-				}
+				//while(processIndex < processes.length && !(processes[processIndex]["Next"]))
+				//{
+				//	processIndex++;
+				//}
 				processTime = Number(processes[processIndex]["Index MS Session"]);
 			}
 			
@@ -5644,13 +5644,14 @@ if(request.getParameter("email") != null)
 									topProcesses.splice(x, 1);
 									delete curTop[curFrame["PID"]];
 									//break;
+									updateProcAni = true;
 								}
 							}
 						}
 					}
 					//else
 					{
-						for(var x = 0; x < numTopProcesses; x++)
+						for(var x = 0; curFrame["Next"] && x < numTopProcesses; x++)
 						{
 							if(topProcesses.length <= x)
 							{
