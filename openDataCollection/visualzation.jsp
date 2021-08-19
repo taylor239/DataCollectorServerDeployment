@@ -5312,8 +5312,8 @@ if(request.getParameter("email") != null)
 				.attr("preserveAspectRatio", "none");
 			
 				
-				var xRatio = divBounds["width"] / lastImg["width"];
-				var yRatio = (divBounds["height"] * .8) / lastImg["height"];
+				var xRatio = divBounds["width"] / lastImg["naturalWidth"];
+				var yRatio = (divBounds["height"] * .8) / lastImg["naturalHeight"];
 				var finalRatio = xRatio;
 				if(xRatio > yRatio)
 				{
@@ -5427,8 +5427,8 @@ if(request.getParameter("email") != null)
 				lastImg = await loadImage(curFrame);
 				
 				
-				var xRatio = divBounds["width"] / lastImg["width"];
-				var yRatio = (divBounds["height"] * .8) / lastImg["height"];
+				var xRatio = divBounds["width"] / lastImg["naturalWidth"];
+				var yRatio = (divBounds["height"] * .8) / lastImg["naturalHeight"];
 				var finalRatio = xRatio;
 				if(xRatio > yRatio)
 				{
