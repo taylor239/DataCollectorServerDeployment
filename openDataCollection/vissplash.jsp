@@ -1657,25 +1657,25 @@ function fadeOutLightbox()
 				if(curRow)
 				{
 					curRow.style.display = "";
-					if(!(user.includes(userSearch)))
+					if(!(userSearch === "") && !(user.includes(userSearch)))
 					{
 						curRow.style.display = "none";
 					}
-					if(!(session.includes(sessionSearch)))
+					if(!(sessionSearch === "") && !(session.includes(sessionSearch)))
 					{
 						curRow.style.display = "none";
 					}
-					if(!(theNormData[user][session]["Index MS Session Min Date"].includes(startSearch)))
+					if(!(startSearch === "") && !(theNormData[user][session]["Index MS Session Min Date"].includes(startSearch)))
 					{
 						curRow.style.display = "none";
 					}
-					if(!(theNormData[user][session]["Index MS Session Max Date"].includes(endSearch)))
+					if(!(endSearch === "") && !(theNormData[user][session]["Index MS Session Max Date"].includes(endSearch)))
 					{
 						curRow.style.display = "none";
 					}
 					
-					var hasTask = false;
-					for(entry in theNormData[user][session]["events"])
+					var hasTask = (tasksSearch === "");
+					for(entry in theNormData[user][session]["events"] && !hasTask)
 					{
 						var curEvent = theNormData[user][session]["events"][entry];
 						if(curEvent["Description"] == "start")
@@ -1693,8 +1693,8 @@ function fadeOutLightbox()
 						curRow.style.display = "none";
 					}
 					
-					var hasTask = false;
-					for(entry in theNormData[user][session]["windows"])
+					var hasTask = (windowSearch === "");
+					for(entry in theNormData[user][session]["windows"] && !hasTask)
 					{
 						var curEvent = theNormData[user][session]["windows"][entry];
 						var curOption = curEvent["FirstClass"] + ": " + curEvent["Name"];
@@ -1708,8 +1708,8 @@ function fadeOutLightbox()
 						curRow.style.display = "none";
 					}
 					
-					var hasTask = false;
-					for(entry in theNormData[user][session]["processsummary"])
+					var hasTask = (processSearch === "");
+					for(entry in theNormData[user][session]["processsummary"] && !hasTask)
 					{
 						var curEvent = theNormData[user][session]["processsummary"][entry];
 						var curOption = curEvent["Command"] + ": " + curEvent["Arguments"];
@@ -1723,12 +1723,12 @@ function fadeOutLightbox()
 						curRow.style.display = "none";
 					}
 					
-					if(!(theNormData[user][session]["environment"][0]["Environment"].includes(environmentSearch)))
+					if(!(environmentSearch === "") &&  !(theNormData[user][session]["environment"][0]["Environment"].includes(environmentSearch)))
 					{
 						curRow.style.display = "none";
 					}
 					
-					if(!(theNormData[user][session]["environment"][0]["Notes"].includes(noteSearch)))
+					if(!(noteSearch === "") && !(theNormData[user][session]["environment"][0]["Notes"].includes(noteSearch)))
 					{
 						curRow.style.display = "none";
 					}
