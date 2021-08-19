@@ -5128,6 +5128,10 @@ if(request.getParameter("email") != null)
 			var processTime = Infinity;
 			if(processes && processIndex < processes.length)
 			{
+				while(!(processes[processIndex]["Next Index"]))
+				{
+					processIndex++;
+				}
 				processTime = Number(processes[processIndex]["Index MS Session"]);
 			}
 			
