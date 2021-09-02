@@ -1449,6 +1449,55 @@ public class DatabaseConnector
             try { if (conn != null) conn.close(); } catch(Exception e) { }
         }
 		
+		if(myReturn != null)
+		{
+			System.out.println("Trying to get task tags");
+			ConcurrentHashMap eventTagMap = getTaskTagsHierarchyMap(event, admin, usersToSelect, sessionsToSelect, start, end);
+			//if(true)
+			//{
+			//	System.out.println(eventTagMap);
+			//	return myReturn;
+			//}
+			
+			Iterator userIterator = eventTagMap.entrySet().iterator();
+			while(userIterator.hasNext())
+			{
+				Map.Entry userEntry = (Entry) userIterator.next();
+				String userName = (String) userEntry.getKey();
+				System.out.println(userName);
+				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userEntry.getValue();
+				Iterator sessionIterator = sessionMap.entrySet().iterator();
+				while(sessionIterator.hasNext())
+				{
+					Map.Entry sessionEntry = (Entry) sessionIterator.next();
+					String sessionName = (String) sessionEntry.getKey();
+					//System.out.println(sessionName);
+					ConcurrentHashMap eventTags = (ConcurrentHashMap) sessionEntry.getValue();
+					
+					//System.out.println(myReturn);
+					ArrayList eventList = (ArrayList) ((ConcurrentHashMap)((ConcurrentHashMap) myReturn.get(userName)).get(sessionName)).get("events");
+					
+					//System.out.println(eventList);
+					
+					for(int x = 0; x < eventList.size(); x++)
+					{
+						ConcurrentHashMap curEvent = (ConcurrentHashMap) eventList.get(x);
+						if(eventTags.containsKey(curEvent.get("TaskName")))
+						{
+							ConcurrentHashMap nameMap = (ConcurrentHashMap) eventTags.get(curEvent.get("TaskName"));
+							if(nameMap.containsKey(curEvent.get("StartTime")))
+							{
+								ArrayList tagList = (ArrayList) nameMap.get(curEvent.get("StartTime"));
+								curEvent.put("Tags", tagList);
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		
+		
 		return myReturn;
 	}
 	
@@ -1565,6 +1614,146 @@ public class DatabaseConnector
 				
 				eventList.add(nextRow);
 				//myReturn.add(nextRow);
+			}
+			stmt = myStatement;
+			rset = myResults;
+			
+			rset.close();
+			stmt.close();
+			conn.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+            try { if (rset != null) rset.close(); } catch(Exception e) { }
+            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+            try { if (conn != null) conn.close(); } catch(Exception e) { }
+        }
+		
+		return myReturn;
+	}
+	
+	public ConcurrentHashMap getTaskTagsHierarchyMap(String event, String admin, ArrayList usersToSelect, ArrayList sessionsToSelect, String start, String end)
+	{
+		ConcurrentHashMap myReturn = new ConcurrentHashMap();
+		
+		Connection conn = null;
+        Statement stmt = null;
+        ResultSet rset = null;
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		conn = myConnector;
+		
+		String taskQuery = this.taskTagQuery;
+		String userSelectString = "";
+		if(!usersToSelect.isEmpty())
+		{
+			userSelectString = " AND `Task`.`username` IN (";
+			for(int x=0; x<usersToSelect.size(); x++)
+			{
+				userSelectString += "?";
+				if(!(x + 1 == usersToSelect.size()))
+				{
+					userSelectString += ", ";
+				}
+			}
+			userSelectString += ")";
+			taskQuery = taskQuery.replace("`Task`.`adminEmail` = ?", "`Task`.`adminEmail` = ? " + userSelectString);
+		}
+		
+		String sessionSelectString = "";
+		if(!sessionsToSelect.isEmpty())
+		{
+			sessionSelectString = " AND `Task`.`session` IN (";
+			for(int x=0; x<sessionsToSelect.size(); x++)
+			{
+				sessionSelectString += "?";
+				if(!(x + 1 == sessionsToSelect.size()))
+				{
+					sessionSelectString += ", ";
+				}
+			}
+			sessionSelectString += ")";
+			taskQuery = taskQuery.replace("`Task`.`adminEmail` = ?", "`Task`.`adminEmail` = ? " + sessionSelectString);
+		}
+		
+		if(!start.isEmpty() && !end.isEmpty())
+		{
+			taskQuery = taskQuery + limiter;
+		}
+		
+		try
+		{
+			System.out.println(taskQuery);
+			PreparedStatement myStatement = myConnector.prepareStatement(taskQuery);
+			myStatement.setString(1, event);
+			myStatement.setString(2, admin);
+			int sessionOffset = 0;
+			for(int x=0; x < sessionsToSelect.size(); x++)
+			{
+				myStatement.setString(3 + x, (String) sessionsToSelect.get(x));
+				sessionOffset = x + 1;
+			}
+			
+			int secondSessionOffset = 0;
+			for(int x=0; x < usersToSelect.size(); x++)
+			{
+				myStatement.setString(3 + sessionOffset + x, (String) usersToSelect.get(x));
+				secondSessionOffset = x + 1;
+			}
+			
+			if(!start.isEmpty() && !end.isEmpty())
+			{
+				myStatement.setInt(3 + sessionOffset + secondSessionOffset, Integer.parseInt(start));
+				myStatement.setInt(4 + sessionOffset + secondSessionOffset, Integer.parseInt(end));
+			}
+			
+			
+			ResultSet myResults = myStatement.executeQuery();
+			while(myResults.next())
+			{
+				//ConcurrentHashMap nextRow = new ConcurrentHashMap();
+				
+				//nextRow.put("Username", myResults.getString("username"));
+				String userName = myResults.getString("username");
+				//nextRow.put("Session", myResults.getString("session"));
+				String sessionName = myResults.getString("session");
+				String taskName = myResults.getString("taskName");
+				//nextRow.put("Completion", myResults.getString("completion"));
+				Timestamp startTime = myResults.getTimestamp("startTimestamp", cal);
+				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
+				//nextRow.put("Event", myResults.getString("event"));
+				
+				String tag = myResults.getString("tag");
+				
+				if(!myReturn.containsKey(userName))
+				{
+					myReturn.put(userName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap userMap = (ConcurrentHashMap) myReturn.get(userName);
+				
+				if(!userMap.containsKey(sessionName))
+				{
+					userMap.put(sessionName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userMap.get(sessionName);
+				
+				if(!sessionMap.containsKey(taskName))
+				{
+					sessionMap.put(taskName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap nameMap = (ConcurrentHashMap) sessionMap.get(taskName);
+				
+				if(!nameMap.containsKey(startTime))
+				{
+					nameMap.put(startTime, new ArrayList());
+				}
+				ArrayList tagList = (ArrayList) nameMap.get(startTime);
+				
+				tagList.add(tag);
 			}
 			stmt = myStatement;
 			rset = myResults;

@@ -426,9 +426,9 @@ public class DataExportLog extends HttpServlet {
 				dataTypes.add("events");
 				ConcurrentHashMap eventMap = myConnector.getTasksHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
 				headMap = myConnector.mergeMaps(headMap, eventMap);
-				dataTypes.add("eventtags");
-				ConcurrentHashMap eventTagMap = myConnector.getTaskTagsHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
-				headMap = myConnector.mergeMaps(headMap, eventTagMap);
+				//dataTypes.add("eventtags");
+				//ConcurrentHashMap eventTagMap = myConnector.getTaskTagsHierarchy(eventName, admin, userSelectList, sessionSelectList, firstIndex, count);
+				//headMap = myConnector.mergeMaps(headMap, eventTagMap);
 			}
 			//else
 			{
