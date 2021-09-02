@@ -4254,7 +4254,7 @@ if(request.getParameter("email") != null)
 										sessionName = d["Session"];
 										//var scale = theNormData[userName][sessionName]["Time Scale"];
 										maxSession = Number(theNormData[userName][sessionName]["Index MS Session Max"]);
-										minSession = theNormData[userName]["Index MS User Min Absolute"] + theNormData[userName][sessionName]["Index MS User Session Min"];
+										minSession = theNormData[userName][sessionName]["Index MS Session Min Universal"];
 										scale = d3.scaleLinear();
 										scale.range([0, maxSession / 60000]);
 										scale.domain([xAxisPadding, visWidth]);
@@ -6207,7 +6207,7 @@ if(request.getParameter("email") != null)
 						sessionName = owningSession;
 						//var scale = theNormData[userName][sessionName]["Time Scale"];
 						maxSession = Number(theNormData[userName][sessionName]["Index MS Session Max"]);
-						minSession = theNormData[userName]["Index MS User Min Absolute"] + theNormData[userName][sessionName]["Index MS User Session Min"];
+						minSession = theNormData[userName][sessionName]["Index MS Session Min Universal"];
 						scale = d3.scaleLinear();
 						scale.range([0, maxSession / 60000]);
 						scale.domain([xAxisPadding, visWidth]);
@@ -6922,8 +6922,6 @@ if(request.getParameter("email") != null)
 		
 		while(unfound && items[middleIndex] && items[middleIndex]["Index MS"] != value && firstIndex < lastIndex)
 		{
-			console.log("Compare to: " + value);
-			console.log("Searching at " + middleIndex + ": " + items[middleIndex]["Index MS"]);
 		   if (value < items[middleIndex]["Index MS"])
 			{
 				lastIndex = middleIndex - 1;
@@ -7226,9 +7224,11 @@ if(request.getParameter("email") != null)
 					.append("tr");
 				delRow.append("td")
 					.attr("colspan", "2")
+					.attr("width", "50%")
 					.html("<button type=\"button\" onclick=\"deleteTask('" + curSlot["Owning User"] + "', '" + curSlot["Original Session"] + "', '" + curSlot["TaskName"] + "', '" + curSlot["Index MS"] + "','" + curSlot["Source"] + "')\">Delete</button>");
 				delRow.append("td")
 					.attr("colspan", "2")
+					.attr("width", "50%")
 					.html("<button type=\"button\" onclick=\"updateTask('" + curSlot["Owning User"] + "', '" + curSlot["Original Session"] + "', '" + curSlot["TaskName"] + "', '" + curSlot["Index MS"] + "','" + curSlot["Source"] + "')\">Update</button>");
 			
 				var updateRow = d3.select("#extraInfoTable")
@@ -7241,6 +7241,7 @@ if(request.getParameter("email") != null)
 					.append("tr");
 				updateRow.append("td")
 					.attr("colspan", "2")
+					.attr("width", "50%")
 					.html("<div align='center'>Task Name</div><div align='center'><input type=\"text\" id=\"updateTaskName\" name=\"updateTaskName\" value=\"" + curSlot["TaskName"] + "\"></div>");
 				
 				var curTags = "";
@@ -7250,6 +7251,7 @@ if(request.getParameter("email") != null)
 				}	
 				updateRow.append("td")
 					.attr("colspan", "2")
+					.attr("width", "50%")
 					.html("<div align='center'>Tags</div><div align='center'><textarea id=\"updateTags\" name=\"updateTags\" rows=\"5\" cols=\"50\">" + curTags + "</textarea></div>");
 				
 				updateRow = d3.select("#extraInfoTable")
@@ -7271,7 +7273,13 @@ if(request.getParameter("email") != null)
 						+ "<td colspan=\"2\"><button type=\"button\" onclick=\"buildTaskMapTop('" + curSlot["Owning User"] + "', '" + curSlot["Original Session"] + "', '" + curSlot["Hash"] + "', false)\">Build Attack Graph User Limited</button></td>");
 		}
 		
-		d3.select("#extraInfoTable")
+		var infoTitleRow = d3.select("#extraInfoTable")
+			.append("tr");
+		infoTitleRow.append("td")
+			.attr("colspan", "4")
+			.html("<div align='center'><b>Selected Data Attributes</b></div>");
+		
+		d3.select("#extraInfoTable").append("tr").append("td").attr("colspan", "4").append("table").attr("width", "100%")
 				.selectAll("tr")
 				.data(finalFormattedSlot)
 				.enter()
