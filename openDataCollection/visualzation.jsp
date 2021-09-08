@@ -39,7 +39,6 @@ if(eventAdmin != null)
 	session.setAttribute("eventAdmin", eventAdmin);
 }
 
-
 if(request.getParameter("email") != null)
 {
 	session.removeAttribute("admin");
@@ -220,8 +219,7 @@ if(request.getParameter("email") != null)
 						</div>
 						</td>
 					</tr>
-					
-					
+
 			</table>
 		</td>
 		<td class="layoutTableCenter centerCol" id="mainVisContainer">
@@ -312,7 +310,6 @@ if(request.getParameter("email") != null)
 	</tr>
 </table>
 </body>
-
 
 <style>
 
@@ -426,11 +423,9 @@ if(request.getParameter("email") != null)
 	firstFilter["Value"] = "== 'Aggregated'";
 	//firstFilter["id"] = "filter_0"
 	filters.push(firstFilter);
+
 	
-	
-	
-	
-	
+
 	var containingTableRow = document.getElementById("mainVisContainer");
 	var visTable = document.getElementById("visTable");
 	var visRow = document.getElementById("visRow");
@@ -606,8 +601,7 @@ if(request.getParameter("email") != null)
 	}
 	
 	//rebuildFilters();
-	
-	
+
 	function removeFilter(filterNum)
 	{
 		
@@ -779,8 +773,7 @@ if(request.getParameter("email") != null)
 			}
 		}
 	}
-	
-	
+
 	
 	var startedDownload = {};
 	
@@ -909,8 +902,7 @@ if(request.getParameter("email") != null)
 	var measureBy = "session";
 	async function filter(dataToFilter, filters)
 	{
-		
-		
+
 		summaryProcStats = {};
 		summaryProcStatsArray = [];
 		var filterMap = {};
@@ -958,8 +950,7 @@ if(request.getParameter("email") != null)
 						}
 					}
 				}
-				
-				
+
 				
 				for(data in dataToFilter[user][session])
 				{
@@ -1111,8 +1102,7 @@ if(request.getParameter("email") != null)
 					curEntry["Server"] = data[entry]["Server"];
 					savedFilters[data[entry]["SaveName"]].push(curEntry);
 				}
-				
-				
+
 				d3.select("#savedFilters")
 					.selectAll("option")
 					.remove();
@@ -1141,16 +1131,14 @@ if(request.getParameter("email") != null)
 				rebuildFilters();
 				downloadData();
 			})
-	
-			
+
 	var db;
 	var objectStore;
 	
 	var curQueue = [];
 	
 	var persistWriting = false;
-	
-	
+
 	
 	async function persistData(key, value)
 	{
@@ -1197,8 +1185,7 @@ if(request.getParameter("email") != null)
 		args["value"] = value;
 		curQueue.push(args);
 		var myReturn = await writePersist();
-		
-		
+
 		//if(curQueue.length > 0)
 		//{
 		//	console.log("Waiting on write...")
@@ -1374,8 +1361,7 @@ if(request.getParameter("email") != null)
 			})
 			
 		}
-		
-		
+
 	}
 	
 	async function nestedCountData(key)
@@ -1409,8 +1395,7 @@ if(request.getParameter("email") != null)
 			})
 			
 		}
-		
-		
+
 	}
 	
 	async function getScreenshotData()
@@ -1489,8 +1474,7 @@ if(request.getParameter("email") != null)
 		
 		d3.select("#title")
 			.html(origTitle);
-		
-		
+
 		if(needsUpdate)
 		{
 			d3.select("#title")
@@ -1532,8 +1516,7 @@ if(request.getParameter("email") != null)
 					first = false;
 				}
 			}
-			
-			
+
 			d3.json("logExport.json?event=" + eventName + "&datasources=windows,events,environment,screenshotindices&normalize=none" + userSessionFilter, async function(error, data)
 				{
 					try
@@ -1566,8 +1549,7 @@ if(request.getParameter("email") != null)
 					
 					d3.select("#title")
 						.html(origTitle + "<br />Index data: <b>" + downloadedSize + "</b> bytes; new image data: <b>" + downloadedImageSize + "</b> bytes; new process data: <b>" + downloadedProcessSize + "</b> bytes; finished " + downloadedSessions + " of " + totalSessions + " sessions.")
-					
-					
+
 					d3.select("body").style("cursor", "");
 					start(true);
 				})
@@ -2241,8 +2223,7 @@ if(request.getParameter("email") != null)
 		}
 		sheet.innerHTML = "#playbutton_" + SHA256(userName + sessionName) + " {fill:Yellow;}";
 		document.body.appendChild(sheet);
-		
-		
+
 		var curCount = nextCount;
 		
 		while(curCount < imageArray.length)
@@ -2340,8 +2321,7 @@ if(request.getParameter("email") != null)
 						+ downloadedMouseSessions + " mouse sessions of "
 						+ totalSessions
 						+ " total sessions.")
-				
-				
+
 				if(curCount < imageArray.length)
 				{
 					console.log("Continuing screenshots from " + userName + ", " + sessionName + ": " + curCount + " : " + chunkSize + " of " + imageArray.length);
@@ -2453,8 +2433,7 @@ if(request.getParameter("email") != null)
 		var e = new Date().getTime + (seconds * 1000);
 		while(new Date().getTime() < e) {}
 	}
-	
-	
+
 	
 	function setTimeScale(type)
 	{
@@ -2478,8 +2457,7 @@ if(request.getParameter("email") != null)
 			return toReturn;
 		}
 	}
-	
-	
+
 	async function storeProcessDataMap(toStore)
 	{
 		if(this.session == "Aggregated")
@@ -2510,8 +2488,7 @@ if(request.getParameter("email") != null)
 			return toReturn;
 		}
 	}
-	
-	
+
 	async function storeProcessDataLookup(toStore)
 	{
 		if(this.session == "Aggregated")
@@ -2534,12 +2511,10 @@ if(request.getParameter("email") != null)
 	
 	var processToWindow = {};
 	var windowToProcess = {};
-	
-	
+
 	var timelineTick;
 	var timelineText;
-	
-	
+
 	var visWidthParent = (containingTableRow.offsetWidth - visPadding);
 	var refreshingStart = false;
 	async function start(needsUpdate)
@@ -2559,8 +2534,7 @@ if(request.getParameter("email") != null)
 		var visHeightNew = windowHeight * .5 * timelineZoomVert;
 		barHeight = visHeightNew / 10;
 		legendHeight = visHeightNew / 25;
-		
-		
+
 		if(needsUpdate)
 		{
 			d3.select("#mainVisualization").selectAll("*").remove();
@@ -2732,17 +2706,14 @@ if(request.getParameter("email") != null)
 							
 							if(dataType == "processes")
 							{
-								
-								
+
 								thisData[x]["Owning User"] = user;
 								thisData[x]["Owning Session"] = session;
 								thisData[x]["Hash"] = SHA256(thisData[x]["User"] + thisData[x]["Start"] + thisData[x]["PID"])
-								
-								
+
 								curLookupTable[thisData[x]["Hash"]] = thisData[x];
 								//lookupTable[user][session]["Processes"][thisData[x]["Hash"]] = thisData[x];
-								
-								
+
 								
 								
 								curPid = thisData[x]["PID"]
@@ -2986,8 +2957,7 @@ if(request.getParameter("email") != null)
 					highlightItems("select_" + SHA256(d));
 				})
 		.classed("clickableBar", true);
-		
-		
+
 		var legendText = legendSVG.append("g")
 				.selectAll("text")
 				.data(windowLegend)
@@ -3045,8 +3015,7 @@ if(request.getParameter("email") != null)
 		svg = svg.append("g");
 		
 		var finalTimelineHeight = 0;
-		
-		
+
 		//Paint main vis timeline
 		var curSessionCount = 0;
 		backgroundG = svg.append("g")
@@ -3125,8 +3094,7 @@ if(request.getParameter("email") != null)
 				})
 		.attr("opacity", 1)
 		.attr("z", 2);
-		
-		
+
 		var userLabels = svg.append("g")
 		.selectAll("text")
 		.data(userOrderArray)
@@ -3199,8 +3167,7 @@ if(request.getParameter("email") != null)
 				{
 					addFilterDirect(0, "", "!= '" + userOrderMap[d] + "'");
 				});
-		
-		
+
 		var filterLabelsUser = svg.append("g")
 		.selectAll("text")
 		.data(userOrderArray)
@@ -3276,8 +3243,7 @@ if(request.getParameter("email") != null)
 				{
 					downloadUser(userOrderMap[d]);
 				});
-		
-		
+
 		var downloadLabelsUser = svg.append("g")
 		.selectAll("text")
 		.data(userOrderArray)
@@ -3483,8 +3449,7 @@ if(request.getParameter("email") != null)
 		.attr("z", 2);
 		
 		var foregroundTextG = svg.append("g");
-		
-		
+
 		
 		var eventTimeline;
 		var eventTypeNumbers = {};
@@ -3535,8 +3500,7 @@ if(request.getParameter("email") != null)
 							
 							//sessionList.push(userSession);
 							var eventsList = theNormData[theUser][curSession]["events"];
-							
-							
+
 							var curActiveMap = {};
 							var curSessionList = [];
 							
@@ -4196,8 +4160,7 @@ if(request.getParameter("email") != null)
 					return "screenshot_" + d["Hash"];
 				})
 		.attr("opacity", .9);
-		
-		
+
 		//Tick for animation
 		timelineTick = svg.append("rect").style("pointer-events", "none");
 		timelineText = svg.append("text")
@@ -4371,8 +4334,7 @@ if(request.getParameter("email") != null)
 		.attr("opacity", "1")
 		.text("Active Window")
 		.attr("z", 2);
-		
-		
+
 		var sessionAxes = svg.append("g")
 		.selectAll("g")
 		.data(sessionList)
@@ -4416,8 +4378,7 @@ if(request.getParameter("email") != null)
 					axis(d3.select(this));
 					d3.selectAll(this).select("*").style("pointer-events", "none");
 				});
-		
-		
+
 		
 		
 		var sessionLabels = svg.append("g")
@@ -4547,13 +4508,11 @@ if(request.getParameter("email") != null)
 					return colorScaleAccent(d["Number"]);
 				});
 
-
 		var legendTextEvents = legendSVG.append("g")
 		.selectAll("text")
 		.data(eventTypeArray)
 		.enter()
 		.append("text")
-		//.attr("font-size", 11)
 		.style("pointer-events", "none")
 		.attr("x", 0)
 		.attr("y", function(d, i)
@@ -4607,8 +4566,7 @@ if(request.getParameter("email") != null)
 		toReturn -= parseInt(getComputedStyle(document.getElementById(elementID), null).getPropertyValue('padding-top'), 10)
 		return toReturn;
 	}
-	
-	
+
 	
 	var lastHighlighted;
 	
@@ -4626,9 +4584,6 @@ if(request.getParameter("email") != null)
 	
 	function clearWindow()
 	{
-		//d3.select("#mainVisualization").select("svg")
-		//.attr("height", (visHeight) + "px")
-		//.style("height", (visHeight) + "px");
 		if(curPlayButton)
 		{
 			curPlayButton.attr("fill", curPlayButton.attr("initFill"));
@@ -4641,7 +4596,6 @@ if(request.getParameter("email") != null)
 		{
 			if(curSelElements[selection] && !(curSelElements[selection].empty()) && curSelElements[selection].attr("initFill"))
 			{
-				//curSelElements[selection].attr("fill", curSelElements[selection].attr("initFill"));
 				curSelElements[selection].attr("fill", function(){ return this.getAttribute("initFill"); });
 			}
 		}
@@ -4681,7 +4635,6 @@ if(request.getParameter("email") != null)
 			.selectAll("*")
 			.remove();
 		d3.select("#extraHighlightDiv").style('overflow-y', 'auto').style("height", "auto")
-		//d3.select("#infoTable").append("tr").html("<td colspan=4><div align=\"center\">Details</div></td>");
 		
 		for(element in curHighlight)
 		{
@@ -4691,7 +4644,7 @@ if(request.getParameter("email") != null)
 		
 		if(theNormDataDone)
 		{
-			//showDefault();
+			
 		}
 	}
 	
@@ -4705,7 +4658,6 @@ if(request.getParameter("email") != null)
 		var newSVG = d3.select("#infoTable").append("tr").append("td").append("div").style("max-width", visWidthParent + "px").style("overflow-x", "scroll").append("svg")
 			.attr("width", ((visWidthParent / 15) * summaryProcStatsArray.length)  + "px")
 			.attr("height", bottomVisHeight  + "px")
-			//.attr("id", "processSVG")
 			.append("g");
 		
 		var processTooltip = newSVG.append("g")
@@ -4713,8 +4665,6 @@ if(request.getParameter("email") != null)
 		.attr("y", "0px")
 		.attr("x", "0px")
 		.attr("font-size", xAxisPadding / 10)
-		//.attr("width", xAxisPadding + "px")
-		//.attr("height", bottomVisHeight + "px")
 		.attr("alignment-baseline", "auto")
 		.attr("dominant-baseline", "auto")
 		.attr("text-anchor", "left")
@@ -4752,8 +4702,7 @@ if(request.getParameter("email") != null)
 								.attr("y", (bottomVisHeight - d["count"] / summaryProcStats["Max"] * bottomVisHeight + (xAxisPadding / 10)) + "px")
 								.attr("x", i * (visWidthParent / 15) + (visWidthParent / 60) + "px");
 					});
-					
-		
+
 		var barLabels = newSVG.append("g").selectAll("text")
 		.data(summaryProcStatsArray)
 		.enter()
@@ -4812,8 +4761,7 @@ if(request.getParameter("email") != null)
 							}
 							return "white";
 						});
-		
-		
+
 	}
 	
 	var animationTimeout;
@@ -4833,13 +4781,12 @@ if(request.getParameter("email") != null)
 		
 		var divBounds = aniRow.node().getBoundingClientRect();
 		
-		
 		var screenshots = theNormData[owningUser][owningSession]["screenshots"];
 		var keystrokes = (await theNormData[owningUser][owningSession]["keystrokes"]["getfiltered"]()).value;
 		var mouse = (await theNormData[owningUser][owningSession]["mouse"]["getfiltered"]()).value;
 		var windows = theNormData[owningUser][owningSession]["windows"];
 		var processes = (await theNormData[owningUser][owningSession]["processes"]["getfiltered"]()).value;
-		
+		var events = theNormData[owningUser][owningSession]["events"];
 		
 		var garbageToRemove = [];
 		
@@ -4850,17 +4797,14 @@ if(request.getParameter("email") != null)
 		var backgroundG = animationSvg.append("g");
 		
 		var animationAxisG = animationSvg.append("g");
-		
-		
+
 		var animationG = animationSvg.append("g");
 		
 		var curScreenshot = backgroundG.append("image")
 			.attr("width", divBounds["width"])
 			.attr("height", divBounds["height"])
-			//.attr("preserveAspectRatio", "xMidYMid meet");
 			.attr("preserveAspectRatio", "none");
-		
-			
+
 		var lastScreenshot;
 		
 		var maxSessionAnimation = theNormData[owningUser][owningSession]["Index MS Session Max"];
@@ -4883,8 +4827,7 @@ if(request.getParameter("email") != null)
 					(
 						[0, animationSvg.attr("width")]
 					);
-		
-		
+
 		var animationAxis = d3.axisBottom().scale(timeScaleAnimation);
 		animationAxisG.call(animationAxis);
 		animationAxisG.attr("transform", "translate(" + 0 + "," + (divBounds["height"] * .8) + ")")
@@ -4895,6 +4838,7 @@ if(request.getParameter("email") != null)
 		var keystrokesIndex = 0;
 		var mouseIndex = 0;
 		var windowsIndex = 0;
+		var eventsIndex = 0;
 		var processIndex = 0;
 		var numTopProcesses = 5;
 		var topProcesses = [];
@@ -5027,11 +4971,9 @@ if(request.getParameter("email") != null)
 				.style("pointer-events", "none")
 				.attr("text-anchor", "end")
 				.attr("dominant-baseline", "hanging")
-				//.attr("textLength", (2 * divBounds["width"]) / 9)
 				.attr("fill", "Black")
 				.attr("stroke", "Black")
 				.attr("font-size", (divBounds["height"] * .025))
-				//.style("font-weight", "bold")
 				.text("Top Process %CPU")
 				.attr("x", (6.5 * divBounds["width"]) / 9)
 				.attr("y", (divBounds["height"] * .8) + textPadding);
@@ -5039,11 +4981,9 @@ if(request.getParameter("email") != null)
 				.style("pointer-events", "none")
 				.attr("text-anchor", "end")
 				.attr("dominant-baseline", "Auto")
-				//.attr("textLength", (2 * divBounds["width"]) / 9)
 				.attr("fill", "Black")
 				.attr("stroke", "Black")
 				.attr("font-size", (divBounds["height"] * .025))
-				//.style("font-weight", "bold")
 				.text("100")
 				.attr("x", (6.5 * divBounds["width"]) / 9)
 				.attr("y", (divBounds["height"]));
@@ -5051,11 +4991,9 @@ if(request.getParameter("email") != null)
 				.style("pointer-events", "none")
 				.attr("text-anchor", "start")
 				.attr("dominant-baseline", "Auto")
-				//.attr("textLength", (2 * divBounds["width"]) / 9)
 				.attr("fill", "Black")
 				.attr("stroke", "Black")
 				.attr("font-size", (divBounds["height"] * .025))
-				//.style("font-weight", "bold")
 				.text("0")
 				.attr("x", (4.5 * divBounds["width"]) / 9)
 				.attr("y", (divBounds["height"]));
@@ -5086,31 +5024,19 @@ if(request.getParameter("email") != null)
 				.style("pointer-events", "none")
 				.attr("text-anchor", "end")
 				.attr("dominant-baseline", "middle")
-				//.attr("textLength", (divBounds["width"]) / 9)
 				.attr("fill", "Black")
 				.attr("stroke", "Black")
 				.attr("font-size", (divBounds["height"] * .025))
-				//.style("font-weight", "bold")
 				.text("Active Window and Tasks")
 				.attr("x", divBounds["width"])
 				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .075));
-		//var activeWindowNameBg = playPauseG.append("rect")
-		//		.style("pointer-events", "none")
-		//		.attr("fill", "White")
-		//		.attr("opacity", ".8")
-		//		.attr("x", (divBounds["width"]) - ((2 * divBounds["width"]) / 9))
-		//		.attr("width", (4 * divBounds["width"]) / 9)
-		//		.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .125))
-		//		.attr("height", (divBounds["height"] * .025));
 		var activeWindow = playPauseG.append("text")
 				.style("pointer-events", "none")
 				.attr("text-anchor", "end")
 				.attr("dominant-baseline", "middle")
-				//.attr("textLength", (2 * divBounds["width"]) / 9)
 				.attr("fill", "Black")
 				.attr("stroke", "Black")
 				.attr("font-size", (divBounds["height"] * .025))
-				//.style("font-weight", "bold")
 				.text("...")
 				.attr("x", divBounds["width"])
 				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .1));
@@ -5118,16 +5044,25 @@ if(request.getParameter("email") != null)
 				.style("pointer-events", "none")
 				.attr("text-anchor", "end")
 				.attr("dominant-baseline", "middle")
-				//.attr("textLength", (4 * divBounds["width"]) / 9)
 				.attr("fill", "Black")
 				.attr("stroke", "Black")
 				.attr("font-size", (divBounds["height"] * .025))
-				//.style("font-weight", "bold")
 				.text("...")
 				.attr("x", divBounds["width"])
 				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .125));
 		
-		
+		var activeEvents = [];
+		var activeEventName = playPauseG.append("text")
+				.style("pointer-events", "none")
+				.attr("text-anchor", "end")
+				.attr("dominant-baseline", "middle")
+				.attr("fill", "Black")
+				.attr("stroke", "Black")
+				.attr("font-size", (divBounds["height"] * .025))
+				.text("...")
+				.attr("x", divBounds["width"])
+				.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .15));
+
 		
 		
 		function nextFrame()
@@ -5152,13 +5087,14 @@ if(request.getParameter("email") != null)
 			{
 				windowsTime = Number(windows[windowsIndex]["Index MS Session"]);
 			}
+			var eventsTime = Infinity;
+			if(events && eventsIndex < events.length)
+			{
+				eventsTime = Number(events[eventsIndex]["Index MS Session"]);
+			}
 			var processTime = Infinity;
 			if(processes && processIndex < processes.length)
 			{
-				//while(processIndex < processes.length && !(processes[processIndex]["Next"]))
-				//{
-				//	processIndex++;
-				//}
 				processTime = Number(processes[processIndex]["Index MS Session"]);
 			}
 			
@@ -5170,26 +5106,58 @@ if(request.getParameter("email") != null)
 					{
 						if(processTime < screenshotTime)
 						{
-							processIndex++;
-							return processes[processIndex - 1];
+							if(eventsTime < processTime)
+							{
+								eventsIndex++;
+								return events[eventsIndex - 1];
+							}
+							else
+							{
+								processIndex++;
+								return processes[processIndex - 1];
+							}
 						}
 						else
 						{
-							screenshotIndex++;
-							return screenshots[screenshotIndex - 1];
+							if(eventsTime < screenshotTime)
+							{
+								eventsIndex++;
+								return events[eventsIndex - 1];
+							}
+							else
+							{
+								screenshotIndex++;
+								return screenshots[screenshotIndex - 1];
+							}
 						}
 					}
 					else
 					{
 						if(processTime < windowsTime)
 						{
-							processIndex++;
-							return processes[processIndex - 1];
+							if(eventsTime < processTime)
+							{
+								eventsIndex++;
+								return events[eventsIndex - 1];
+							}
+							else
+							{
+								processIndex++;
+								return processes[processIndex - 1];
+							}
 						}
 						else
 						{
-							windowsIndex++;
-							return windows[windowsIndex - 1];
+							if(eventsTime < windowsTime)
+							{
+								eventsIndex++;
+								return events[eventsIndex - 1];
+							}
+							else
+							{
+								windowsIndex++;
+								return windows[windowsIndex - 1];
+							}
 						}
 					}
 				}
@@ -5199,26 +5167,58 @@ if(request.getParameter("email") != null)
 					{
 						if(processTime < mouseTime)
 						{
-							processIndex++;
-							return processes[processIndex - 1];
+							if(eventsTime < processTime)
+							{
+								eventsIndex++;
+								return events[eventsIndex - 1];
+							}
+							else
+							{
+								processIndex++;
+								return processes[processIndex - 1];
+							}
 						}
 						else
 						{
-							mouseIndex++;
-							return mouse[mouseIndex - 1];
+							if(eventsTime < mouseTime)
+							{
+								eventsIndex++;
+								return events[eventsIndex - 1];
+							}
+							else
+							{
+								mouseIndex++;
+								return mouse[mouseIndex - 1];
+							}
 						}
 					}
 					else
 					{
 						if(processTime < windowsTime)
 						{
-							processIndex++;
-							return processes[processIndex - 1];
+							if(eventsTime < processTime)
+							{
+								eventsIndex++;
+								return events[eventsIndex - 1];
+							}
+							else
+							{
+								processIndex++;
+								return processes[processIndex - 1];
+							}
 						}
 						else
 						{
-							windowsIndex++;
-							return windows[windowsIndex - 1];
+							if(eventsTime < windowsTime)
+							{
+								eventsIndex++;
+								return events[eventsIndex - 1];
+							}
+							else
+							{
+								windowsIndex++;
+								return windows[windowsIndex - 1];
+							}
 						}
 					}
 				}
@@ -5229,25 +5229,58 @@ if(request.getParameter("email") != null)
 				{
 					if(processTime < mouseTime)
 					{
-						processIndex++;
-						return processes[processIndex - 1];
+						if(eventsTime < processTime)
+						{
+							eventsIndex++;
+							return events[eventsIndex - 1];
+						}
+						else
+						{
+							processIndex++;
+							return processes[processIndex - 1];
+						}
 					}
 					else
 					{
-						mouseIndex++;
-						return mouse[mouseIndex - 1];
+						if(eventsTime < mouseTime)
+						{
+							eventsIndex++;
+							return events[eventsIndex - 1];
+						}
+						else
+						{
+							mouseIndex++;
+							return mouse[mouseIndex - 1];
+						}
 					}
 				}
 				else
 				{
 					if(processTime < windowsTime)
 					{
-						processIndex++;
-						return processes[processIndex - 1];
+						if(eventsTime < processTime)
+						{
+							eventsIndex++;
+							return events[eventsIndex - 1];
+						}
+						else
+						{
+							processIndex++;
+							return processes[processIndex - 1];
+						}
 					}
+					else
 					{
-						windowsIndex++;
-						return windows[windowsIndex - 1];
+						if(eventsTime < windowsTime)
+						{
+							eventsIndex++;
+							return events[eventsIndex - 1];
+						}
+						else
+						{
+							windowsIndex++;
+							return windows[windowsIndex - 1];
+						}
 					}
 				}
 			}
@@ -5257,26 +5290,58 @@ if(request.getParameter("email") != null)
 				{
 					if(processTime < keystrokesTime)
 					{
-						processIndex++;
-						return processes[processIndex - 1];
+						if(eventsTime < processTime)
+						{
+							eventsIndex++;
+							return events[eventsIndex - 1];
+						}
+						else
+						{
+							processIndex++;
+							return processes[processIndex - 1];
+						}
 					}
 					else
 					{
-						keystrokesIndex++;
-						return keystrokes[keystrokesIndex - 1];
+						if(eventsTime < keystrokesTime)
+						{
+							eventsIndex++;
+							return events[eventsIndex - 1];
+						}
+						else
+						{
+							keystrokesIndex++;
+							return keystrokes[keystrokesIndex - 1];
+						}
 					}
 				}
 				else
 				{
 					if(processTime < windowsTime)
 					{
-						processIndex++;
-						return processes[processIndex - 1];
+						if(eventsTime < processTime)
+						{
+							eventsIndex++;
+							return events[eventsIndex - 1];
+						}
+						else
+						{
+							processIndex++;
+							return processes[processIndex - 1];
+						}
 					}
 					else
 					{
-						windowsIndex++;
-						return windows[windowsIndex - 1];
+						if(eventsTime < windowsTime)
+						{
+							eventsIndex++;
+							return events[eventsIndex - 1];
+						}
+						else
+						{
+							windowsIndex++;
+							return windows[windowsIndex - 1];
+						}
 					}
 				}
 			}
@@ -5284,8 +5349,7 @@ if(request.getParameter("email") != null)
 		
 		var lastFrame;
 		var lastImg = new Image();
-		
-		
+
 		var lastMouseClicks = [];
 		
 		var keyboardInputs = [];
@@ -5297,10 +5361,6 @@ if(request.getParameter("email") != null)
 							.attr("font-size", 0);
 		
 		keyboardInputs.unshift(curKeyInput);
-		//var typedText = animationG.selectAll("text").data(keyboardInputs).append("text");
-		
-		//var curLine = "";
-		
 		
 		var typedText;
 			
@@ -5326,18 +5386,12 @@ if(request.getParameter("email") != null)
 		{
 			var curFrame = screenshots[screenshotIndex];
 			
-			
-			
-			//lastImg.src = "data:image/jpg;base64," + (await (curFrame["Screenshot"]()));
 			lastImg = await loadImage(curFrame);
-			
 			
 			curScreenshot = backgroundG.append("image")
 				.attr("width", divBounds["width"])
 				.attr("height", divBounds["height"])
-				//.attr("preserveAspectRatio", "xMidYMid meet");
 				.attr("preserveAspectRatio", "none");
-			
 				
 				var xRatio = divBounds["width"] / lastImg["naturalWidth"];
 				var yRatio = (divBounds["height"] * .8) / lastImg["naturalHeight"];
@@ -5346,8 +5400,7 @@ if(request.getParameter("email") != null)
 				{
 					finalRatio = yRatio;
 				}
-			
-				
+
 				var finalWidth = finalRatio * lastImg["width"];
 				var finalX = (divBounds["width"] - finalWidth) / 2;
 				
@@ -5363,7 +5416,6 @@ if(request.getParameter("email") != null)
 				
 				textHeight = curScreenshot.attr("width") / 50;
 				
-				//startY = finalRatio * lastImg["height"];
 				startY = (divBounds["height"] * .8);
 				
 				if(!typedText)
@@ -5376,13 +5428,12 @@ if(request.getParameter("email") != null)
 				
 				if(prevLastScreenshot)
 				{
-					//prevLastScreenshot.remove();
 					garbageToRemove.push(prevLastScreenshot);
 				}
 				if(lastScreenshot)
 				{
 					prevLastScreenshot = lastScreenshot;
-					//lastScreenshot.remove();
+					
 				}
 				lastScreenshot = curScreenshot;
 				for(toRemove in garbageToRemove)
@@ -5402,8 +5453,7 @@ if(request.getParameter("email") != null)
 		{
 			startY = (divBounds["height"] * .8)
 			var curFrame = nextFrame();
-			
-			
+
 			if(curFrame)
 			{
 				axisTick .attr("x", timeScaleAnimation(curFrame["Index MS Session"]));
@@ -5452,8 +5502,7 @@ if(request.getParameter("email") != null)
 				
 				//lastImg.src = "data:image/jpg;base64," + (await curFrame["Screenshot"]());
 				lastImg = await loadImage(curFrame);
-				
-				
+
 				var xRatio = divBounds["width"] / lastImg["naturalWidth"];
 				var yRatio = (divBounds["height"] * .8) / lastImg["naturalHeight"];
 				var finalRatio = xRatio;
@@ -5507,7 +5556,31 @@ if(request.getParameter("email") != null)
 					}
 				}
 			}
-			
+			if(curFrame && curFrame["TaskName"])
+			{
+				if(curFrame["Description"] == "start")
+				{
+					activeEvents.push(curFrame["TaskName"]);
+				}
+				else
+				{
+					var curIndex = activeEvents.indexOf(curFrame["TaskName"]);
+					if(curIndex > -1)
+					{
+						activeEvents.splice(curIndex, 1);
+					}
+				}
+				activeEventName.text(activeEvents.join(', '));
+				activeEventName.attr("textLength", "")
+				if(activeEventName.node().getBBox()["width"] + textHeight > ((2.5 * divBounds["width"]) / 9))
+				{
+					activeEventName.attr("textLength", (2.5 * divBounds["width"]) / 9)
+				}
+				else
+				{
+					activeEventName.attr("textLength", "")
+				}
+			}
 			if(curFrame && curFrame["FirstClass"])
 			{
 				activeWindow.text(curFrame["FirstClass"]);
@@ -5652,8 +5725,7 @@ if(request.getParameter("email") != null)
 					//keyboardInputs.unshift(curLine);
 					
 				}
-				
-				
+
 			}
 			
 			if(curFrame && curFrame["PID"])
@@ -5790,8 +5862,7 @@ if(request.getParameter("email") != null)
 				keyboardInputs[entry].attr("y", startY  + textPadding + ((Number(entry) + 2) * textHeight))
 									.attr("font-size", textHeight);
 			}
-			
-			
+
 			if(playing && curFrame && (!(lastFrame)))
 			{
 				axisTick .style("transition", (Number(curFrame["Index MS Session"]) / playbackSpeedMultiplier) + "ms linear");
@@ -5923,6 +5994,9 @@ if(request.getParameter("email") != null)
 					
 					activeWindow.text("...");
 					activeWindowName.text("...");
+					
+					activeEvents = [];
+					activeEventName.text("...");
 					
 					for(entry in lastMouseClicks)
 					{
@@ -6089,8 +6163,7 @@ if(request.getParameter("email") != null)
 		}
 		delBlankLines();
 	}
-	
-	
+
 	var selectRect;
 	var timeScaleAni;
 	
@@ -6110,8 +6183,7 @@ if(request.getParameter("email") != null)
 		
 		screenshotIndex = theNormData[owningUser][owningSession]["screenshots"][0]["Index MS"];
 		screenshotSession = theNormData[owningUser][owningSession]["screenshots"][0]["Original Session"];
-		
-		
+
 		d3.select("#screenshotDiv")
 		.append("img")
 		.attr("width", "100%")
@@ -6123,8 +6195,7 @@ if(request.getParameter("email") != null)
 					//showLightbox("<tr><td><div width=\"100%\"><img src=\"./getScreenshot.jpg?username=" + owningUser + "&timestamp=" + getScreenshot(owningUser, screenshotSession, screenshotIndex)["Index MS"] + "&session=" + screenshotSession + "&event=" + eventName + "\" style=\"max-height: " + (windowHeight * .9) + "px; max-width:100%\"></div></td></tr>");
 					showLightbox("<tr><td><div width=\"100%\"><img src=\"data:image/jpg;base64," + (await (theNormData[owningUser][owningSession]["screenshots"][0]["Screenshot"]())) + "\" style=\"max-height: " + (windowHeight * .9) + "px; max-width:100%\"></div></td></tr>");
 				});
-		
-		
+
 		curProcessMap = (await processMap[owningUser][owningSession]["data"]()).value;
 		
 		var timeScale;
@@ -6294,8 +6365,7 @@ if(request.getParameter("email") != null)
 				.attr("font-size", bottomVizFontSize * 2)
 				.text("Select Time:")
 				.attr("pointer-events", "none");
-		
-		
+
 		//var newRow = d3.select("#infoTable").append("tr").append("td")
 		//	.attr("width", visWidthParent)
 		//	.style("max-width", visWidthParent + "px")
@@ -6306,8 +6376,7 @@ if(request.getParameter("email") != null)
 			.attr("height", bottomVisHeight + "px")
 			.attr("id", "processGraphSvg")
 			.append("g");
-		
-		
+
 		cpuSortedList = [];
 		var maxCPU = 0;
 		for(osUser in curProcessMap)
@@ -6331,27 +6400,23 @@ if(request.getParameter("email") != null)
 				}
 			}
 		}
-		
-		
+
 		cpuSortedList.sort(function(a, b)
 		{
 			if(a[0]["Average CPU"] > b[0]["Average CPU"]) { return -1; }
 			if(a[0]["Average CPU"] < b[0]["Average CPU"]) { return 1; }
 			return 0;
 		})
-		
-		
+
 		var cpuScale = d3.scaleLinear();
 		cpuScale.domain([0, maxCPU]);
 		cpuScale.range([bottomVisHeight, 0]);
-		
-		
+
 		
 		var finalProcList = [];
 		
 		var lineFormattedData = []
-		
-		
+
 		for(entry in cpuSortedList)
 		{
 			for(subEntry in cpuSortedList[entry])
@@ -6372,8 +6437,7 @@ if(request.getParameter("email") != null)
 		cpuSortedList = cpuSortedList.reverse();
 		
 		finalProcList = finalProcList.reverse();
-		
-		
+
 		var procPoints = newSVG.selectAll("circle")
 			.data(finalProcList)
 			.enter()
@@ -6519,8 +6583,7 @@ if(request.getParameter("email") != null)
 						g.node().dispatchEvent(e);
 						
 					});
-		
-		
+
 		
 		var line = d3.line()
 				.x
@@ -6551,8 +6614,7 @@ if(request.getParameter("email") != null)
 				.curve(d3.curveMonotoneX);
 		
 		var enterExit = [];
-		
-		
+
 		var procLines = newSVG.selectAll("path")
 				.data(lineFormattedData)
 				.enter()
@@ -6608,8 +6670,7 @@ if(request.getParameter("email") != null)
 										
 							}
 						});
-		
-		
+
 		var procPointsWindow = newSVG.append("g").selectAll("circle")
 		.data(enterExit)
 		.enter()
@@ -6672,15 +6733,13 @@ if(request.getParameter("email") != null)
 					return "red";
 					//return colorScale(d["Process Order"] % 20);
 				});
-		
-		
+
 		var yAxis = d3.axisLeft().scale(cpuScale)
 		
 		var cpuAxis = newSVG.append("g")
 				.attr("transform", "translate(" + xAxisPadding + ", 0)")
 				.call(yAxis);
-		
-		
+
 		var axisLabel = newSVG.append("g")
 				.append("text")
 				.attr("y", bottomVisHeight / 2 + "px")
@@ -6727,8 +6786,7 @@ if(request.getParameter("email") != null)
 		.attr("text-anchor", "left")
 		.style("font-weight", "bold")
 		.text("");
-		
-		
+
 		//var highlightTable = d3.select("#highlightDiv").style('overflow-y', 'scroll').style("height", bottomVisHeight + "px");
 		var highlightTable = d3.select("#highlightDiv").style("height", bottomVisHeight + "px");
 
@@ -6736,8 +6794,7 @@ if(request.getParameter("email") != null)
 				.append("svg")
 				.attr("width", "100%")
 				.attr("height", (legendHeight * cpuSortedList.length * 2 + legendHeight) + "px");
-		
-		
+
 		
 		legendSVGProcess = legendSVGProcess.append("g");
 		
@@ -6836,8 +6893,7 @@ if(request.getParameter("email") != null)
 				})
 				.attr("class", "clickableBar")
 				.attr("initStrokeWidth", 0);
-		
-		
+
 		var legendTextProcess = legendSVGProcess.append("g")
 		.selectAll("text")
 		.data(cpuSortedList)
@@ -6881,8 +6937,7 @@ if(request.getParameter("email") != null)
 						return "none";
 					}
 				});
-		
-		
+
 		var legendTextProcessCmd = legendSVGProcess.append("g")
 		.selectAll("text")
 		.data(cpuSortedList)
@@ -6926,8 +6981,7 @@ if(request.getParameter("email") != null)
 						return "none";
 					}
 				});
-		
-		
+
 	}
 	
 	function closestIndexMSBinary(items, value){
@@ -7207,8 +7261,7 @@ if(request.getParameter("email") != null)
 			if(a.key > b.key) { return 1; }
 			return 0;
 		})
-		
-		
+
 		for(x=0; x<formattedSlot.length; x+=2)
 		{
 			if(formattedSlot[x]["key"] in highlightMap)
@@ -7240,8 +7293,7 @@ if(request.getParameter("email") != null)
 		d3.select("#extraInfoTable")
 				.selectAll("tr")
 				.remove();
-		
-		
+
 		if(type == "Events")
 		{
 			
@@ -7315,13 +7367,11 @@ if(request.getParameter("email") != null)
 						{
 							return "<td width=\"12.5%\" style=\" max-width:" + (.125 * visWidthParent) + "px\">" + d["key1"] + "</td>" + "<td width=\"37.5%\" style=\" max-width:" + (.375 * visWidthParent) + "px; overflow-x:auto;\">" + d["value1"] + "</td>" + "<td width=\"12.5%\" style=\" max-width:" + (.125 * visWidthParent) + "px\">" + d["key2"] + "</td>" + "<td width=\"37.5%\" style=\" max-width:" + (.375 * visWidthParent) + "px; overflow-x:auto;\">" + d["value2"] + "</td>";
 						});
-		
-		
+
 		d3.select("#screenshotDiv")
 				.selectAll("*")
 				.remove();
-		
-		
+
 		d3.select("#screenshotDiv")
 				.append("img")
 				.attr("width", "100%")
@@ -7381,13 +7431,11 @@ if(request.getParameter("email") != null)
 	}
 	
 	var attackGraphs = [];
-	
-	
+
 	async function buildTaskMapTop(user, session, task, onlySession, colissionMap)
 	{
 		var curGraph = await buildTaskMap(user, session, task, onlySession, colissionMap)
-		
-		
+
 		var toReturn = await analyzeTaskMap(curGraph);
 		toReturn = await petriToGraph(toReturn);
 		attackGraphs.push(toReturn);
@@ -7563,8 +7611,7 @@ if(request.getParameter("email") != null)
 					}
 				}
 			}
-			
-			
+
 			for(var x = curChildren.length - 1; x >= 0; x--)
 			{
 				//Take the last child and last concurrent children.
@@ -7628,21 +7675,18 @@ if(request.getParameter("email") != null)
 			
 			nodeCache[curParent["Task Hash"]] = curNode;
 		}
-		
-				
+
 		return nodeCache;
 	}
 	
 	async function buildTaskMap(user, session, task, onlySession, colissionMap)
 	{
-		
-		
+
 		if(task.constructor.name == "String")
 		{
 			task = objectCacheMap[task];
 		}
-		
-		
+
 		
 		if(!colissionMap)
 		{
@@ -7675,8 +7719,7 @@ if(request.getParameter("email") != null)
 		var sessionTasks = {};
 		var sessionCurIndices = {};
 		//First we select all of the task arrays.
-		
-		
+
 		if(onlySession)
 		{
 			sessions.push(session);
@@ -7693,8 +7736,7 @@ if(request.getParameter("email") != null)
 				else
 				{
 					var curSession = theNormData[user]["Session Ordering"][theNormData[user]["Session Ordering"]["Order List"][entry]];
-					
-					
+
 					
 					if(theNormData[user][curSession]["events"])
 					{
@@ -7707,8 +7749,7 @@ if(request.getParameter("email") != null)
 				}
 			}
 		}
-		
-		
+
 		
 		var sessionsIncluded = [];
 		//Next we find the start and end indices in each session based.
@@ -7781,11 +7822,9 @@ if(request.getParameter("email") != null)
 					sessionsIncluded.push(sessions[entry]);
 				}
 			}
-			
-			
+
 		}
-		
-		
+
 		//This helper function returns the next task from all session
 		//lists.
 		if(sessionsIncluded.length == 0)
@@ -7803,8 +7842,7 @@ if(request.getParameter("email") != null)
 				var curSession = sessionTasks[sessionsIncluded[entry]];
 				var curStart = sessionCurIndices["start_" + sessionsIncluded[entry]];
 				var curEnd = sessionCurIndices["end_" + sessionsIncluded[entry]];
-				
-				
+
 				if(curStart <= curEnd)
 				{
 					if(curSession[curStart]["Index MS"] < minEvent)
@@ -7818,8 +7856,7 @@ if(request.getParameter("email") != null)
 			sessionCurIndices["start_" + finalSession] = sessionCurIndices["start_" + finalSession] + 1;
 			return toReturn;
 		}
-		
-		
+
 		//Iterate through tasks.  If the task starts or ends during
 		//this task but not both, it is a concurrent task.  Add it to
 		//list of concurrencies.  If the task starts and ends during
@@ -7872,11 +7909,9 @@ if(request.getParameter("email") != null)
 	
 	function viewPetriNets()
 	{
-		
-		
+
 		showLightbox("<tr><td id=\"petriRow\"><div id=\"petriDiv\" width=\"100%\" height=\"100%\"></div></td></tr>");
-		
-		
+
 		var graphArrows = svg.append("svg:defs").selectAll("marker")
 	    .data(["end"])      // Different link/path types can be defined here
 		  .enter().append("svg:marker")    // This section adds in the arrows
@@ -7889,14 +7924,12 @@ if(request.getParameter("email") != null)
 		    .attr("orient", "auto")
 		  .append("svg:path")
 		    .attr("d", "M0,-5L10,0L0,5");
-		
-		
+
 		var petriRow = d3.select("#petriRow");
 		var petriDiv = d3.select("#petriDiv");
 		
 		var divBounds = petriRow.node().getBoundingClientRect();
-		
-		
+
 		var petriSvg = petriDiv.append("svg")
 			.attr("width", divBounds["width"])
 			.attr("height", divBounds["height"])
@@ -7912,8 +7945,7 @@ if(request.getParameter("email") != null)
 		var numUnused = 0;
 		
 		var finalAttackGraphs = JSON.parse(JSON.stringify(attackGraphs));
-		
-		
+
 		for(var entry in finalAttackGraphs)
 		{
 			for(place in finalAttackGraphs[entry]["nodes"])
@@ -7936,11 +7968,9 @@ if(request.getParameter("email") != null)
 			usedPlaces[finalNodesEdges["links"][entry]["source"]["id"]] = false;
 			usedPlaces[finalNodesEdges["links"][entry]["source"]] = false;
 		}
+
 		
-		
-		
-		
-		
+
 		var simulation = d3.forceSimulation(finalNodesEdges.nodes)
 			.force("link", d3.forceLink(finalNodesEdges.links).id(d => d.id))
 			.force("charge", d3.forceManyBody().strength(-250))
@@ -8059,8 +8089,7 @@ if(request.getParameter("email") != null)
 			.attr("width", transitionWidth)
 			.attr("height", transitionHeight)
 			.attr("fill", "blue");
-		
-		
+
 		var labels = node.filter(d => d.type === "Place")
 		.append("text")
 		.attr("text-anchor", function(d)
