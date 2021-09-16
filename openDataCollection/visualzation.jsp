@@ -146,6 +146,15 @@ if(request.getParameter("email") != null)
 							</div>
 						</td>
 					</tr>
+					<tr>
+						<td colspan="5">
+							<div align="center">
+									Petri Nets to Visualize<br />
+									<select style="width: 100%;" name="petriNets" id="petriNets" multiple>
+									</select>
+							</div>
+						</td>
+					</tr>
 					<tr id="filterTitle1">
 						<td colspan="5">
 							<div align="center">
@@ -519,6 +528,8 @@ if(request.getParameter("email") != null)
 						+"</div>"
 						+"</td>";
 					});
+		
+		rebuildPetriMenu();
 	}
 	
 	//rebuildFilters();

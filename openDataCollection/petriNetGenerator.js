@@ -2,6 +2,25 @@
 
 var attackGraphs = [];
 
+function rebuildPetriMenu()
+{
+	//console.log(d3.select("#petriNets"));
+	d3.select("#petriNets").selectAll("option").remove();
+	d3.select("#petriNets")
+		.selectAll("option")
+		.data(attackGraphs)
+		.enter()
+		.append("option")
+		.attr("value", function(d, i)
+		{
+			return i;
+		})
+		.html(function(d, i)
+		{
+			return d["nodes"][0]["Place"]["TaskName"];
+		})
+}
+
 async function buildTaskMapTop(user, session, task, onlySession, colissionMap)
 {
 	var curGraph = await buildTaskMap(user, session, task, onlySession, colissionMap)
@@ -10,6 +29,7 @@ async function buildTaskMapTop(user, session, task, onlySession, colissionMap)
 	toReturn = await petriToGraph(toReturn);
 	attackGraphs.push(toReturn);
 	console.log(attackGraphs)
+	rebuildPetriMenu();
 	return toReturn;
 }
 
