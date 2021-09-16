@@ -172,9 +172,15 @@ public class AddTask extends HttpServlet {
 		long endTime = Math.round(Double.parseDouble((String)request.getParameter("end")));
 		String taskName = (String)request.getParameter("taskName");
 		String taskTags = (String)request.getParameter("taskTags");
+		String taskGoal = (String)request.getParameter("taskGoal");
+		
 		if(taskTags == null)
 		{
 			taskTags = "";
+		}
+		if(taskGoal == null)
+		{
+			taskGoal = "";
 		}
 		String taskLines[] = taskTags.split("\\r?\\n");
 		String userName = (String)request.getParameter("userName");
@@ -188,11 +194,11 @@ public class AddTask extends HttpServlet {
 		}
 		if(fromAnon)
 		{
-			result = myConnector.addTask(eventName, (String) inverseUserMap.get(userName), sessionName, admin, startTime, endTime, taskName, taskLines, tagger);
+			result = myConnector.addTask(eventName, (String) inverseUserMap.get(userName), sessionName, admin, startTime, endTime, taskName, taskLines, tagger, taskGoal);
 		}
 		else
 		{
-			result = myConnector.addTask(eventName, userName, sessionName, admin, startTime, endTime, taskName, taskLines, tagger);
+			result = myConnector.addTask(eventName, userName, sessionName, admin, startTime, endTime, taskName, taskLines, tagger, taskGoal);
 		}
 		Gson gson = new GsonBuilder().create();
 		

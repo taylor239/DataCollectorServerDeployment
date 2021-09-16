@@ -1,5 +1,80 @@
 @CHARSET "UTF-8";
 
+.popimage
+{
+	
+}
+
+.black_overlay
+{
+	transition:300ms linear;
+	display: none;
+	position: absolute;
+	top: 0%;
+	left: 0%;
+	width: 100%;
+	height: 100%;
+	background-color: black;
+	z-index:1001;
+	opacity:0;
+	cursor:pointer;
+}
+
+.black_highlight
+{
+	transition:300ms linear;
+	position: absolute;
+	top: 0%;
+	left: 0%;
+	width: 100%;
+	height: 100%;
+	z-index:1001;
+	cursor:pointer;
+}
+ 
+.white_content
+{
+	transition:300ms linear;
+	border-radius:10px;
+	display: none;
+	position: absolute;
+	top: 2.5%;
+	left: 5%;
+	width: 90%;
+	height: 95%;
+	max-height:95%;
+	padding: 2px;
+	border: 4px solid #000;
+	background-color: white;
+	z-index:1002;
+	overflow: auto;
+	text-align:center;
+	opacity:0;
+	vertical-align:middle;
+}
+
+.white_dim
+{
+	transition:300ms linear;
+	border-radius:10px;
+	display: block;
+	padding: 2px;
+	border: 4px solid #000;
+	background-color: white;
+	z-index:1002;
+	overflow: auto;
+	text-align:justify;
+	cursor:pointer;
+	opacity:0;
+	vertical-align:middle;
+}
+
+.white_content td
+{
+	text-align:center;
+	vertical-align:middle;
+}
+
 body
 {
 	overflow-y: scroll; /* Show vertical scrollbar */

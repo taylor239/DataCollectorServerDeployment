@@ -158,7 +158,7 @@ public class DatabaseConnector
 	
 	private String setNote = "UPDATE `User` SET `notes`= ? WHERE `event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ?";
 	
-	private String insertTask = "INSERT INTO `Task`(`event`, `adminEmail`, `username`, `session`, `taskName`, `completion`, `startTimestamp`) VALUES (?,?,?,?,?,?, FROM_UNIXTIME(? / 1000))";
+	private String insertTask = "INSERT INTO `Task`(`event`, `adminEmail`, `username`, `session`, `taskName`, `completion`, `startTimestamp`, `goal`) VALUES (?,?,?,?,?,?, FROM_UNIXTIME(? / 1000), ?)";
 	private String insertTaskEvent = "INSERT INTO `TaskEvent`(`event`, `adminEmail`, `username`, `session`, `taskName`, `eventTime`, `eventDescription`, `startTimestamp`, `source`) VALUES (?,?,?,?,?,FROM_UNIXTIME(? / 1000),?,FROM_UNIXTIME(? / 1000),?)";
 	private String insertTaskTag = "INSERT INTO `TaskTags`(`event`, `adminEmail`, `username`, `session`, `taskName`, `startTimestamp`, `tag`) VALUES (?,?,?,?,?, FROM_UNIXTIME(? / 1000), ?)";
 	
@@ -1001,7 +1001,7 @@ public class DatabaseConnector
 	
 	
 	
-	public ConcurrentHashMap addTask(String event, String user, String session, String admin, long start, long end, String taskName, String[] tags, String tagger)
+	public ConcurrentHashMap addTask(String event, String user, String session, String admin, long start, long end, String taskName, String[] tags, String tagger, String goal)
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
@@ -1024,6 +1024,7 @@ public class DatabaseConnector
 			myStatement.setString(5, taskName);
 			myStatement.setString(6, "1");
 			myStatement.setLong(7, start);
+			myStatement.setString(8, goal);
 			
 			//System.out.println(myStatement);
 			
@@ -1402,6 +1403,7 @@ public class DatabaseConnector
 				nextRow.put("Source", myResults.getString("source"));
 				nextRow.put("TaskName", myResults.getString("taskName"));
 				nextRow.put("Completion", myResults.getString("completion"));
+				nextRow.put("Goal", myResults.getString("goal"));
 				nextRow.put("EventTime", myResults.getTimestamp("eventTime", cal));
 				nextRow.put("StartTime", myResults.getTimestamp("startTimestamp", cal));
 				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
