@@ -29,6 +29,19 @@ function closestIndexMSBinary(items, value)
 			firstIndex = middleIndex + 1;
 		}
 		middleIndex = Math.floor((lastIndex + firstIndex)/2);
+		if(!items[middleIndex])
+		{
+			console.log(items);
+			console.log(middleIndex);
+			if(middleIndex == 0)
+			{
+				middleIndex++;
+			}
+			else
+			{
+				middleIndex--;
+			}
+		}
 	}
 	
 	if(middleIndex > lastIndex)
@@ -90,6 +103,19 @@ function closestIndexMSBinarySession(items, value){
 			firstIndex = middleIndex + 1;
 		}
 		middleIndex = Math.floor((lastIndex + firstIndex)/2);
+		if(!items[middleIndex])
+		{
+			console.log(items);
+			console.log(middleIndex);
+			if(middleIndex == 0)
+			{
+				middleIndex++;
+			}
+			else
+			{
+				middleIndex--;
+			}
+		}
 	}
 	var curDiff = Math.abs(value - items[middleIndex]["Index MS Session"]);
 	var nextDiff = Infinity;
@@ -146,6 +172,19 @@ function binarySearch(items, value)
 			firstIndex = middleIndex + 1;
 		}
 		middleIndex = Math.floor((lastIndex + firstIndex)/2);
+		if(!items[middleIndex])
+		{
+			console.log(items);
+			console.log(middleIndex);
+			if(middleIndex == 0)
+			{
+				middleIndex++;
+			}
+			else
+			{
+				middleIndex--;
+			}
+		}
 	}
 	return middleIndex;
 }
