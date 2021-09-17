@@ -1737,6 +1737,19 @@ async function playAnimation(owningUser, owningSession, seekTo)
 						continue;
 					
 				}
+				
+				var totalTextHeight = Number(keyboardInputs[keyboardInputs.length - 1].attr("initY")) + Number(keyboardInputs[keyboardInputs.length - 1].attr("font-size")) - (startY  + textPadding);
+				var totalBarHeight = (divBounds["height"] - (startY  + textPadding));
+				var adjustedBarHeight = totalBarHeight;
+				
+				if(totalTextHeight > totalBarHeight)
+				{
+					adjustedBarHeight = (totalBarHeight / totalTextHeight) * totalBarHeight;
+				}
+				
+				textScrollBar.attr("height", adjustedBarHeight);
+				textScrollBar.attr("maxY", divBounds["height"]);
+				
 				if(playing)
 				{
 					seekBar.attr("fill", "Chartreuse").attr("stroke", "Chartreuse");
