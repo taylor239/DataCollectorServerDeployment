@@ -59,7 +59,92 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	var animationAxisG = animationSvg.append("g");
 	var animationAxisGMin = animationSvg.append("g");
 
+	
+	//The typed text and mouse click elements, including scroll bar for the text.
+	
+	//Scroll functions:
+	var aniTextScroll = d3.drag()
+	.on("drag", aniTextDrag)
+	.on("start", function(d)
+			{
+				
+			});
+	
+	function aniTextDrag(d)
+	{
+		var curHeight = Number(d3.select("#animationTextScrollbar").attr("height"));
+		
+		var x = d3.mouse(this)[0];
+		var y = d3.mouse(this)[1] - (curHeight / 2);
+		
+		var minY = Number(d3.select("#animationTextScrollbar").attr("minY"));
+		
+		var scrollPercent;
+		if(y < minY)
+		{
+			y = minY;
+			scrollPercent = 0;
+		}
+		
+		var maxY = Number(d3.select("#animationTextScrollbar").attr("maxY"));
+		
+		
+		if(Number(y) + Number(curHeight) > maxY)
+		{
+			y = maxY - curHeight;
+		}
+		
+		
+		d3.select("#animationTextScrollbar")
+			.attr("y", y);
+		
+		if(!scrollPercent)
+		{
+			scrollPercent = (y - minY) / (maxY - curHeight - minY);
+		}
+		
+		
+		if(!scrollPercent)
+		{
+			scrollPercent = 0;
+		}
+		
+		var maxTextHeight = Number(keyboardInputs[keyboardInputs.length - 1].attr("initY")) - divBounds["height"];
+		var minTextHeight = Number(keyboardInputs[0].attr("initY")) - divBounds["height"];
+		var minText = Number(keyboardInputs[0].attr("initY"));
+		var heightDiff = maxTextHeight - minTextHeight;
+		var toSubtract = scrollPercent * heightDiff;
+		for(entry in keyboardInputs)
+		{
+			var entryY = keyboardInputs[entry].attr("initY");
+			var calcY = entryY - toSubtract;
+			keyboardInputs[entry].attr("y", calcY);
+			
+			if(calcY < minText)
+			{
+				keyboardInputs[entry].style("opacity", 0);
+			}
+			else
+			{
+				keyboardInputs[entry].style("opacity", 1);
+			}
+		}
+		
+	}
+	
 	var animationG = animationSvg.append("g");
+	var animationGKeyHolder = animationSvg.append("g").attr("id", "animationGKeyHolder");
+	var animationGKey = animationGKeyHolder.append("g").attr("id", "animationGKey");
+	var textScrollBar = animationGKeyHolder.append("rect")
+		.attr("x", (divBounds["width"]) / 2 - (divBounds["width"]) / 144)
+		.attr("y", 0)
+		.attr("width", (divBounds["width"]) / 144)
+		.attr("height", 0)
+		.attr("id", "animationTextScrollbar")
+		.call(aniTextScroll);
+	
+	
+		
 	
 	var curScreenshot = backgroundG.append("image")
 		.attr("width", divBounds["width"])
@@ -281,7 +366,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.attr("height", (divBounds["height"] * .05))
 			.attr("fill", "Chartreuse")
 			.attr("stroke", "Black")
-			.attr("x", (8 * divBounds["width"]) / 9)
+			.attr("x", (6.5 * divBounds["width"]) / 9)
 			.attr("y", (divBounds["height"] * .8) + textPadding)
 			.style("cursor", "pointer");
 	var playPauseLabel = playPauseG.append("text")
@@ -295,7 +380,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.attr("font-size", (divBounds["height"] * .0375))
 			.text("⏸")
 			.style("cursor", "pointer")
-			.attr("x", (8.5 * divBounds["width"]) / 9)
+			.attr("x", (7 * divBounds["width"]) / 9)
 			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .03125));
 	var activeWindowTitle = playPauseG.append("text")
 			.style("pointer-events", "none")
@@ -306,7 +391,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.attr("font-size", (divBounds["height"] * .025))
 			.text("Active Window and Tasks")
 			.attr("x", divBounds["width"])
-			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .075));
+			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .03125));
 	var activeWindow = playPauseG.append("text")
 			.style("pointer-events", "none")
 			.attr("text-anchor", "end")
@@ -316,7 +401,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.attr("font-size", (divBounds["height"] * .025))
 			.text("...")
 			.attr("x", divBounds["width"])
-			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .1));
+			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .075));
 	var activeWindowName = playPauseG.append("text")
 			.style("pointer-events", "none")
 			.attr("text-anchor", "end")
@@ -326,7 +411,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.attr("font-size", (divBounds["height"] * .025))
 			.text("...")
 			.attr("x", divBounds["width"])
-			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .125));
+			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .1));
 	
 	
 	var activeEvents = [];
@@ -339,17 +424,17 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.attr("font-size", (divBounds["height"] * .025))
 			.text("...")
 			.attr("x", divBounds["width"])
-			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .15));
+			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .125));
 	var activeEventName2 = playPauseG.append("text")
 			.style("pointer-events", "none")
 			.attr("text-anchor", "end")
 			.attr("dominant-baseline", "middle")
 			.attr("fill", "Black")
 			.attr("stroke", "Black")
-			.attr("font-size", (divBounds["height"] * .0125))
+			.attr("font-size", (divBounds["height"] * .025))
 			.text("")
 			.attr("x", divBounds["width"])
-			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .1625));
+			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .15));
 
 	
 	
@@ -644,8 +729,9 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	
 	var keyboardInputs = [];
 	
-	var curKeyInput = animationG.append("text").attr("x", 0)
+	var curKeyInput = animationGKey.append("text").attr("x", 0)
 						.attr("y", 0)
+						.attr("initY", 0)
 						.text("")
 						.attr("text", "")
 						.attr("font-size", 0);
@@ -710,7 +796,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			
 			if(!typedText)
 			{
-				typedText = animationG.append("text").attr("x", 0)
+				typedText = animationGKey.append("text").attr("x", 0)
 					.attr("y", startY + textHeight + textPadding)
 					.text("Input:")
 					.attr("font-size", textHeight);
@@ -734,6 +820,8 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				}
 			}
 		
+		textScrollBar.attr("y", startY  + textPadding);
+		textScrollBar.attr("minY", startY  + textPadding);
 		runAnimationWrapped();
 	}
 	
@@ -823,11 +911,17 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			textHeight = curScreenshot.attr("width") / 50;
 			
 			//startY = finalRatio * lastImg["height"];
+			var startYOld = startY;
 			startY = (divBounds["height"] * .8);
+			
+			if(startY != startYOld)
+			{
+				//TODO: Do some stuff here to update the layout
+			}
 			
 			if(!typedText)
 			{
-				typedText = animationG.append("text").attr("x", 0)
+				typedText = animationGKey.append("text").attr("x", 0)
 					.attr("y", startY + textHeight + textPadding)
 					.text("Input:")
 					.attr("font-size", textHeight);
@@ -866,7 +960,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 					activeEvents.splice(curIndex, 1);
 				}
 			}
-			activeEventName.attr("font-size", (divBounds["height"] * .025));
+			//activeEventName.attr("font-size", (divBounds["height"] * .025));
 			activeEventName.text(activeEvents.join(', '));
 			activeEventName2.text("");
 			activeEventName.attr("textLength", "")
@@ -878,7 +972,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				var secondString = splitString.slice(Math.ceil(splitString.length / 2), splitString.length).join(", ");
 				activeEventName.text(firstString);
 				activeEventName2.text(secondString);
-				activeEventName.attr("font-size", (divBounds["height"] * .0125));
+				//activeEventName.attr("font-size", (divBounds["height"] * .0125));
 				if(activeEventName.node().getBBox()["width"] + textHeight > ((2.5 * divBounds["width"]) / 9))
 				{
 					activeEventName.attr("textLength", (2.5 * divBounds["width"]) / 9);
@@ -1004,8 +1098,9 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			{
 				//keyboardInputs.shift();
 				//keyboardInputs.unshift(curLine);
-				curKeyInput = animationG.append("text").attr("x", 0)
+				curKeyInput = animationGKey.append("text").attr("x", 0)
 				.attr("y", startY  + textPadding)
+				.attr("initY", startY  + textPadding)
 				.text("⏎")
 				.attr("text", "⏎")
 				.attr("font-size", textHeight);
@@ -1023,8 +1118,9 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				{
 					//keyboardInputs.shift();
 					//keyboardInputs.unshift(curLine);
-					curKeyInput = animationG.append("text").attr("x", 0)
+					curKeyInput = animationGKey.append("text").attr("x", 0)
 					.attr("y", startY  + textPadding)
+					.attr("initY", startY  + textPadding)
 					.text("⏎")
 					.attr("text", "")
 					.attr("font-size", textHeight);
@@ -1037,7 +1133,23 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				//keyboardInputs.unshift(curLine);
 				
 			}
-
+			
+			var totalTextHeight = Number(keyboardInputs[keyboardInputs.length - 1].attr("initY")) + Number(keyboardInputs[keyboardInputs.length - 1].attr("font-size")) - (startY  + textPadding);
+			var totalBarHeight = (divBounds["height"] - (startY  + textPadding));
+			var adjustedBarHeight = totalBarHeight;
+			
+			//console.log(totalTextHeight);
+			//console.log(totalBarHeight);
+			
+			if(totalTextHeight > totalBarHeight)
+			{
+				adjustedBarHeight = (totalBarHeight / totalTextHeight) * totalBarHeight;
+			}
+			
+			//console.log(adjustedBarHeight);
+			
+			textScrollBar.attr("height", adjustedBarHeight);
+			textScrollBar.attr("maxY", divBounds["height"]);
 		}
 		
 		if(curFrame && curFrame["PID"])
@@ -1172,8 +1284,11 @@ async function playAnimation(owningUser, owningSession, seekTo)
 		for(entry in keyboardInputs)
 		{
 			keyboardInputs[entry].attr("y", startY  + textPadding + ((Number(entry) + 2) * textHeight))
+								.attr("initY", startY  + textPadding + ((Number(entry) + 2) * textHeight))
+								.style("opacity", 1)
 								.attr("font-size", textHeight);
 		}
+		d3.select("#animationTextScrollbar").attr("y", d3.select("#animationTextScrollbar").attr("minY"));
 
 		if(playing && curFrame && (!(lastFrame)))
 		{
@@ -1223,6 +1338,10 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	//Iterate through events to build a list for the given time
 	function updateEventList(selectTime)
 	{
+		if(!events)
+		{
+			return;
+		}
 		var curTime = 0;
 		var curEventIndex = 0;
 		
@@ -1286,6 +1405,10 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	//Iterate through the processes to get the top processes at a given time.
 	function updateTopProcesses(selectTime)
 	{
+		if(!processes)
+		{
+			return;
+		}
 		var curTime = 0;
 		var curProcessIndex = 0;
 		
@@ -1429,8 +1552,9 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	{
 				clearTimeout(animationTimeout);
 				
-				curKeyInput = animationG.append("text").attr("x", 0)
+				curKeyInput = animationGKey.append("text").attr("x", 0)
 				.attr("y", startY  + textPadding)
+				.attr("initY", startY  + textPadding)
 				.text("Seek to: " + selectTime)
 				.attr("text", "Seek to: " + selectTime)
 				.attr("font-size", textHeight);
@@ -1510,7 +1634,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				
 				var tmpWindow = curWindows;
 				var windowIndexSubtract = 1;
-				while(tmpWindow["Index MS Session"] > selectedEntry["Index MS Session"])
+				while(tmpWindow && tmpWindow["Index MS Session"] > selectedEntry["Index MS Session"])
 				{
 					if(windows[windowsIndex - windowIndexSubtract])
 					{
@@ -1583,18 +1707,22 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				activeEventName.text("...");
 				updateEventList(selectedEntry["Index MS Session"]);
 				
-				curKeyInput = animationG.append("text").attr("x", 0)
+				curKeyInput = animationGKey.append("text").attr("x", 0)
 				.attr("y", startY  + textPadding)
+				.attr("initY", startY  + textPadding)
 				.text("Play from: " + selectedEntry["Index MS Session"])
 				.attr("text", "Play from: " + selectedEntry["Index MS Session"])
 				.attr("font-size", textHeight);
 				
 				keyboardInputs.unshift(curKeyInput);
 				
-				curKeyInput = animationG.append("text").attr("x", 0)
+				curKeyInput = animationGKey.append("text").attr("x", 0)
 				.attr("y", startY  + textPadding)
-				.text("⏯")
-				.attr("text", "⏯")
+				.attr("initY", startY  + textPadding)
+				//.text("⏯")
+				//.attr("text", "⏯")
+				.text("")
+				.attr("text", "")
 				.attr("font-size", textHeight);
 				
 				keyboardInputs.unshift(curKeyInput);
