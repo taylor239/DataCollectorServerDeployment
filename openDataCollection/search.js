@@ -33,7 +33,7 @@ function closestIndexMSBinary(items, value)
 		{
 			console.log(items);
 			console.log(middleIndex);
-			if(middleIndex == 0)
+			if(middleIndex <= 0)
 			{
 				middleIndex++;
 			}
@@ -107,7 +107,7 @@ function closestIndexMSBinarySession(items, value){
 		{
 			console.log(items);
 			console.log(middleIndex);
-			if(middleIndex == 0)
+			if(middleIndex <= 0)
 			{
 				middleIndex++;
 			}
@@ -176,7 +176,7 @@ function binarySearch(items, value)
 		{
 			console.log(items);
 			console.log(middleIndex);
-			if(middleIndex == 0)
+			if(middleIndex <= 0)
 			{
 				middleIndex++;
 			}
