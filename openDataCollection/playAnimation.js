@@ -5,8 +5,31 @@ var animationTimeout;
 //This variable determines how quickly mouse clicks fade.
 var degradeCoefficient = 60000;
 
+var oldUser;
+var oldSession;
+var oldSeek;
+
 async function playAnimation(owningUser, owningSession, seekTo)
 {
+	//If it is the same user and we do not have a specific seek time,
+	//restart play at the last known timestamp.
+	if(oldUser == owningUser && oldSession == owningSession)
+	{
+		if(seekTo)
+		{
+			
+		}
+		else
+		{
+			seekTo = oldSeek;
+		}
+	}
+	else
+	{
+		oldUser = owningUser
+		oldSession = owningSession
+	}
+	
 	showLightbox("<tr><td id=\"animationRow\"><div id=\"animationDiv\" width=\"100%\" height=\"100%\"></div></td></tr>");
 	
 	var playing = true;
@@ -718,6 +741,10 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	
 	async function runAnimationWrapped()
 	{
+		if(foregroundExit)
+		{
+			return;
+		}
 		startY = (divBounds["height"] * .8)
 		var curFrame = nextFrame();
 
@@ -756,6 +783,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 		
 		if(curFrame)
 		{
+			oldSeek = curFrame["Index MS Session"];
 			scaleLabel.text((Math.round( ( (curFrame["Index MS Session"] / 60000) + Number.EPSILON ) * 100 ) / 100) + " Minutes");
 			timeLog.text(curFrame["Index MS Session"] + " MS");
 		}
@@ -1192,9 +1220,223 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				d3.event.stopPropagation();
 			});
 	
+	//Iterate through events to build a list for the given time
+	function updateEventList(selectTime)
+	{
+		var curTime = 0;
+		var curEventIndex = 0;
+		
+		while(curTime < selectTime && curEventIndex < events.length)
+		{
+			curFrame = events[curEventIndex];
+			if(curFrame)
+			{
+				curTime = curFrame["Index MS Session"];
+				if(curTime >= selectTime)
+				{
+					break;
+				}
+				{
+					if(curFrame["Description"] == "start")
+					{
+						activeEvents.push(curFrame["TaskName"]);
+					}
+					else
+					{
+						var curIndex = activeEvents.indexOf(curFrame["TaskName"]);
+						if(curIndex > -1)
+						{
+							activeEvents.splice(curIndex, 1);
+						}
+					}
+				}
+				
+			}
+			curEventIndex++;
+		}
+		
+		activeEventName.attr("font-size", (divBounds["height"] * .025));
+		activeEventName.text(activeEvents.join(', '));
+		activeEventName2.text("");
+		activeEventName.attr("textLength", "")
+		activeEventName2.attr("textLength", "")
+		if(activeEventName.node().getBBox()["width"] + textHeight > ((2.5 * divBounds["width"]) / 9))
+		{
+			var splitString = activeEvents;
+			var firstString = splitString.slice(0, Math.ceil(splitString.length / 2)).join(", ");
+			var secondString = splitString.slice(Math.ceil(splitString.length / 2), splitString.length).join(", ");
+			activeEventName.text(firstString);
+			activeEventName2.text(secondString);
+			activeEventName.attr("font-size", (divBounds["height"] * .0125));
+			if(activeEventName.node().getBBox()["width"] + textHeight > ((2.5 * divBounds["width"]) / 9))
+			{
+				activeEventName.attr("textLength", (2.5 * divBounds["width"]) / 9);
+			}
+			if(activeEventName2.node().getBBox()["width"] + textHeight > ((2.5 * divBounds["width"]) / 9))
+			{
+				activeEventName2.attr("textLength", (2.5 * divBounds["width"]) / 9);
+			}
+		}
+		else
+		{
+			activeEventName.attr("textLength", "")
+		}
+	}
+	
+	//Iterate through the processes to get the top processes at a given time.
+	function updateTopProcesses(selectTime)
+	{
+		var curTime = 0;
+		var curProcessIndex = 0;
+		
+		while(curTime < selectTime && processIndex < processes.length)
+		{
+			curFrame = processes[curProcessIndex];
+			
+			
+			if(curFrame)
+			{
+				curTime = curFrame["Index MS Session"];
+				if(curTime >= selectTime)
+				{
+					break;
+				}
+				
+				if(curFrame["CPU"] > 0)
+				{
+					if(curTop[curFrame["PID"]])
+					{
+						for(var x = 0; x < topProcesses.length; x++)
+						{
+							if(curFrame["PID"] == topProcesses[x]["PID"])
+							{
+								//if(curFrame["CPU"] != topProcesses[x]["CPU"])
+								{
+									topProcesses.splice(x, 1);
+									delete curTop[curFrame["PID"]];
+									//break;
+									updateProcAni = true;
+								}
+							}
+						}
+					}
+					//else
+					{
+						for(var x = 0; curFrame["Next"] && x < numTopProcesses; x++)
+						{
+							if(topProcesses.length <= x)
+							{
+								topProcesses.push(curFrame);
+								curTop[curFrame["PID"]] = true;
+								updateProcAni = true;
+								break;
+							}
+							else
+							{
+								if(curFrame["CPU"] > topProcesses[x]["CPU"])
+								{
+									curTop[curFrame["PID"]] = true;
+									topProcesses.splice(x, 0, curFrame);
+									if(topProcesses[numTopProcesses])
+									{
+										delete curTop[topProcesses[numTopProcesses]["PID"]];
+									}
+									topProcesses = topProcesses.slice(0, numTopProcesses);
+									updateProcAni = true;
+									break;
+								}
+							}
+						}
+					}
+				}
+			}
+			curProcessIndex++;
+		}
+		
+		
+		if(topProcesses[0])
+		{
+			maxProcCPU = topProcesses[0]["CPU"];
+		}
+		else
+		{
+			maxProcCPU = 0;
+		}
+		processGraphAniMaxLabel.text(maxProcCPU);
+		processGraphAniBarG.selectAll("*")
+				//.data(topProcesses)
+				//.exit()
+				.remove();
+		processGraphAniBarG.selectAll("rect")
+				.data(topProcesses)
+				.enter()
+				.append("rect")
+				//.attr("width", (2 * divBounds["width"]) / 9)
+				.attr("width", function(d, i)
+						{
+							if(maxProcCPU == 0)
+							{
+								return 0;
+							}
+							return ((d["CPU"] / maxProcCPU) * (2 * divBounds["width"]) / 9);
+						})
+				.attr("height", (((divBounds["height"] * .2) - textPadding) / numTopProcesses))
+				.attr("fill", function(d, i)
+						{
+							//var scaleMult = 20 / numTopProcesses;
+							//if(scaleMult > 1)
+							//{
+							//	return colorScale(i * scaleMult);
+							//}
+							//else
+							//{
+								return colorScale(((i % 10) * 2) + 1);
+							//}
+						})
+				.style("fill-opacity", ".9")
+				.attr("stroke", "Black")
+				.attr("x", (4.5 * divBounds["width"]) / 9)
+				.attr("y", function(d, i)
+						{
+							var initReturn =  ((divBounds["height"] * .8) + textPadding);
+							return initReturn + (i * (((divBounds["height"] * .2) - textPadding) / numTopProcesses));
+						});
+		
+		//processGraphAniBarG.selectAll("text")
+		//		.data(topProcesses)
+				//.exit()
+		//		.remove();
+		processGraphAniBarG.selectAll("text")
+				.data(topProcesses)
+				.enter()
+				.append("text")
+				.attr("dominant-baseline", "hanging")
+				.attr("font-size", (((divBounds["height"] * .2) - textPadding) / numTopProcesses) / 2)
+				.attr("stroke", "Black")
+				.text(function(d, i)
+						{
+							return d["Command"] + " " + d["PID"] + ": " + d["CPU"];
+						})
+				.attr("x", (4.5 * divBounds["width"]) / 9)
+				.attr("y", function(d, i)
+						{
+							var initReturn =  ((divBounds["height"] * .8) + textPadding);
+							return initReturn + (i * (((divBounds["height"] * .2) - textPadding) / numTopProcesses));
+						});
+	}
+	
 	function seekTime(selectTime)
 	{
 				clearTimeout(animationTimeout);
+				
+				curKeyInput = animationG.append("text").attr("x", 0)
+				.attr("y", startY  + textPadding)
+				.text("Seek to: " + selectTime)
+				.attr("text", "Seek to: " + selectTime)
+				.attr("font-size", textHeight);
+				
+				keyboardInputs.unshift(curKeyInput);
+				
 				topProcesses = [];
 				curTop = {};
 				updateProcAni = true;
@@ -1224,6 +1466,11 @@ async function playAnimation(owningUser, owningSession, seekTo)
 					processIndex = closestIndexMSBinarySession(processes, selectTime);
 					var curProcess = processes[processIndex];
 				}
+				if(events)
+				{
+					eventsIndex = closestIndexMSBinarySession(events, selectTime);
+					var curEvent = events[eventsIndex];
+				}
 				
 				var selectedEntry;
 				if(screenshots && curScreenshot)
@@ -1246,6 +1493,59 @@ async function playAnimation(owningUser, owningSession, seekTo)
 					selectedEntry = curWindows;
 					curDiff = Math.abs(Number(curWindows["Index MS Session"]) - selectTime);
 				}
+				if(processes && curProcess && curDiff > Math.abs(Number(curProcess["Index MS Session"]) - selectTime))
+				{
+					selectedEntry = curProcess;
+					curDiff = Math.abs(Number(curProcess["Index MS Session"]) - selectTime);
+				}
+				if(events && curEvent && curDiff > Math.abs(Number(curEvent["Index MS Session"]) - selectTime))
+				{
+					selectedEntry = curEvent;
+					curDiff = Math.abs(Number(curEvent["Index MS Session"]) - selectTime);
+				}
+				
+				//Getting last known window before the closest seek entry
+				activeWindow.text("...");
+				activeWindowName.text("...");
+				
+				var tmpWindow = curWindows;
+				var windowIndexSubtract = 1;
+				while(tmpWindow["Index MS Session"] > selectedEntry["Index MS Session"])
+				{
+					if(windows[windowsIndex - windowIndexSubtract])
+					{
+						tmpWindow = windows[windowsIndex - windowIndexSubtract];
+						windowIndexSubtract++;
+					}
+					else
+					{
+						break;
+					}	
+				}
+				
+				if(tmpWindow)
+				{
+					activeWindow.text(tmpWindow["FirstClass"]);
+					activeWindow.attr("textLength", "")
+					if(activeWindow.node().getBBox()["width"] + textHeight > ((2.5 * divBounds["width"]) / 9))
+					{
+						activeWindow.attr("textLength", (2.5 * divBounds["width"]) / 9)
+					}
+					else
+					{
+						activeWindow.attr("textLength", "")
+					}
+					activeWindowName.text(tmpWindow["Name"]);
+					activeWindowName.attr("textLength", "")
+					if(activeWindowName.node().getBBox()["width"] + textHeight > ((2.5 * divBounds["width"]) / 9))
+					{
+						activeWindowName.attr("textLength", (2.5 * divBounds["width"]) / 9)
+					}
+					else
+					{
+						activeWindowName.attr("textLength", "")
+					}
+				}
 				
 				while(screenshots && screenshotIndex < screenshots.length && Number(screenshots[screenshotIndex]["Index MS Session"]) < Number(selectedEntry["Index MS Session"]))
 				{
@@ -1263,24 +1563,42 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				{
 					windowsIndex++;
 				}
+				while(processes && processIndex < processes.length && Number(processes[processIndex]["Index MS Session"]) < Number(selectedEntry["Index MS Session"]))
+				{
+					processIndex++;
+				}
+				while(events && eventsIndex < events.length && Number(events[eventsIndex]["Index MS Session"]) < Number(selectedEntry["Index MS Session"]))
+				{
+					eventsIndex++;
+				}
+				
 				
 				lastFrame = selectedEntry;
 				axisTick.style("transition", "none");
 				axisTick .attr("x", timeScaleAnimation(selectedEntry["Index MS Session"]));
 				
+				updateTopProcesses(selectedEntry["Index MS Session"]);
+				
+				activeEvents = [];
+				activeEventName.text("...");
+				updateEventList(selectedEntry["Index MS Session"]);
+				
 				curKeyInput = animationG.append("text").attr("x", 0)
 				.attr("y", startY  + textPadding)
-				.text("⏯")
-				.attr("text", "")
+				.text("Play from: " + selectedEntry["Index MS Session"])
+				.attr("text", "Play from: " + selectedEntry["Index MS Session"])
 				.attr("font-size", textHeight);
 				
 				keyboardInputs.unshift(curKeyInput);
 				
-				activeWindow.text("...");
-				activeWindowName.text("...");
+				curKeyInput = animationG.append("text").attr("x", 0)
+				.attr("y", startY  + textPadding)
+				.text("⏯")
+				.attr("text", "⏯")
+				.attr("font-size", textHeight);
 				
-				activeEvents = [];
-				activeEventName.text("...");
+				keyboardInputs.unshift(curKeyInput);
+				
 				
 				for(entry in lastMouseClicks)
 				{

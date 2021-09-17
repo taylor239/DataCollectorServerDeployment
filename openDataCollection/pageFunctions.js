@@ -56,8 +56,11 @@ function nestedTutorial()
 	}
 }
 
+var foregroundExit = true;
+
 function dimBackground(toHighlight, captionText, nextFunction)
 {
+	foregroundExit = false;
 	
 	curFunction = nextFunction;
 	
@@ -171,6 +174,7 @@ function fadeInDim()
 
 function undimBackground()
 {
+	foregroundExit = true;
 	clearTimeout(lightBoxTimeout);
 	
 	var oldBlackDiv=document.getElementById('fade');
@@ -208,6 +212,7 @@ var lightBoxTimeout;
 
 async function showLightbox(theHTML)
 {
+	foregroundExit = false;
 	clearTimeout(lightBoxTimeout);
 	
 	var newWhiteDiv=document.createElement('table');
@@ -244,6 +249,7 @@ function fadeInLightbox()
 
 function unshowLightbox()
 {
+	foregroundExit = true;
 	clearTimeout(animationTimeout);
 	clearTimeout(lightBoxTimeout);
 	
