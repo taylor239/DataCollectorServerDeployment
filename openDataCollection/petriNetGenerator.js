@@ -24,9 +24,17 @@ function rebuildPetriMenu()
 async function buildTaskMapTop(user, session, task, onlySession, colissionMap)
 {
 	var curGraph = await buildTaskMap(user, session, task, onlySession, colissionMap)
-
+	
+	console.log(curGraph);
+	
 	var toReturn = await analyzeTaskMap(curGraph);
+	
+	console.log(toReturn);
+	
 	toReturn = await petriToGraph(toReturn);
+	
+	console.log(toReturn);
+	
 	attackGraphs.push(toReturn);
 	console.log(attackGraphs)
 	rebuildPetriMenu();
@@ -249,7 +257,7 @@ async function analyzeTaskMap(taskMap, nodeCache)
 							nextConNode["Result"] = taskToCheck["Parent Task"];
 							nextConNode["Transitions"] = [];
 							nodeCache[taskToCheck["Parent Task"]["Task Hash"]] = nextConNode;
-							console.log(taskToCheck);
+							//console.log(taskToCheck);
 							analyzeTaskMap(taskToCheck, nodeCache);
 						}
 						curTransition.push(nextConNode);
@@ -351,14 +359,14 @@ async function buildTaskMap(user, session, task, onlySession, colissionMap)
 		var curSession = sessionTasks[sessions[entry]];
 		var startNode = binarySearch(curSession, task["Index MS"]);
 		var endNode = binarySearch(curSession, task["Next"]["Index MS"]);
-		console.log(curSession[startNode]);
-		console.log(curSession[startNode]["Index MS"]);
-		console.log(task);
-		console.log(task["Index MS"]);
+		//console.log(curSession[startNode]);
+		//console.log(curSession[startNode]["Index MS"]);
+		//console.log(task);
+		//console.log(task["Index MS"]);
 		while((curSession[startNode]["Index MS"] < task["Index MS"] || curSession[startNode] == task) && startNode < curSession.length)
 		{
-			console.log(task["Next"]);
-			console.log(task["Next"]["Index MS"]);
+			//console.log(task["Next"]);
+			//console.log(task["Next"]["Index MS"]);
 			if(curSession[startNode]["Index MS"] > task["Next"]["Index MS"])
 			{
 				//return toReturn;
