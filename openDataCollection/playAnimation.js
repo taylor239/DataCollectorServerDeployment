@@ -9,6 +9,41 @@ var oldUser;
 var oldSession;
 var oldSeek;
 
+//This shows the task adding table when toggled.
+var taskToggled = false;
+
+function toggleTaskTable()
+{
+	if(taskToggled)
+	{
+		d3.select("#toggleTaskButton").attr("fill", "Cyan");
+		d3.select("#toggleTaskButtonLabel").text("Show Task");
+		
+		d3.select("#taskMenuTable").style("display", "none");
+		
+		taskToggled = false;
+	}
+	else
+	{
+		d3.select("#toggleTaskButton").attr("fill", "Crimson");
+		d3.select("#toggleTaskButtonLabel").text("Hide Task");
+		
+		d3.select("#taskMenuTable").style("display", "");
+		
+		taskToggled = true;
+	}
+}
+
+var needsReseek = false;
+function addTaskWrapper(userName, sessionName, isUpdate, fromAni)
+{
+	addTask(userName, sessionName, isUpdate, fromAni);
+	needsReseek = true;
+	//events = theNormData[owningUser][owningSession]["events"];
+	//seekTime(oldSeek);
+}
+
+//This plays the animation.
 async function playAnimation(owningUser, owningSession, seekTo)
 {
 	//If it is the same user and we do not have a specific seek time,
@@ -42,7 +77,12 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	var divBounds = aniRow.node().getBoundingClientRect();
 	
 	var screenshots = theNormData[owningUser][owningSession]["screenshots"];
-	var keystrokes = (await theNormData[owningUser][owningSession]["keystrokes"]["getfiltered"]()).value;
+	var getKeyValue = (await theNormData[owningUser][owningSession]["keystrokes"]["getfiltered"]())
+	var keystrokes;
+	if(getKeyValue)
+	{
+		keystrokes = getKeyValue.value;
+	}
 	var mouse = (await theNormData[owningUser][owningSession]["mouse"]["getfiltered"]()).value;
 	var windows = theNormData[owningUser][owningSession]["windows"];
 	var processes = (await theNormData[owningUser][owningSession]["processes"]["getfiltered"]()).value;
@@ -53,6 +93,48 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	var animationSvg = aniDiv.append("svg")
 		.attr("width", divBounds["width"])
 		.attr("height", divBounds["height"]);
+	
+	var taskMenu = aniDiv.append("table")
+		.attr("width", divBounds["width"])
+		.attr("height", divBounds["height"])
+		.style("position", "absolute")
+		.style("top", "0")
+		.style("left", "0")
+		.style("right", "0")
+		.style("height", "20%")
+		.attr("id", "taskMenuTable")
+		.style("display", "none")
+		.style("background-color", "white");
+	
+	var addTaskAniRow = taskMenu.append("tr").append("td")
+		.attr("width", visWidthParent + "px")
+		.html("<td><div id=\"addTaskAniTitle\" align=\"center\">Add Task</div></td>");
+
+	var selectEntries = "";
+	for(var x = 0; searchTerms && x < searchTerms.length; x++)
+	{
+		selectEntries = selectEntries + "<option value=\"" + searchTerms[x] + "\">" + searchTerms[x] + "</option>";
+	}
+	
+	var addTagRowAni = taskMenu.append("tr").append("td")
+			.attr("width", visWidthParent + "px")
+			.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")
+			.html(	"<td colspan=\"2\" width=\"50%\"><div align=\"center\"><b>Search Tags:</b></div><div align=\"center\"><input type=\"text\" style=\"width:75%\" id=\"searchTagsAni\" name=\"searchTagsAni\" value=\"Search/New\" onkeyup=\"filterTags()\"><button type=\"button\" style=\"width:20%\" onclick=\"addTag(true)\">Add</button></div>" +
+						"<div align=\"center\"><select style=\"width:100%\" name=\"storedTagsAni\" id=\"storedTagsAni\" size=\"3\" multiple>" + selectEntries + "</select></div></td>" +
+						"<td colspan=\"2\" width=\"50%\"><div align=\"center\"><b>Task Tags:</b></div><div align=\"center\"><textarea id=\"tagsAni\" name=\"tagsAni\" rows=\"5\" cols=\"50\"></textarea></div></td>");
+	
+	var addGoalRowAni = taskMenu.append("tr").append("td")
+			.attr("width", visWidthParent + "px")
+			.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")
+			.html(	"<td colspan=\"4\" width=\"100%\"><div align=\"center\"><b>Task Goal:</b></div><div align=\"center\"><textarea id=\"addTaskAniGoal\" name=\"addTaskAniGoal\" rows=\"2\" cols=\"100\"></textarea></div></td>");
+	
+	var addTaskAniRow = taskMenu.append("tr").append("td")
+			.attr("width", visWidthParent + "px")
+			.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")
+			.html("<td width=\"25%\"><div align=\"center\"><input type=\"text\" id=\"addTaskAniStart\" name=\"addTaskAniStart\" value=\"Start (MS Session Time)\"></div></td>" +
+						"<td width=\"25%\"><div align=\"center\"><input type=\"text\" id=\"addTaskAniEnd\" name=\"addTaskAniEnd\" value=\"End (MS Session Time)\"></div></td>" +
+						"<td width=\"25%\"><div align=\"center\"><input type=\"text\" id=\"addTaskAniName\" name=\"addTaskAniName\" value=\"Task Name\"></div></td>" +
+						"<td width=\"25%\"><div align=\"center\"><button type=\"button\" onclick=\"addTaskWrapper('" + owningUser + "', '" + owningSession + "', false, true)\">Submit</button></div></td>");
 	
 	var backgroundG = animationSvg.append("g");
 	
@@ -228,8 +310,8 @@ async function playAnimation(owningUser, owningSession, seekTo)
 					selectRect.attr("width", 0);
 					selectRectAni.attr("x", initX);
 					selectRectAni.attr("width", 0);
-					document.getElementById("addTaskStart").value = "Start (MS Session Time)";
-					document.getElementById("addTaskEnd").value = "End (MS Session Time)";
+					document.getElementById("addTaskAniStart").value = "Start (MS Session Time)";
+					document.getElementById("addTaskAniEnd").value = "End (MS Session Time)";
 				});
 	
 	function dragmoveAddTask(d)
@@ -254,8 +336,8 @@ async function playAnimation(owningUser, owningSession, seekTo)
 		}
 		selectRect.attr("x", timeScaleAni(startPoint) + xAxisPadding);
 		selectRect.attr("width", timeScaleAni(endPoint - startPoint));
-		document.getElementById("addTaskStart").value = startPoint;
-		document.getElementById("addTaskEnd").value = endPoint;
+		document.getElementById("addTaskAniStart").value = startPoint;
+		document.getElementById("addTaskAniEnd").value = endPoint;
 	}
 	
 	var dragBarG = animationSvg.append("g")
@@ -360,6 +442,38 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.attr("x", (4.5 * divBounds["width"]) / 9)
 			.attr("y", (divBounds["height"]));
 	
+	
+	var showTaskAddG = animationSvg.append("g");
+	
+	var showTaskAdd = showTaskAddG.append("rect")
+			.attr("width", divBounds["width"] / 9)
+			.attr("height", (divBounds["height"] * .05))
+			.attr("fill", "Cyan")
+			.attr("stroke", "Black")
+			.attr("x", (7.5 * divBounds["width"]) / 9)
+			.attr("y", (divBounds["height"] * .8) + textPadding)
+			.style("cursor", "pointer")
+			.attr("id", "toggleTaskButton")
+			.on("click", function(d, i)
+					{
+						toggleTaskTable();
+					});
+	
+	var showTaskAddLabel = showTaskAddG.append("text")
+			.style("pointer-events", "none")
+			.attr("text-anchor", "middle")
+			.attr("dominant-baseline", "middle")
+			//.attr("font-weight", "bolder")
+			.attr("textLength", divBounds["width"] / 9)
+			.attr("fill", "Black")
+			.attr("stroke", "Black")
+			.attr("font-size", (divBounds["height"] * .0375))
+			.text("Show Task")
+			.style("cursor", "pointer")
+			.attr("id", "toggleTaskButtonLabel")
+			.attr("x", (8 * divBounds["width"]) / 9)
+			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .03125));
+	
 	var playPauseG = animationSvg.append("g");
 	var playPause = playPauseG.append("rect")
 			.attr("width", divBounds["width"] / 9)
@@ -382,6 +496,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.style("cursor", "pointer")
 			.attr("x", (7 * divBounds["width"]) / 9)
 			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .03125));
+	/*
 	var activeWindowTitle = playPauseG.append("text")
 			.style("pointer-events", "none")
 			.attr("text-anchor", "end")
@@ -392,6 +507,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.text("Active Window and Tasks")
 			.attr("x", divBounds["width"])
 			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .03125));
+	*/
 	var activeWindow = playPauseG.append("text")
 			.style("pointer-events", "none")
 			.attr("text-anchor", "end")
@@ -833,6 +949,14 @@ async function playAnimation(owningUser, owningSession, seekTo)
 		{
 			return;
 		}
+		
+		if(needsReseek)
+		{
+			needsReseek = false;
+			events = theNormData[owningUser][owningSession]["events"];
+			seekTime(oldSeek);
+		}
+		
 		startY = (divBounds["height"] * .8)
 		var curFrame = nextFrame();
 
