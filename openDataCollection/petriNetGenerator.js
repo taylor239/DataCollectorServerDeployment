@@ -60,34 +60,183 @@ async function petriToGraph(analyzedTasks)
 		
 		if(entry != "-1")
 		{
-		for(transition in curPlace["Transitions"])
-		{
 			var transitionNode = {};
 			transitionNode["id"] = curPlace["Result"]["Task Hash"] + "_transition";
 			transitionNum++;
 			transitionNode["type"] = "Transition";
 			transitionNode["Target Place"] = curPlace["Result"];
-			//transitionNode["target"] = entry + "_place";
-			var curTransition = curPlace["Transitions"][transition];
-			for(source in curTransition)
+			
+			
+			for(source in curPlace["Transitions"])
 			{
 				//transitionNode["id"] = curTransition[source]["Result"]["Task Hash"] + "_" + transitionNode["id"];
 				var prevPlaceLink = {};
 				prevPlaceLink["target"] = transitionNode["id"];
-				prevPlaceLink["source"] = curTransition[source]["Result"]["Task Hash"] + "_place";
+				prevPlaceLink["source"] = curPlace["Transitions"][source]["Result"]["Task Hash"] + "_place";
 				toReturn["links"].push(prevPlaceLink);
 			}
+			
+			
 			var nextPlaceLink = {};
 			nextPlaceLink["source"] = transitionNode["id"];
 			nextPlaceLink["target"] = placeNode["id"];
 			toReturn["links"].push(nextPlaceLink);
 			toReturn["nodes"].push(transitionNode);
 		}
-		}
 	}
 	return toReturn;
 }
 
+async function analyzeTaskMap(curTask)
+{
+	//If the current task does not have a predecessor, give it
+	//the default start node as a predecessor.
+	if(!curTask["Predecessor"])
+	{
+		var defPred = {}
+		defPred["Child Tasks"] = [];
+		defPred["Concurrent Tasks"] = [];
+		defParent = {};
+		defPred["Parent Task"] = {};
+		defPred["Parent Task"]["TaskName"] = "_StartNode_";
+		defPred["Parent Task"]["Task Hash"] = "-1";
+		curTask["Predecessor"] = [defPred];
+	}
+	
+	var curParent = curTask["Parent Task"];
+	var curChildren = curTask["Child Tasks"];
+	//For all children except the first, their predecessor is the
+	//first child before them that is not concurrent to them.
+	
+	//If there is no previous child, then the predecessor is
+	//the predecessor for the parent.  We will assign this at
+	//the end from this list.
+	var predlessChildren = [];
+	
+	//We also keep track of children that have been used as
+	//predecessors so that at the end we can determine which
+	//ones are not used and thus are predecessor to the parent.
+	var usedChildren = {};
+	
+	//After this is all done, we will recursively call this on
+	//the children.
+	for(var x = curChildren.length - 1; x >= 0; x--)
+	{
+		//Get the current child
+		var curChild = curChildren[x];
+		var curChildChildren = curChild["Child Tasks"];
+		var curConcurrent = curChild["Concurrent Tasks"];
+		var curChildParent = curChild["Parent Task"];
+		
+		var foundPred = false;
+		if(x >= 1)
+		{
+			//Iterate through children before this child,
+			//looking for one that is not concurrent.
+			for(var y = x - 1; y >= 0; y--)
+			{
+				if(curConcurrent.indexOf(curChildren[y]) == -1)
+				{
+					//The previous child is not concurrent to the
+					//current child we are getting pred for.  We
+					//assign it as pred and continue.
+					curChild["Predecessor"] = [curChildren[y]];
+					usedChildren[curChildren[y]] = true;
+					foundPred = true;
+					break;
+				}
+			}
+		}
+		
+		if(!foundPred)
+		{
+			//There was no previous child that was not concurrent
+			//to the current child, so we set it aside.
+			predlessChildren.push(curChild)
+		}
+	}
+	
+	//Now, for each child without a pred, we assign the pred for
+	//the parent.
+	for(entry in predlessChildren)
+	{
+		predlessChildren[entry]["Predecessor"] = curTask["Predecessor"];
+	}
+	
+	//The predecessor to the parent task are all of the children that are
+	//not predecessor to anything else.
+	newPredList = [];
+	for(entry in curChildren)
+	{
+		if(curChildren[entry] in usedChildren)
+		{
+			
+		}
+		else
+		{
+			newPredList.push(curChildren[entry]);
+		}
+	}
+	if(newPredList.length > 0)
+	{
+		curTask["Predecessor"] = newPredList;
+	}
+	
+	//Now we run this same algorithm on all children.
+	for(var x = curChildren.length - 1; x >= 0; x--)
+	{
+		var curChild = curChildren[x];
+		analyzeTaskMap(curChild);
+	}
+	
+	console.log("Returning task:")
+	console.log(curTask)
+	
+	//Finally, we transform the nodes with predecessors into a graph map.
+	return toNodeMap(curTask);
+}
+
+function toNodeMap(curTask, nodeMap, targetNode)
+{
+	if(!nodeMap)
+	{
+		nodeMap = {};
+	}
+	
+	var curNode;
+	
+	if(nodeMap[curTask["Parent Task"]["Task Hash"]])
+	{
+		curNode = nodeMap[curTask["Parent Task"]["Task Hash"]];
+	}
+	else
+	{
+		curNode = {};
+		curNode["Result"] = curTask["Parent Task"];
+		curNode["Transitions"] = [];
+		nodeMap[curNode["Result"]["Task Hash"]] = curNode;
+	}
+	
+	if(targetNode)
+	{
+		targetNode["Transitions"].push(curNode);
+	}
+	
+	
+	for(entry in curTask["Predecessor"])
+	{
+		nodeMap = toNodeMap(curTask["Predecessor"][entry], nodeMap, curNode);
+	}
+	
+	if(curNode["Transitions"].length == 0)
+	{
+		curNode["Transitions"].push(curNode);
+	}
+	
+	return nodeMap;
+}
+
+/*
 async function analyzeTaskMap(taskMap, nodeCache)
 {
 	if(!nodeCache)
@@ -280,6 +429,8 @@ async function analyzeTaskMap(taskMap, nodeCache)
 
 	return nodeCache;
 }
+*/
+
 
 async function buildTaskMap(user, session, task, onlySession, colissionMap)
 {
