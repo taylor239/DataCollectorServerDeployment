@@ -102,9 +102,12 @@ async function analyzeTaskMap(taskMap, nodeCache)
 	//child task with no subsequent task is a requirement for
 	//transition to the result.  Each child task with no children
 	//requires the collected data from its time and its
-	//predecessor childto fire.
+	//predecessor child to fire.
 	var curChildren = curTask["Child Tasks"];
 	var childHashes = {};
+	
+	console.log("Analyzing node:")
+	console.log(curParent)
 	
 	for(entry in curChildren)
 	{
@@ -116,6 +119,7 @@ async function analyzeTaskMap(taskMap, nodeCache)
 		var curNode = {};
 		if(nodeCache[curParent["Task Hash"]])
 		{
+			console.log("Cur node is cached");
 			curNode = nodeCache[curParent["Task Hash"]];
 		}
 		else
@@ -129,8 +133,12 @@ async function analyzeTaskMap(taskMap, nodeCache)
 		
 		if(curChildren.length == 0)
 		{
+			console.log("No node children")
+			
 			if(!curTask["Predecessor"])
 			{
+				console.log("Does not have predecessor")
+				
 				var defPred = {}
 				defPred["Child Tasks"] = [];
 				defPred["Concurrent Tasks"] = [];
@@ -140,33 +148,23 @@ async function analyzeTaskMap(taskMap, nodeCache)
 				defPred["Parent Task"]["Task Hash"] = "-1";
 				curTask["Predecessor"] = defPred;
 			}
-			if(curTask["Predecessor"])
+			
+			console.log("Has predecessor, adjusting:")
+			console.log(curTask["Predecessor"]["Parent Task"])
+			
+			var nextPredNode = {};
+			if(nodeCache[curTask["Predecessor"]["Parent Task"]["Task Hash"]])
 			{
-				var nextPredNode = {};
-				if(nodeCache[curTask["Predecessor"]["Parent Task"]["Task Hash"]])
-				{
-					nextPredNode = nodeCache[curTask["Predecessor"]["Parent Task"]["Task Hash"]];
-				}
-				else
-				{
-					nextPredNode["Result"] = curTask["Predecessor"]["Parent Task"];
-					nextPredNode["Transitions"] = [];
-					nodeCache[curTask["Predecessor"]["Parent Task"]["Task Hash"]] = nextPredNode;
-					analyzeTaskMap(curTask["Predecessor"], nodeCache);
-				}
-				curTransition.push(nextPredNode);
+				nextPredNode = nodeCache[curTask["Predecessor"]["Parent Task"]["Task Hash"]];
 			}
 			else
 			{
-				var defPred = {}
-				defPred["Child Tasks"] = [];
-				defPred["Concurrent Tasks"] = [];
-				defParent = {};
-				defPred["Parent Task"] = {};
-				defPred["Parent Task"]["TaskName"] = "_StartNode_";
-				defPred["Parent Task"]["Task Hash"] = "-1";
-				curTask["Predecessor"] = defPred;
+				nextPredNode["Result"] = curTask["Predecessor"]["Parent Task"];
+				nextPredNode["Transitions"] = [];
+				nodeCache[curTask["Predecessor"]["Parent Task"]["Task Hash"]] = nextPredNode;
+				analyzeTaskMap(curTask["Predecessor"], nodeCache);
 			}
+			curTransition.push(nextPredNode);
 		}
 		
 		for(var x = curChildren.length - 1; x >= 0; x--)
@@ -216,8 +214,13 @@ async function analyzeTaskMap(taskMap, nodeCache)
 			//If the last child has a concurrent task and that task
 			//is also a child then it is also a requirement and
 			//in the transition.
+			
+			console.log("Looking at child:")
+			console.log(curChildren[x]["Parent Task"]);
+			
 			if(x == curChildren.length - 1)
 			{
+				console.log("Last child")
 				//curTransition.push(curChildren[x]["Parent Task"])
 				var nextNode = {};
 				if(nodeCache[curChildren[x]["Parent Task"]["Task Hash"]])
@@ -233,6 +236,7 @@ async function analyzeTaskMap(taskMap, nodeCache)
 					{
 						if(curChildren[x]["Predecessor"])
 						{
+							
 						}
 						else
 						{
@@ -266,7 +270,7 @@ async function analyzeTaskMap(taskMap, nodeCache)
 			}
 			else
 			{
-				
+				console.log("This is before the last node, we dont care?")
 			}
 		}
 		curNode["Transitions"].push(curTransition);
