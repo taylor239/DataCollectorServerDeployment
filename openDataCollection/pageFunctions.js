@@ -1,4 +1,4 @@
-
+var animationTimeout;
 function getFullWidth() {
 	  return Math.max(
 		document.body.scrollWidth,
@@ -250,7 +250,10 @@ function fadeInLightbox()
 function unshowLightbox()
 {
 	foregroundExit = true;
-	clearTimeout(animationTimeout);
+	if(animationTimeout)
+	{
+		clearTimeout(animationTimeout);
+	}
 	clearTimeout(lightBoxTimeout);
 	
 	var oldWhiteDiv=document.getElementById('light');

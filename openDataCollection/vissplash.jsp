@@ -9,6 +9,7 @@
 <script src="./pathFunctions.js"></script>
 <script src="./d3.v4.min.js"></script>
 <script src="./d3-scale-chromatic.v0.3.min.js"></script>
+<script src="./pageFunctions.js"></script>
 <meta charset="UTF-8">
 <title>Data Collection Visualization</title>
 </head>
@@ -127,7 +128,7 @@ if(request.getParameter("email") != null)
 							</tr>
 							<tr>
 								<td colspan="11">
-									<div align="center"><input type="button" value="Refresh Search" onclick="refreshSearch()"><input type="button" value="Visualize Selected" onclick="visualize()"></div>
+									<div align="center"><input type="button" value="Refresh Search" onclick="refreshSearch()"><input type="button" value="Visualize Selected" onclick="visualize()"><input type="button" value="Statistics" onclick="stats()"></div>
 								</td>
 							</tr>
 							<tr>
@@ -200,81 +201,6 @@ if(request.getParameter("email") != null)
 	-o-transition: all 0.2s ease-in;
 	-webkit-transition: all 0.2s ease-in;
 	transition: all 0.2s ease-in;
-}
-
-.popimage
-{
-	
-}
-
-.black_overlay
-{
-	transition:300ms linear;
-	display: none;
-	position: absolute;
-	top: 0%;
-	left: 0%;
-	width: 100%;
-	height: 100%;
-	background-color: black;
-	z-index:1001;
-	opacity:0;
-	cursor:pointer;
-}
-
-.black_highlight
-{
-	transition:300ms linear;
-	position: absolute;
-	top: 0%;
-	left: 0%;
-	width: 100%;
-	height: 100%;
-	z-index:1001;
-	cursor:pointer;
-}
- 
-.white_content
-{
-	transition:300ms linear;
-	border-radius:10px;
-	display: none;
-	position: absolute;
-	top: 2.5%;
-	left: 5%;
-	width: 90%;
-	height: 95%;
-	max-height:95%;
-	padding: 2px;
-	border: 4px solid #000;
-	background-color: white;
-	z-index:1002;
-	overflow: auto;
-	text-align:center;
-	opacity:0;
-	vertical-align:middle;
-}
-
-.white_dim
-{
-	transition:300ms linear;
-	border-radius:10px;
-	display: block;
-	padding: 2px;
-	border: 4px solid #000;
-	background-color: white;
-	z-index:1002;
-	overflow: auto;
-	text-align:justify;
-	cursor:pointer;
-	opacity:0;
-	vertical-align:middle;
-}
-
-.white_content td
-{
-	text-align:center;
-	vertical-align:middle;
 }
 
 </style>
@@ -376,240 +302,6 @@ function toggleCol(colToExpand)
 		}
 	}
 	
-}
-
-function getFullWidth() {
-	  return Math.max(
-		document.body.scrollWidth,
-		document.documentElement.scrollWidth,
-		document.body.offsetWidth,
-		document.documentElement.offsetWidth,
-		document.documentElement.clientWidth
-	  );
-	}
-
-	function getFullHeight() {
-	  return Math.max(
-		document.body.scrollHeight,
-		document.documentElement.scrollHeight,
-		document.body.offsetHeight,
-		document.documentElement.offsetHeight,
-		document.documentElement.clientHeight
-	  );
-	}
-
-
-
-function dimBackground(toHighlight, captionText, nextFunction)
-{
-	
-	curFunction = nextFunction;
-	
-	var totalWidth = getFullWidth();
-	var totalHeight = getFullHeight();
-	
-	
-	var eleX = Math.round(toHighlight.getBoundingClientRect()["x"]);
-	var eleY = Math.round(toHighlight.getBoundingClientRect()["y"]);
-	var eleWidth = Math.round(toHighlight.getBoundingClientRect()["width"]);
-	var eleHeight = Math.round(toHighlight.getBoundingClientRect()["height"]);
-	
-	var surroundingRects = [];
-	
-	var leftRect = {x: 0, y: 0, width: eleX, height: totalHeight};
-	var topRect = {x: eleX, y:0, width: eleWidth, height: eleY};
-	var bottomRect = {x: eleX, y: eleY + eleHeight, width: eleWidth, height: totalHeight - (eleY + eleHeight)};
-	var rightRect = {x: eleX + eleWidth, y: 0, width: totalWidth - (eleX + eleWidth), height: totalHeight};
-	surroundingRects.push(leftRect);
-	surroundingRects.push(topRect);
-	surroundingRects.push(bottomRect);
-	surroundingRects.push(rightRect);
-	
-	
-	var newBlackDiv=document.createElement('div');
-	newBlackDiv.className="black_highlight";
-	//newBlackDiv.style.position = "absolute";
-	//newBlackDiv.style.display = "block";
-	//newBlackDiv.style.width = totalWidth + "px";
-	//newBlackDiv.style.height = totalHeight + "px";
-	newBlackDiv.id="fade";
-	document.body.appendChild(newBlackDiv);
-	newBlackDiv.onclick=undimBackground;
-	newBlackDiv.style.opacity=0;
-	
-	var dimSVG = d3.select(newBlackDiv).append("svg")
-	dimSVG.attr("width", "100%")
-		.attr("height", "100%")
-		.selectAll("rect")
-		.data(surroundingRects)
-		.enter()
-		.append("rect")
-		.attr("x", function(d, i)
-				{
-					return d["x"];
-				})
-		.attr("y", function(d, i)
-				{
-					return d["y"];
-				})
-		.attr("width", function(d, i)
-				{
-					return d["width"];
-				})
-		.attr("height", function(d, i)
-				{
-					return d["height"];
-				})
-		.attr("fill", "Black")
-		.attr("opacity", ".8")
-		.on("click", "undimBackground()");
-	
-	dimSVG.append("text")
-		.attr("fill", "white")
-		.text("Click anywhere to continue.")
-		.attr("alignment-baseline", "hanging")
-		.attr("dominant-baseline", "hanging")
-		.attr("text-anchor", "middle")
-		.attr("x", "50%")
-		.attr("y", "1%");
-	
-	var minWidth = totalWidth * .15;
-	if(eleWidth > minWidth)
-	{
-		minWidth = eleWidth;
-	}
-	
-	if(captionText)
-	{
-		var box = document.createElement('span');
-		box.style.position = 'absolute'; 
-		box.style.left = eleX + "px";
-		box.style.right = (totalWidth - (eleX + minWidth)) + "px";
-		if((eleY + eleHeight) > (totalHeight * .75))
-		{
-			
-			box.style.bottom = (totalHeight - eleY) + "px";
-		}
-		else
-		{
-			box.style.top = (eleY + eleHeight) + "px";
-			
-		}
-		box.className="white_dim";
-		box.id="light";
-		box.onclick=undimBackground;
-		box.innerHTML=captionText;
-		document.body.appendChild(box);
-	}
-	
-	dimTimeout=setTimeout("fadeInDim();", 1);
-}
-
-function fadeInDim()
-{
-	var oldBlackDiv=document.getElementById('fade');
-	oldBlackDiv.style.opacity=.8;
-	var oldWhiteDiv=document.getElementById('light');
-	oldWhiteDiv.style.opacity=1;
-}
-
-function undimBackground()
-{
-	clearTimeout(lightBoxTimeout);
-	
-	var oldBlackDiv=document.getElementById('fade');
-	oldBlackDiv.style.opacity=0;
-	var oldWhiteDiv=document.getElementById('light');
-	if(oldWhiteDiv)
-	{
-		oldWhiteDiv.style.opacity=0;
-	}
-	
-	lightBoxTimeout=setTimeout("fadeOutDim();", 300);
-}
-
-function fadeOutDim()
-{
-	var oldBlackDiv=document.getElementById('fade');
-	oldBlackDiv.display="none";
-	
-	var oldWhiteDiv=document.getElementById('light');
-	if(oldWhiteDiv)
-	{
-		oldWhiteDiv.display="none";
-		document.body.removeChild(oldWhiteDiv);
-	}
-	
-	document.body.removeChild(oldBlackDiv);
-	
-	if(curFunction)
-	{
-		curFunction();
-	}
-}
-
-var lightBoxTimeout;
-
-async function showLightbox(theHTML)
-{
-	clearTimeout(lightBoxTimeout);
-	
-	var newWhiteDiv=document.createElement('table');
-	newWhiteDiv.className="white_content";
-	newWhiteDiv.id="light";
-	newWhiteDiv.innerHTML=theHTML;
-	
-	var newBlackDiv=document.createElement('table');
-	newBlackDiv.className="black_overlay";
-	newBlackDiv.id="fade";
-	
-	document.body.appendChild(newWhiteDiv);
-	document.body.appendChild(newBlackDiv);
-	
-	newWhiteDiv.style.display='table';
-	newBlackDiv.style.display='table';
-	
-	//newWhiteDiv.onclick=unshowLightbox;
-	newBlackDiv.onclick=unshowLightbox;
-	
-	newWhiteDiv.style.opacity=0;
-	newBlackDiv.style.opacity=0;
-	lightBoxTimeout=setTimeout("fadeInLightbox();", 1);
-}
-
-function fadeInLightbox()
-{
-	var oldWhiteDiv=document.getElementById('light');
-	oldWhiteDiv.style.opacity=1;
-	
-	var oldBlackDiv=document.getElementById('fade');
-	oldBlackDiv.style.opacity=.8;
-}
-
-function unshowLightbox()
-{
-	clearTimeout(animationTimeout);
-	clearTimeout(lightBoxTimeout);
-	
-	var oldWhiteDiv=document.getElementById('light');
-	oldWhiteDiv.style.opacity=0;
-	
-	var oldBlackDiv=document.getElementById('fade');
-	oldBlackDiv.style.opacity=0;
-	
-	lightBoxTimeout=setTimeout("fadeOutLightbox();", 300);
-}
-
-function fadeOutLightbox()
-{
-	var oldWhiteDiv=document.getElementById('light');
-	oldWhiteDiv.display="none";
-	
-	var oldBlackDiv=document.getElementById('fade');
-	oldBlackDiv.display="none";
-	
-	document.body.removeChild(oldWhiteDiv);
-	document.body.removeChild(oldBlackDiv);
 }
 
 </script>
@@ -1566,6 +1258,104 @@ function fadeOutLightbox()
 							document.getElementById(SHA256(user+session + "_notes")).value = "Error: " + data + "\n" + error;
 						}
 					});
+	}
+	
+	
+	function stats()
+	{
+		showLightbox("<tr><td><table id='statsTable' width='100%'>" + 
+						"<tr id='statsTitleRow'>" + 
+							"<td id='statsTitleCol'><h1>Data Point Counts</h1></td>" + 
+						"</tr>" + 
+						"<tr id='statsBodyRow'>" + 
+							"<td id='statsBodyCol'>" + 
+								"<table id='innerStatsBody'></table>" + 
+							"</td>" + 
+						"</tr>" + 
+					"</table></tr></td>");
+		
+		var statsTable = d3.select("#innerStatsBody");
+		var fieldRow = statsTable.append("tr");
+		
+		fieldRow.append("td").html("<b>User</b>");
+		fieldRow.append("td").html("<b>Session</b>");
+		fieldRow.append("td").html("<b>Tasks</b>");
+		fieldRow.append("td").html("<b>Windows</b>");
+		fieldRow.append("td").html("<b>Processes</b>");
+		fieldRow.append("td").html("<b>Screenshots</b>");
+		fieldRow.append("td").html("<b>Mouse Input</b>");
+		fieldRow.append("td").html("<b>Key Input</b>");
+		
+		var totalRows = fieldRow.selectAll("td").size();
+		
+		fieldRow.selectAll("td").attr("width", ((1 / totalRows) * 100) + "%");
+		
+		for(user in theNormData)
+		{
+			for(session in theNormData[user]["Session Ordering"]["Order List"])
+			{
+				let sessionName = theNormData[user]["Session Ordering"][theNormData[user]["Session Ordering"]["Order List"][session]];
+				
+				if(sessionName == "Aggregated")
+				{
+					continue;
+				}
+				
+				var curRow = statsTable.append("tr");
+				
+				curRow.append("td").html(user);
+				curRow.append("td").html(sessionName);
+				if(theNormData[user][sessionName]["eventbounds"])
+				{
+					curRow.append("td").html(theNormData[user][sessionName]["eventbounds"][0]["TotalEntries"]);
+				}
+				else
+				{
+					curRow.append("td").html("0");
+				}
+				if(theNormData[user][sessionName]["windowbounds"])
+				{
+					curRow.append("td").html(theNormData[user][sessionName]["windowbounds"][0]["TotalEntries"]);
+				}
+				else
+				{
+					curRow.append("td").html("0");
+				}
+				if(theNormData[user][sessionName]["processbounds"])
+				{
+					curRow.append("td").html(theNormData[user][sessionName]["processbounds"][0]["TotalEntries"]);
+				}
+				else
+				{
+					curRow.append("td").html("0");
+				}
+				if(theNormData[user][sessionName]["screenshotsbounds"])
+				{
+					curRow.append("td").html(theNormData[user][sessionName]["screenshotsbounds"][0]["TotalEntries"]);
+				}
+				else
+				{
+					curRow.append("td").html("0");
+				}
+				if(theNormData[user][sessionName]["mousebounds"])
+				{
+					curRow.append("td").html(theNormData[user][sessionName]["mousebounds"][0]["TotalEntries"]);
+				}
+				else
+				{
+					curRow.append("td").html("0");
+				}
+				if(theNormData[user][sessionName]["keystrokesbounds"])
+				{
+					curRow.append("td").html(theNormData[user][sessionName]["keystrokesbounds"][0]["TotalEntries"]);
+				}
+				else
+				{
+					curRow.append("td").html("0");
+				}
+			}
+		}
+		
 	}
 	
 	function visualize()
