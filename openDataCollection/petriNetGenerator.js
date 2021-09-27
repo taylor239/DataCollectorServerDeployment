@@ -27,7 +27,8 @@ async function buildTaskMapTop(user, session, task, onlySession, colissionMap)
 	
 	console.log(curGraph);
 	
-	var toReturn = await analyzeTaskMap(curGraph);
+	var toReturn = await analyzeTaskMap(curGraph)
+	toReturn = toNodeMap(toReturn);
 	
 	console.log(toReturn);
 	
@@ -105,6 +106,8 @@ async function analyzeTaskMap(curTask)
 	
 	var curParent = curTask["Parent Task"];
 	var curChildren = curTask["Child Tasks"];
+	console.log("Analyzing:");
+	console.log(curParent["TaskName"]);
 	//For all children except the first, their predecessor is the
 	//first child before them that is not concurrent to them.
 	
@@ -158,6 +161,8 @@ async function analyzeTaskMap(curTask)
 	
 	//Now, for each child without a pred, we assign the pred for
 	//the parent.
+	console.log("Predless children:");
+	console.log(predlessChildren);
 	for(entry in predlessChildren)
 	{
 		predlessChildren[entry]["Predecessor"] = curTask["Predecessor"];
@@ -168,7 +173,7 @@ async function analyzeTaskMap(curTask)
 	newPredList = [];
 	for(entry in curChildren)
 	{
-		if(curChildren[entry] in usedChildren)
+		if(usedChildren[curChildren[entry]])
 		{
 			
 		}
@@ -177,6 +182,8 @@ async function analyzeTaskMap(curTask)
 			newPredList.push(curChildren[entry]);
 		}
 	}
+	console.log("Pred list for parent:");
+	console.log(newPredList);
 	if(newPredList.length > 0)
 	{
 		curTask["Predecessor"] = newPredList;
@@ -192,8 +199,7 @@ async function analyzeTaskMap(curTask)
 	console.log("Returning task:")
 	console.log(curTask)
 	
-	//Finally, we transform the nodes with predecessors into a graph map.
-	return toNodeMap(curTask);
+	return curTask;
 }
 
 function toNodeMap(curTask, nodeMap, targetNode)
