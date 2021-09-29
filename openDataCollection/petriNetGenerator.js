@@ -48,6 +48,8 @@ async function petriToGraph(analyzedTasks)
 	toReturn["nodes"] = [];
 	toReturn["links"] = [];
 	
+	var nodeSourceCounts = {};
+	
 	var transitionNum = 0;
 	
 	for(var entry in analyzedTasks)
@@ -63,10 +65,11 @@ async function petriToGraph(analyzedTasks)
 		{
 			var transitionNode = {};
 			transitionNode["id"] = curPlace["Result"]["Task Hash"] + "_transition";
+			//transitionNode["label"] = curPlace["Result"]["Goal"];
+			transitionNode["label"] = curPlace["Result"]["TaskName"];
 			transitionNum++;
 			transitionNode["type"] = "Transition";
 			transitionNode["Target Place"] = curPlace["Result"];
-			
 			
 			for(source in curPlace["Transitions"])
 			{
@@ -74,6 +77,8 @@ async function petriToGraph(analyzedTasks)
 				var prevPlaceLink = {};
 				prevPlaceLink["target"] = transitionNode["id"];
 				prevPlaceLink["source"] = curPlace["Transitions"][source]["Result"]["Task Hash"] + "_place";
+				
+				
 				toReturn["links"].push(prevPlaceLink);
 			}
 			
@@ -88,8 +93,19 @@ async function petriToGraph(analyzedTasks)
 	return toReturn;
 }
 
-async function analyzeTaskMap(curTask)
+async function analyzeTaskMap(curTask, nodeMap)
 {
+	if(!nodeMap)
+	{
+		nodeMap = {};
+	}
+	
+	if(nodeMap[curTask["Parent Task"]["Task Hash"]])
+	{
+		curTask = nodeMap[curTask["Parent Task"]["Task Hash"]];
+		return curTask;
+	}
+	
 	//If the current task does not have a predecessor, give it
 	//the default start node as a predecessor.
 	if(!curTask["Predecessor"])
@@ -106,8 +122,7 @@ async function analyzeTaskMap(curTask)
 	
 	var curParent = curTask["Parent Task"];
 	var curChildren = curTask["Child Tasks"];
-	console.log("Analyzing:");
-	console.log(curParent["TaskName"]);
+	
 	//For all children except the first, their predecessor is the
 	//first child before them that is not concurrent to them.
 	
@@ -130,8 +145,6 @@ async function analyzeTaskMap(curTask)
 		var curConcurrent = curChild["Concurrent Tasks"];
 		var curChildParent = curChild["Parent Task"];
 		
-		console.log("Analyzing child:");
-		console.log(curChildParent["TaskName"]);
 		var foundPred = false;
 		if(x >= 1)
 		{
@@ -139,8 +152,6 @@ async function analyzeTaskMap(curTask)
 			//looking for one that is not concurrent.
 			for(var y = x - 1; y >= 0; y--)
 			{
-				console.log("Comparing to:");
-				console.log(curChildren[y]["Parent Task"]["TaskName"]);
 				var isConcurrent = false;
 				for(entry in curConcurrent)
 				{
@@ -154,7 +165,6 @@ async function analyzeTaskMap(curTask)
 					//The previous child is not concurrent to the
 					//current child we are getting pred for.  We
 					//assign it as pred and continue.
-					console.log("Found nonconcurrent pred")
 					curChild["Predecessor"] = [curChildren[y]];
 					curChildren[y]["UsedPred"] = true;
 					foundPred = true;
@@ -162,7 +172,6 @@ async function analyzeTaskMap(curTask)
 				}
 			}
 		}
-		console.log("Found pred: " + foundPred)
 		if(!foundPred)
 		{
 			//There was no previous child that was not concurrent
@@ -173,8 +182,6 @@ async function analyzeTaskMap(curTask)
 	
 	//Now, for each child without a pred, we assign the pred for
 	//the parent.
-	console.log("Predless children:");
-	console.log(predlessChildren);
 	for(entry in predlessChildren)
 	{
 		predlessChildren[entry]["Predecessor"] = curTask["Predecessor"];
@@ -194,23 +201,20 @@ async function analyzeTaskMap(curTask)
 			newPredList.push(curChildren[entry]);
 		}
 	}
-	console.log("Pred list for parent:");
-	console.log(newPredList);
 	
 	if(newPredList.length > 0)
 	{
 		curTask["Predecessor"] = newPredList;
 	}
 	
+	nodeMap[curTask["Parent Task"]["Task Hash"]] = curTask;
 	//Now we run this same algorithm on all children.
 	for(var x = curChildren.length - 1; x >= 0; x--)
 	{
 		var curChild = curChildren[x];
-		analyzeTaskMap(curChild);
+		analyzeTaskMap(curChild, nodeMap);
 	}
 	
-	console.log("Returning task:")
-	console.log(curTask)
 	
 	return curTask;
 }
@@ -860,9 +864,12 @@ function viewPetriNets()
 		.append("rect")
 		.attr("width", transitionWidth)
 		.attr("height", transitionHeight)
-		.attr("fill", "blue");
+		.attr("fill", "blue")
+		.call(d3.drag()
+		   .on("drag", dragged)
+		   .on("end", dragended));
 
-	var labels = node.filter(d => d.type === "Place")
+	var labels = node//.filter(d => d.type === "Place")
 	.append("text")
 	.attr("text-anchor", function(d)
 			{
@@ -876,9 +883,17 @@ function viewPetriNets()
 				}
 				return "middle";
 			})
+	.style("text-shadow", "1px 0 0 white, 1px 0 0 white, -1px 0 0 white, -1px 0 0 white")
 	.text(function(d)
 			{
-				return d["Place"]["TaskName"];
+				if(d["type"] == "Place")
+				{
+					return d["Place"]["Goal"];
+				}
+				else
+				{
+					return d["label"];
+				}
 			});
 	
 	node = transitions.merge(places).merge(labels);
