@@ -1089,7 +1089,7 @@
 									eventTypeArray.push(eventType);
 								}
 								
-								if(eventsList[z]["Description"] == "start" || !(eventsList[z]["TaskName"] in curActiveMap))
+								if(eventsList[z]["Description"] == "start" || !(eventsList[z]["TaskName"] + "_" + SHA256(eventsList[z]["StartTime"]) in curActiveMap))
 								{
 									//var placeholder = {};
 									//placeholder["Index MS Session"] = theNormData[theUser][curSession]["Index MS Session Max"];
@@ -1154,7 +1154,7 @@
 									}
 									if(!(eventsList[z]["Description"] == "end"))
 									{
-										curActiveMap[eventsList[z]["TaskName"]] = eventsList[z];
+										curActiveMap[eventsList[z]["TaskName"] + "_" + SHA256(eventsList[z]["StartTime"])] = eventsList[z];
 									}
 									//if(Object.keys(curActiveMap).length > maxNumActive)
 									//{
@@ -1163,12 +1163,12 @@
 								}
 								else
 								{
-									eventsList[z]["Active Row"] = curActiveMap[eventsList[z]["TaskName"]]["Active Row"];
-									curActiveMap[eventsList[z]["TaskName"]]["Next"] = eventsList[z];
-									curActiveMap[eventsList[z]["TaskName"]] = eventsList[z];
+									eventsList[z]["Active Row"] = curActiveMap[eventsList[z]["TaskName"] + "_" + SHA256(eventsList[z]["StartTime"])]["Active Row"];
+									curActiveMap[eventsList[z]["TaskName"] + "_" + SHA256(eventsList[z]["StartTime"])]["Next"] = eventsList[z];
+									curActiveMap[eventsList[z]["TaskName"] + "_" + SHA256(eventsList[z]["StartTime"])] = eventsList[z];
 									if(eventsList[z]["Description"] == "end")
 									{
-										delete curActiveMap[eventsList[z]["TaskName"]];
+										delete curActiveMap[eventsList[z]["TaskName"] + "_" + SHA256(eventsList[z]["StartTime"])];
 										openRow = eventsList[z]["Active Row"];
 										if(openSpots.length == 0)
 										{
