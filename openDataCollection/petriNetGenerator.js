@@ -1,5 +1,7 @@
 //This code builds and visualizes petri nets from selected tasks.
 
+const curve = d3.line().curve(d3.curveNatural);
+
 var attackGraphs = [];
 
 function rebuildPetriMenu()
@@ -27,6 +29,8 @@ async function buildTaskMapTop(user, session, task, onlySession, colissionMap)
 	
 	console.log(curGraph);
 	
+	curGraph = getNestingLevel(curGraph);
+	
 	var toReturn = await analyzeTaskMap(curGraph)
 	toReturn = toNodeMap(toReturn);
 	
@@ -39,6 +43,37 @@ async function buildTaskMapTop(user, session, task, onlySession, colissionMap)
 	attackGraphs.push(toReturn);
 	console.log(attackGraphs)
 	rebuildPetriMenu();
+	return toReturn;
+}
+
+function getNestingLevel(toReturn)
+{
+	if(toReturn["Nesting Level"])
+	{
+		return;
+	}
+	//console.log("Getting nesting level")
+	//console.log(toReturn);
+	toReturn["Nesting Level"] = 1;
+	
+	if(toReturn["Child Tasks"] && toReturn["Child Tasks"].length > 0)
+	{
+		var maxNest = 0;
+		for(var entry in toReturn["Child Tasks"])
+		{
+			getNestingLevel(toReturn["Child Tasks"][entry]);
+			if(toReturn["Child Tasks"][entry]["Nesting Level"] > maxNest)
+			{
+				maxNest = toReturn["Child Tasks"][entry]["Nesting Level"];
+			}
+		}
+		toReturn["Nesting Level"] = maxNest + 1;
+	}
+	
+	toReturn["Parent Task"]["Nesting Level"] = toReturn["Nesting Level"];
+	toReturn["Parent Task"]["Mouse Input"] = toReturn["Mouse Input"];
+	toReturn["Parent Task"]["Key Input"] = toReturn["Key Input"];
+	
 	return toReturn;
 }
 
@@ -481,6 +516,8 @@ async function buildTaskMap(user, session, task, onlySession, colissionMap)
 	var childTasks = [];
 	
 	var toReturn = {};
+	toReturn["Mouse Input"] = 0;
+	toReturn["Key Input"] = 0;
 	colissionMap[thisHash] = toReturn;
 	toReturn["Parent Task"] = task;
 	toReturn["Concurrent Tasks"] = concurrentTasks;
@@ -533,8 +570,70 @@ async function buildTaskMap(user, session, task, onlySession, colissionMap)
 	//at will be in between these indices.
 	for(entry in sessions)
 	{
-		var alreadyIn = false;
 		var curSession = sessionTasks[sessions[entry]];
+		
+		//Get keyboard and mouse indices to calculate IO during task
+		var getKeyValue = (await theNormData[user][sessions[entry]]["keystrokes"]["getfiltered"]())
+		var keystrokes;
+		if(getKeyValue)
+		{
+			keystrokes = getKeyValue.value;
+			var startNode = binarySearch(keystrokes, task["Index MS"]);
+			if(startNode >= 0)
+			{
+				while(keystrokes[startNode] && Number(keystrokes[startNode]["Index MS"]) < Number(task["Index MS"]))
+				{
+					startNode++;
+				}
+				
+				var endNode = binarySearch(keystrokes, task["Next"]["Index MS"]);
+				while(keystrokes[endNode] && Number(keystrokes[endNode]["Index MS"]) > Number(task["Next"]["Index MS"]))
+				{
+					endNode--;
+				}
+				
+				if(endNode > startNode)
+				{
+					toReturn["Key Input"] += (endNode - startNode);
+				}
+			}
+		}
+		else
+		{
+			
+		}
+		var getMouseValue = (await theNormData[user][sessions[entry]]["mouse"]["getfiltered"]())
+		var mouse;
+		if(getMouseValue)
+		{
+			mouse = getMouseValue.value;
+			var startNode = binarySearch(mouse, task["Index MS"]);
+			if(startNode >= 0)
+			{
+				while(mouse[startNode] && Number(mouse[startNode]["Index MS"]) < Number(task["Index MS"]))
+				{
+					startNode++;
+				}
+				
+				var endNode = binarySearch(mouse, task["Next"]["Index MS"]);
+				while(mouse[endNode] && Number(mouse[endNode]["Index MS"]) > Number(task["Next"]["Index MS"]))
+				{
+					endNode--;
+				}
+				
+				if(endNode > startNode)
+				{
+					toReturn["Mouse Input"] += (endNode - startNode);
+				}
+			}
+		}
+		else
+		{
+			
+		}
+		
+		
+		var alreadyIn = false;
 		var startNode = binarySearch(curSession, task["Index MS"]);
 		var endNode = binarySearch(curSession, task["Next"]["Index MS"]);
 		//console.log(curSession[startNode]);
@@ -700,7 +799,8 @@ function viewPetriNets()
 	    .attr("orient", "auto")
 	  .append("svg:path")
 	    .attr("d", "M0,-5L10,0L0,5");
-
+	
+	
 	var petriRow = d3.select("#petriRow");
 	var petriDiv = d3.select("#petriDiv");
 	
@@ -721,11 +821,49 @@ function viewPetriNets()
 	var numUnused = 0;
 	
 	var finalAttackGraphs = JSON.parse(JSON.stringify(attackGraphs));
-
+	
+	//In this loop we merge nodes and calculate min, max nesting level and time taken
+	var minNestingLevel = 0;
+	var maxNestingLevel = 0;
+	var minInput = Infinity;
+	var maxInput = 0;
+	var minTimeTaken = Infinity;
+	var maxTimeTaken = 0;
+	
+	
 	for(var entry in finalAttackGraphs)
 	{
 		for(place in finalAttackGraphs[entry]["nodes"])
 		{
+			if(finalAttackGraphs[entry]["nodes"][place]["type"] == "Transition")
+			{
+				if(finalAttackGraphs[entry]["nodes"][place]["Target Place"]["Nesting Level"] > maxNestingLevel)
+				{
+					maxNestingLevel = finalAttackGraphs[entry]["nodes"][place]["Target Place"]["Nesting Level"];
+				}
+				var timeTaken = finalAttackGraphs[entry]["nodes"][place]["Target Place"]["Next"]["Index MS"] - finalAttackGraphs[entry]["nodes"][place]["Target Place"]["Index MS"];
+				finalAttackGraphs[entry]["nodes"][place]["Time Taken"] = timeTaken;
+				
+				if(timeTaken < minTimeTaken)
+				{
+					minTimeTaken = timeTaken;
+				}
+				if(timeTaken > maxTimeTaken)
+				{
+					maxTimeTaken = timeTaken;
+				}
+				
+				var totalInput = finalAttackGraphs[entry]["nodes"][place]["Target Place"]["Mouse Input"] + finalAttackGraphs[entry]["nodes"][place]["Target Place"]["Key Input"];
+				if(totalInput < minInput)
+				{
+					minInput = totalInput;
+				}
+				if(totalInput > maxInput)
+				{
+					maxInput = totalInput;
+				}
+			}
+			
 			if(finalAttackGraphs[entry]["nodes"][place]["id"] in usedPlaces)
 			{
 				
@@ -738,6 +876,132 @@ function viewPetriNets()
 		}
 		finalNodesEdges["links"] = finalNodesEdges["links"].concat(JSON.parse(JSON.stringify(finalAttackGraphs[entry]["links"])));
 	}
+	
+	//console.log("Max Nesting: " + maxNestingLevel);
+	//console.log("Time Taken: " + minTimeTaken + " : " + maxTimeTaken);
+	//The multiplier range on the transition rect glyph.
+	var minTransition = 1;
+	var maxTransition = 3;
+	
+	var inputScaleRange = ["#ba4f00", "#a470ff"];
+	var inputScale = d3.scaleLinear().domain([minInput, maxInput]).range(inputScaleRange);
+	var nestingSizeScale = d3.scaleLinear().domain([minNestingLevel, maxNestingLevel]).range([minTransition, maxTransition]);
+	var timeTakenScaleRange = ["#ffcf3d", "#00ff1e", "#00315c"];
+	var timeTakenScale = d3.scaleLinear().domain([minTimeTaken, (minTimeTaken + maxTimeTaken) / 2, maxTimeTaken]).range(timeTakenScaleRange);
+	
+	var legendWidth = divBounds["width"] / 8;
+	var legendHeight = divBounds["height"] / 3
+	
+	function linspace(start, end, n)
+	{
+		var out = [];
+		var delta = (end - start) / (n - 1);
+		
+		var i = 0;
+		while(i < (n - 1)) {
+		    out.push(start + (i * delta));
+		    i++;
+		}
+		
+		out.push(end);
+		return out;
+	}
+
+	var inputLegend = petriG.append("g");
+	var inputGradient = inputLegend.append('defs')
+		.append('linearGradient')
+		.attr('id', 'inputGradient')
+		.attr('x1', '0%') // bottom
+		.attr('y1', '100%')
+		.attr('x2', '0%') // to top
+		.attr('y2', '0%')
+		.attr('spreadMethod', 'pad');
+	var inputPct = linspace(0, 100, inputScaleRange.length).map(function(d)
+		{
+			return Math.round(d) + '%';
+		});
+	var inputColourPct = d3.zip(inputPct, inputScaleRange);
+	inputColourPct.forEach(function(d)
+	{
+		inputGradient.append('stop')
+			.attr('offset', d[0])
+			.attr('stop-color', d[1])
+			.attr('stop-opacity', 1);
+	});
+	inputLegend.append('rect')
+		.attr('x', -divBounds["width"] / 2)
+		.attr('y', -divBounds["height"] / 2)
+		.attr('width', legendWidth / 4)
+		.attr('height', legendHeight)
+		.style('fill', 'url(#inputGradient)');
+	var inputScaleLegend = d3.scaleLinear()
+		.domain([minInput, maxInput])
+		.range([legendHeight, 0]);
+	var inputLegendAxis = d3.axisLeft()
+		.scale(inputScaleLegend);
+	var inputAxisG = inputLegend.append("g")
+		.attr("class", "legend axis")
+		.attr("transform", "translate(" + ((-divBounds["width"] / 2) + (legendWidth / 4)) + ", " + (-divBounds["height"] / 2) + ")")
+		.call(inputLegendAxis);
+	inputAxisG.selectAll("text").style("fill", "white");
+	inputAxisG.selectAll("line").style("stroke", "white");
+	var axisLabel = inputLegend.append("text")
+		.attr('x', (-divBounds["width"] / 2) + (legendWidth / 4))
+		.attr('y', (-divBounds["height"] / 2) + (legendHeight / 2))
+		.style("dominant-baseline", "text-after-edge")
+		.style("writing-mode", "tb")
+		.style("text-orientation", "upright")
+		.style("text-anchor", "middle")
+		.text("User Input");
+	
+	
+	
+	var timeTakenLegend = petriG.append("g");
+	var timeTakenGradient = timeTakenLegend.append('defs')
+		.append('linearGradient')
+		.attr('id', 'timeTakenGradient')
+		.attr('x1', '0%') // bottom
+		.attr('y1', '100%')
+		.attr('x2', '0%') // to top
+		.attr('y2', '0%')
+		.attr('spreadMethod', 'pad');
+	var timeTakenPct = linspace(0, 100, timeTakenScaleRange.length).map(function(d)
+		{
+			return Math.round(d) + '%';
+		});
+	var timeTakenColourPct = d3.zip(timeTakenPct, timeTakenScaleRange);
+	timeTakenColourPct.forEach(function(d)
+	{
+		timeTakenGradient.append('stop')
+			.attr('offset', d[0])
+			.attr('stop-color', d[1])
+			.attr('stop-opacity', 1);
+	});
+	timeTakenLegend.append('rect')
+		.attr('x', -divBounds["width"] / 2)
+		.attr('y', (-divBounds["height"] / 2) + ((2 * divBounds["height"]) / 3))
+		.attr('width', legendWidth / 4)
+		.attr('height', legendHeight)
+		.style('fill', 'url(#timeTakenGradient)');
+	var timeTakenScaleLegend = d3.scaleLinear()
+		.domain([minTimeTaken / 60000, maxTimeTaken / 60000])
+		.range([legendHeight, 0]);
+	var timeTakenLegendAxis = d3.axisLeft()
+		.scale(timeTakenScaleLegend);
+	var timeTakenAxisG = timeTakenLegend.append("g")
+		.attr("class", "legend axis")
+		.attr("transform", "translate(" + ((-divBounds["width"] / 2) + (legendWidth / 4)) + ", " + ((-divBounds["height"] / 2) + ((2 * divBounds["height"]) / 3)) + ")")
+		.call(timeTakenLegendAxis);
+	timeTakenAxisG.selectAll("text").style("fill", "white");
+	timeTakenAxisG.selectAll("line").style("stroke", "white");
+	var axisLabel = timeTakenLegend.append("text")
+		.attr('x', (-divBounds["width"] / 2) + (legendWidth / 4))
+		.attr('y', (-divBounds["height"] / 2) + ((2 * divBounds["height"]) / 3) + (legendHeight / 2))
+		.style("dominant-baseline", "text-after-edge")
+		.style("writing-mode", "tb")
+		.style("text-orientation", "upright")
+		.style("text-anchor", "middle")
+		.text("Minutes Taken");
 	
 	for(var entry in finalNodesEdges["links"])
 	{
@@ -753,11 +1017,21 @@ function viewPetriNets()
 		.force("x", d3.forceX())
 		.force("y", d3.forceY());
 	
-	var link = petriG.append("g")
-		.selectAll("line")
+	//var link = petriG.append("g")
+	//	.selectAll("line")
+	//	.data(finalNodesEdges.links)
+	//	.enter()
+	//	.append("line")
+	//	.attr("stroke", "Black")
+	//	.attr("stroke-width", "2")
+	//	.attr("marker-end", "url(#end)");
+	
+	var curveLink = petriG.append("g")
+		.selectAll("path")
 		.data(finalNodesEdges.links)
 		.enter()
-		.append("line")
+		.append("path")
+		.attr('fill', 'none')
 		.attr("stroke", "Black")
 		.attr("stroke-width", "2")
 		.attr("marker-end", "url(#end)");
@@ -860,11 +1134,26 @@ function viewPetriNets()
 	
 	var transitionWidth = 10;
 	var transitionHeight = 20;
+	//nestingSizeScale
 	var transitions = node.filter(d => d.type === "Transition")
 		.append("rect")
-		.attr("width", transitionWidth)
-		.attr("height", transitionHeight)
-		.attr("fill", "blue")
+		.attr("width", function(d)
+				{
+					return transitionWidth * nestingSizeScale(d["Target Place"]["Nesting Level"]);
+				})
+		.attr("height", function(d)
+				{
+					return transitionHeight * nestingSizeScale(d["Target Place"]["Nesting Level"]);
+				})
+		.attr("fill", function(d)
+				{
+					return timeTakenScale(d["Time Taken"]);
+				})
+		.attr("stroke-width", "3px")
+		.attr("stroke", function(d)
+				{
+					return inputScale(d["Target Place"]["Mouse Input"] + d["Target Place"]["Key Input"]);
+				})
 		.call(d3.drag()
 		   .on("drag", dragged)
 		   .on("end", dragended));
@@ -899,7 +1188,44 @@ function viewPetriNets()
 	node = transitions.merge(places).merge(labels);
 	
 	simulation.on("tick", () => {
-		link
+		//link
+		//	.attr("x1", d => d.source.x)
+		//	.attr("y1", d => d.source.y)
+		//	.attr("x2", d => d.target.x)
+		//	.attr("y2", d => d.target.y);
+		
+		curveLink
+			.attr("d", function(d)
+					{
+						var toReturn = [];
+						var startPoint = [d.source.x, d.source.y];
+						toReturn.push(startPoint);
+						
+						//This may be handy later when combining multiple petri nets
+						//var totalDistance = Math.sqrt(Math.pow((d.target.x - d.source.x), 2) + Math.pow((d.target.y - d.source.y), 2));
+						//var finalDistance = .2 * totalDistance;
+						//var finalDistance = 25;
+						var finalDistance = 0;
+						if(d.target.x - d.source.x < 0)
+						{
+							finalDistance = -finalDistance;
+						}
+						var xLen = ((d.target.x - d.source.x));
+						var yLen = ((d.target.y - d.source.y));
+						var yMod = -xLen / (Math.abs(xLen) + Math.abs(yLen));
+						var xMod = yLen / (Math.abs(xLen) + Math.abs(yLen));
+						if(d.target.y - d.source.y < 0)
+						{
+							finalDistance = -finalDistance;
+						}
+						var midPoint = [(finalDistance * xMod) + (d.source.x + d.target.x) / 2, (finalDistance * yMod) + (d.source.y + d.target.y) / 2];
+						toReturn.push(midPoint);
+						
+						var endPoint = [d.target.x, d.target.y];
+						toReturn.push(endPoint);
+						
+						return curve(toReturn);
+					})
 			.attr("x1", d => d.source.x)
 			.attr("y1", d => d.source.y)
 			.attr("x2", d => d.target.x)

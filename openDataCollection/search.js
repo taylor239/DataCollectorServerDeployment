@@ -31,8 +31,8 @@ function closestIndexMSBinary(items, value)
 		middleIndex = Math.floor((lastIndex + firstIndex)/2);
 		if(!items[middleIndex])
 		{
-			console.log(items);
-			console.log(middleIndex);
+			//console.log(items);
+			//console.log(middleIndex);
 			if(middleIndex <= 0)
 			{
 				middleIndex++;

@@ -86,7 +86,7 @@ public class UsersTaken extends HttpServlet {
 			}
 
 			
-			String query = "SELECT COUNT(DISTINCT `username`) AS `usercount`, `username` FROM `openDataCollectionServer`.`UploadToken` WHERE `adminEmail` = ? AND `event` = ? GROUP BY `username`";
+			String query = "SELECT COUNT(DISTINCT `token`) AS `usercount`, `username` FROM `openDataCollectionServer`.`UploadToken` WHERE `adminEmail` = ? AND `event` = ? GROUP BY `username`";
 			
 			String admin = (String)session.getAttribute("admin");
 			
