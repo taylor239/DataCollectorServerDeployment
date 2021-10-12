@@ -784,7 +784,8 @@ async function buildTaskMap(user, session, task, onlySession, colissionMap)
 
 function viewPetriNets()
 {
-
+	var fontSize = "12";
+	
 	showLightbox("<tr><td id=\"petriRow\"><div id=\"petriDiv\" width=\"100%\" height=\"100%\"></div></td></tr>");
 
 	var graphArrows = svg.append("svg:defs").selectAll("marker")
@@ -1025,6 +1026,9 @@ function viewPetriNets()
 	//	.attr("stroke", "Black")
 	//	.attr("stroke-width", "2")
 	//	.attr("marker-end", "url(#end)");
+	var tooltipG = petriG.append("g");
+	var tooltip = tooltipG.append("text").attr("font-size", fontSize);
+	var tooltipBg = tooltipG.append("rect");
 	
 	var curveLink = petriG.append("g")
 		.selectAll("path")
@@ -1042,6 +1046,14 @@ function viewPetriNets()
 		.enter();
 	
 	function dragged(d) {
+		tooltip.text("")
+			.attr("x", 0)
+			.attr("y", 0);
+		tooltipBg
+			.attr("x", 0)
+			.attr("y", 0)
+			.attr("height", 0)
+			.attr("width", 0);
 		  if(d["id"] == "-1_place")
 		  {
 		      return;
@@ -1149,10 +1161,89 @@ function viewPetriNets()
 				{
 					return timeTakenScale(d["Time Taken"]);
 				})
+		.style("cursor", "pointer")
 		.attr("stroke-width", "3px")
 		.attr("stroke", function(d)
 				{
 					return inputScale(d["Target Place"]["Mouse Input"] + d["Target Place"]["Key Input"]);
+				})
+		.on("mouseenter", function(d, i)
+				{
+					tooltip.text(d["Target Place"]["TaskName"])
+						.attr("x", Number(d3.select(this).attr("x")) + Number(d3.select(this).attr("width")))
+						.attr("y", d3.select(this).attr("y"))
+						.style("pointer-events", "none")
+						.attr("alignment-baseline", "hanging")
+						.attr("dominant-baseline", "hanging");
+					
+					tooltip.append("tspan")
+						.attr("x", tooltip.attr("x"))
+						.attr("dy", fontSize)
+						.text("User: " + d["Target Place"]["Owning User"]);
+					
+					tooltip.append("tspan")
+						.attr("x", tooltip.attr("x"))
+						.attr("dy", fontSize)
+						.text("Session: " + d["Target Place"]["Owning Session"]);
+					
+					tooltip.append("tspan")
+						.attr("x", tooltip.attr("x"))
+						.attr("dy", fontSize)
+						.text("Source: " + d["Target Place"]["Source"]);
+					
+					tooltip.append("tspan")
+						.attr("x", tooltip.attr("x"))
+						.attr("dy", fontSize)
+						.text("Goal: " + d["Target Place"]["Goal"]);
+					
+					tooltip.append("tspan")
+						.attr("x", tooltip.attr("x"))
+						.attr("dy", fontSize)
+						.text("Timestamp: " + d["Target Place"]["Index"]);
+					
+					tooltip.append("tspan")
+						.attr("x", tooltip.attr("x"))
+						.attr("dy", fontSize)
+						.text("Key Input: " + d["Target Place"]["Key Input"]);
+					
+					tooltip.append("tspan")
+						.attr("x", tooltip.attr("x"))
+						.attr("dy", fontSize)
+						.text("Mouse Input: " + d["Target Place"]["Mouse Input"]);
+					
+					tooltip.append("tspan")
+						.attr("x", tooltip.attr("x"))
+						.attr("dy", fontSize)
+						.text("Time Taken (Minutes): " + ((d["Target Place"]["Next"]["Index MS"] - d["Target Place"]["Index MS"]) / 60000));
+					
+					if(d["Target Place"]["Tags"])
+					{
+						tooltip.append("tspan")
+							.attr("x", tooltip.attr("x"))
+							.attr("dy", fontSize)
+							.text("Tags: " + d["Target Place"]["Tags"].join(", ").substring(0, 50));
+					}
+					
+					tooltipBg.attr("fill", "Yellow")
+						.style("pointer-events", "none")
+						.attr("x", Number(d3.select(this).attr("x")) + Number(d3.select(this).attr("width")))
+						.attr("y", d3.select(this).attr("y"))
+						.attr("height", tooltip.node().getBoundingClientRect().height)
+						.attr("width", tooltip.node().getBoundingClientRect().width);
+					tooltip.raise();
+					tooltipG.raise();
+				})
+		.on("mouseout", function(d, i)
+				{
+					tooltip.selectAll("*").remove();
+					tooltip.text("")
+						.attr("x", 0)
+						.attr("y", 0);
+					tooltipBg
+						.attr("x", 0)
+						.attr("y", 0)
+						.attr("height", 0)
+						.attr("width", 0);
 				})
 		.call(d3.drag()
 		   .on("drag", dragged)
