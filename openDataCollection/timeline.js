@@ -513,7 +513,7 @@
 				})
 		.on("click", function(d, i)
 		{
-			addFilterDirect(3, "FirstClass", "!= '" + d + "'");
+			addFilterDirect(3, "", "FirstClass", "!= '" + d + "'");
 		});
 		
 		var legendFilterText = legendSVG.append("g")
@@ -724,7 +724,7 @@
 				})
 		.on("click", function(d, i)
 				{
-					addFilterDirect(0, "", "!= '" + userOrderMap[d] + "'");
+					addFilterDirect(0, "", "", "!= '" + userOrderMap[d] + "'");
 				});
 
 		var filterLabelsUser = svg.append("g")
@@ -1525,7 +1525,7 @@
 				})
 		.on("click", function(d, i)
 				{
-					addFilterDirect(1, "", "!= '" + d["Session"] + "'");
+					addFilterDirect(1, "", "", "!= '" + d["Session"] + "'");
 				});
 		
 		var playLabels = svg.append("g")
@@ -2117,7 +2117,7 @@
 					})
 			.on("click", function(d, i)
 					{
-						addFilterDirect(3, "Source", "!= '" + d["Source"] + "'");
+						addFilterDirect(3, "", "Source", "!= '" + d["Source"] + "'");
 					})
 			.attr("height", legendHeight)
 			.style("cursor", "pointer")

@@ -155,77 +155,89 @@ if(request.getParameter("email") != null)
 							</div>
 						</td>
 					</tr>
-					<tr id="filterTitle1">
-						<td colspan="5">
-							<div align="center">
-									Filters
-							</div>
-						</td>
-					</tr>
-					<tr>
-						<td colspan="2">
-						<div align="center">
-						<button type="button" onclick="saveFilters()">Save</button>
-						</div>
-						</td>
-						<td colspan="3">
-						<div align="center">
-						<input type="text" size="15" id="saveFilter" name="saveFilter" value="Name">
-						</div>
-						</td>
-					</tr>
 					<tr>
 						<td colspan="5">
-						<div align="center">
-						<button type="button" onclick="loadFilter(true)">Load</button>
-						<button type="button" onclick="loadFilter(false)">Append</button>
-						<button type="button" onclick="deleteFilter()">Delete</button>
-						</div>
-						</td>
-					</tr>
-					<tr>
-						<td colspan="5">
-						<div align="center">
-						<select name="savedFilters" id="savedFilters">
-							<option value="default">Default</option>
-						</select>
-						</div>
-						</td>
-					</tr>
-					<tr id="filterTitle2">
-						<td width="20%">
-						Level
-						</td>
-						<td width="20%">
-						Field
-						</td>
-						<td width="40%">
-						Value
-						</td>
-						<td width="20%">
-						Server
-						</td>
-						<td>
-						
-						</td>
-					</tr>
-					<tr id = "filter_add">
-						<td id = "filter_add_level">
-						<input type="text" size="2" id="filter_add_level_field" name="filter_add_level_field" value="3">
-						</td>
-						<td id = "filter_add_field">
-						<input type="text" size="6" id="filter_add_field_field" name="filter_add_field_field" value="FirstClass">
-						</td>
-						<td id = "filter_add_value">
-						<input type="text" size="11" id="filter_add_value_field" name="filter_add_value_field" value="!= 'com-datacollectorloc'">
-						</td>
-						<td>
-						
-						</td>
-						<td id = "filter_add_add" class="clickableHover" onclick="addFilter()">
-						<div align="center">
-						+
-						</div>
+							<table id="innerFilterTable">
+								<tr id="filterTitle1">
+									<td colspan="6">
+										<div align="center">
+												Filters
+										</div>
+									</td>
+								</tr>
+								<tr>
+									<td colspan="3">
+									<div align="center">
+									<button type="button" onclick="saveFilters()">Save</button>
+									</div>
+									</td>
+									<td colspan="3">
+									<div align="center">
+									<input type="text" size="15" id="saveFilter" name="saveFilter" value="Name">
+									</div>
+									</td>
+								</tr>
+								<tr>
+									<td colspan="6">
+									<div align="center">
+									<button type="button" onclick="loadFilter(true)">Load</button>
+									<button type="button" onclick="loadFilter(false)">Append</button>
+									<button type="button" onclick="deleteFilter()">Delete</button>
+									</div>
+									</td>
+								</tr>
+								<tr>
+									<td colspan="6">
+									<div align="center">
+									<select name="savedFilters" id="savedFilters">
+										<option value="default">Default</option>
+									</select>
+									</div>
+									</td>
+								</tr>
+								<tr id="filterTitle2">
+									<td width="10%">
+									Level
+									</td>
+									<td width="10%">
+									Prefix
+									</td>
+									<td width="20%">
+									Field
+									</td>
+									<td width="40%">
+									Suffix
+									</td>
+									<td width="20%">
+									Server
+									</td>
+									<td>
+									
+									</td>
+								</tr>
+								<tr id = "filter_add">
+									<td id = "filter_add_level">
+									<input type="text" size="2" id="filter_add_level_field" name="filter_add_level_field" value="3">
+									</td>
+									<td id = "filter_add_prefix">
+									<input type="text" size="2" id="filter_add_prefix_field" name="filter_add_prefix_field" value="">
+									</td>
+									<td id = "filter_add_field">
+									<input type="text" size="6" id="filter_add_field_field" name="filter_add_field_field" value="FirstClass">
+									</td>
+									<td id = "filter_add_value">
+									<input type="text" size="11" id="filter_add_value_field" name="filter_add_value_field" value="!= 'com-datacollectorloc'">
+									</td>
+									<td>
+									
+									</td>
+									<td id = "filter_add_add" class="clickableHover" onclick="addFilter()">
+									<div align="center">
+									+
+									</div>
+									</td>
+								</tr>
+							</table>
 						</td>
 					</tr>
 
@@ -348,6 +360,7 @@ if(request.getParameter("email") != null)
 	var startFilters = 0;
 	
 	var firstFilter = {}
+	firstFilter["Prefix"] = "";
 	firstFilter["Level"] = 1;
 	firstFilter["Field"] = "";
 	firstFilter["Value"] = "== 'Aggregated'";
@@ -460,6 +473,7 @@ if(request.getParameter("email") != null)
 		var x=0;
 		for(entry in filters)
 		{
+			urlToPost += "&filterPrefix" + x + "=" + filters[entry]["Prefix"];
 			urlToPost += "&filterLevel" + x + "=" + filters[entry]["Level"];
 			urlToPost += "&filterValue" + x + "=" + filters[entry]["Value"];
 			urlToPost += "&filterField" + x + "=" + filters[entry]["Field"];
@@ -482,12 +496,12 @@ if(request.getParameter("email") != null)
 	function rebuildFilters()
 	{
 		var tableData = filtersTitle.concat(filters);
-		d3.select("#optionFilterTable")
+		d3.select("#innerFilterTable")
 			.selectAll("tr")
 			//.data(tableData)
 			//.exit()
 			.remove();
-		d3.select("#optionFilterTable")
+		d3.select("#innerFilterTable")
 			.selectAll("tr")
 			.data(tableData)
 			.enter()
@@ -510,6 +524,9 @@ if(request.getParameter("email") != null)
 						d["id"] = "filter_" + (i - startFilters)
 						return "<td id = \"filter_" + (i - startFilters) + "_level\">"
 						+d["Level"]
+						+"</td>"
+						+"<td id = \"filter_" + (i - startFilters) + "_prefix\">"
+						+d["Prefix"]
 						+"</td>"
 						+"<td id = \"filter_" + (i - startFilters) + "_field\">"
 						+d["Field"]
@@ -544,10 +561,12 @@ if(request.getParameter("email") != null)
 	function addFilter()
 	{
 		levelVal = document.getElementById("filter_add_level_field").value;
+		prefixVal = document.getElementById("filter_add_prefix_field").value;
 		fieldVal = document.getElementById("filter_add_field_field").value;
 		valueVal = document.getElementById("filter_add_value_field").value;
 		var newFilter = {}
 		newFilter["Level"] = Number(levelVal);
+		newFilter["Prefix"] = prefixVal;
 		newFilter["Field"] = fieldVal;
 		newFilter["Value"] = valueVal;
 		filters.push(newFilter);
@@ -556,13 +575,14 @@ if(request.getParameter("email") != null)
 		start(true);
 	}
 	
-	function addFilterDirect(levelVal, fieldVal, valueVal)
+	function addFilterDirect(levelVal, prefixVal, fieldVal, valueVal)
 	{
 		//levelVal = document.getElementById("filter_add_level_field").value;
 		//fieldVal = document.getElementById("filter_add_field_field").value;
 		//valueVal = document.getElementById("filter_add_value_field").value;
 		var newFilter = {}
 		newFilter["Level"] = Number(levelVal);
+		newFilter["Prefix"] = prefixVal;
 		newFilter["Field"] = fieldVal;
 		newFilter["Value"] = valueVal;
 		filters.push(newFilter);
@@ -939,7 +959,7 @@ if(request.getParameter("email") != null)
 							{
 								if(toFilter[curFilter]["Field"] in dataSource[entry])
 								{
-									if(!(eval("'" + dataSource[entry][toFilter[curFilter]["Field"]] + "'" + toFilter[curFilter]["Value"])))
+									if(!(eval(toFilter[curFilter]["Prefix"] + "'" + dataSource[entry][toFilter[curFilter]["Field"]] + "'" + toFilter[curFilter]["Value"])))
 									{
 										dataSource.splice(entry, 1);
 										entry--;
@@ -1056,7 +1076,7 @@ if(request.getParameter("email") != null)
 								return d;
 							});
 					
-				d3.select("#optionFilterTable")
+				d3.select("#innerFilterTable")
 				.selectAll("tr")
 				.each(function(d, i)
 						{

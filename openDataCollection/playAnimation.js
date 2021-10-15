@@ -1689,32 +1689,32 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				curTop = {};
 				updateProcAni = true;
 				var curDiff = Infinity;
-				if(screenshots)
+				if(screenshots && screenshots.length > 0)
 				{
 					screenshotIndex = closestIndexMSBinarySession(screenshots, selectTime);
 					var curScreenshot = screenshots[screenshotIndex];
 				}
-				if(keystrokes)
+				if(keystrokes && keystrokes.length > 0)
 				{
 					keystrokesIndex = closestIndexMSBinarySession(keystrokes, selectTime);
 					var curKeystrokes = keystrokes[keystrokesIndex];
 				}
-				if(mouse)
+				if(mouse && mouse.length > 0)
 				{
 					mouseIndex = closestIndexMSBinarySession(mouse, selectTime);
 					var curMouse = mouse[mouseIndex];
 				}
-				if(windows)
+				if(windows && windows.length > 0)
 				{
 					windowsIndex = closestIndexMSBinarySession(windows, selectTime);
 					var curWindows = windows[windowsIndex];
 				}
-				if(processes)
+				if(processes && processes.length > 0)
 				{
 					processIndex = closestIndexMSBinarySession(processes, selectTime);
 					var curProcess = processes[processIndex];
 				}
-				if(events)
+				if(events && events.length > 0)
 				{
 					eventsIndex = closestIndexMSBinarySession(events, selectTime);
 					var curEvent = events[eventsIndex];
