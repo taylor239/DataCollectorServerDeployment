@@ -490,6 +490,13 @@ catch(Exception e)
 	</h4>
 	</td>
 	</tr>
+	<tr>
+	<td>
+	<h4>
+	<a href="cacheBounds.json?event=<%=eventName %>">Manually Cache Statistics</a>
+	</h4>
+	</td>
+	</tr>
 
 	<tr>
 	<td>
