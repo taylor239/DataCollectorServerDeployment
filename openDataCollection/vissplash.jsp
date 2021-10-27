@@ -87,7 +87,7 @@ if(request.getParameter("email") != null)
 						<div align="center" id="mainVisualization">
 						<table id="searchTable">
 							<tr>
-								<td colspan="11">
+								<td colspan="12">
 									<div align="center">User and Session Search Table</div>
 								</td>
 							</tr>
@@ -97,6 +97,9 @@ if(request.getParameter("email") != null)
 								</td>
 								<td class="searchCol">
 									<a class="expandPlus" onclick="toggleCol(this)">➕</a> <b>Session Name</b>
+								</td>
+								<td class="searchCol">
+									<a class="expandPlus" onclick="toggleCol(this)">➕</a> <b>Total Time</b>
 								</td>
 								<td class="searchCol">
 									<a class="expandPlus" onclick="toggleCol(this)">➕</a> Start Date
@@ -127,7 +130,7 @@ if(request.getParameter("email") != null)
 								</td>
 							</tr>
 							<tr>
-								<td colspan="11">
+								<td colspan="12">
 									<div align="center"><input type="button" value="Refresh Search" onclick="refreshSearch()"><input type="button" value="Visualize Selected" onclick="visualize()"><input type="button" value="Statistics" onclick="stats()"></div>
 								</td>
 							</tr>
@@ -137,6 +140,9 @@ if(request.getParameter("email") != null)
 								</td>
 								<td>
 									<input class="searchField" type="text" id="sessionField">
+								</td>
+								<td>
+									
 								</td>
 								<td>
 									<input class="searchField" type="text" id="startDateField">
@@ -181,7 +187,7 @@ if(request.getParameter("email") != null)
 
 .searchCol
 {
-	width: 9.1%
+	width: 8.3%
 }
 .searchField
 {
@@ -1140,6 +1146,9 @@ function toggleCol(colToExpand)
 				newCell.innerHTML = user;
 				newCell = newRow.insertCell();
 				newCell.innerHTML = sessionName;
+				
+				newCell = newRow.insertCell();
+				newCell.innerHTML = theNormData[user][sessionName]["Index MS Session Max"];
 				
 				newCell = newRow.insertCell();
 				newCell.innerHTML = theNormData[user][sessionName]["Index MS Session Min Date"];
