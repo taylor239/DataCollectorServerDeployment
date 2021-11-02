@@ -99,7 +99,7 @@ if(request.getParameter("email") != null)
 									<a class="expandPlus" onclick="toggleCol(this)">➕</a> <b>Session Name</b>
 								</td>
 								<td class="searchCol">
-									<a class="expandPlus" onclick="toggleCol(this)">➕</a> <b>Total Time</b>
+									<a class="expandPlus" onclick="toggleCol(this)">➕</a> <b>Total Time (Minutes)</b>
 								</td>
 								<td class="searchCol">
 									<a class="expandPlus" onclick="toggleCol(this)">➕</a> Start Date
@@ -1148,7 +1148,7 @@ function toggleCol(colToExpand)
 				newCell.innerHTML = sessionName;
 				
 				newCell = newRow.insertCell();
-				newCell.innerHTML = theNormData[user][sessionName]["Index MS Session Max"];
+				newCell.innerHTML = theNormData[user][sessionName]["Index MS Session Max"] / 60000;
 				
 				newCell = newRow.insertCell();
 				newCell.innerHTML = theNormData[user][sessionName]["Index MS Session Min Date"];

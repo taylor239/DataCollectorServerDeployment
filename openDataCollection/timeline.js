@@ -762,6 +762,80 @@
 				})
 		.classed("clickableBar", true);
 		
+		
+		var refreshButtonsUser = svg.append("g")
+		.selectAll("rect")
+		.data(userOrderArray)
+		.enter()
+		.append("rect")
+		.attr("x", visWidth - (xAxisPadding / 1.75 - xAxisPadding / 20) - (barHeight - (xAxisPadding / 25)) * 2 - (xAxisPadding / 1.5))
+		.attr("width", xAxisPadding / 1.5 - xAxisPadding / 20)
+		.attr("height", barHeight - (xAxisPadding / 25))
+		.attr("y", function(d, i)
+				{
+					if(i == 0)
+					{
+						curSessionCount = 0;
+					}
+					numSessions = Object.keys(theNormData[userOrderMap[d]]["Session Ordering"]["Order List"]).length;
+					toReturn = barHeight * i + barHeight * 2 * curSessionCount;
+					curSessionCount += numSessions;
+					return toReturn;
+				})
+		.attr("fill", "Cyan")
+		.attr("initFill", "Cyan")
+		.attr("stroke", "black")
+		.attr("initStroke", "black")
+		.attr("stroke-width", "0")
+		.attr("initStrokeWidth", "0")
+		.attr("z", 2)
+		.classed("clickableBar", true)
+		.attr("id", function(d, i)
+				{
+					
+					return("refreshbuttonuser_" + SHA256(userOrderMap[d]));
+				})
+		.on("click", function(d, i)
+				{
+					refreshUser(userOrderMap[d]);
+				});
+
+		var refreshLabelsUser = svg.append("g")
+		.selectAll("text")
+		.data(userOrderArray)
+		.enter()
+		.append("text")
+		.attr("x", visWidth - (xAxisPadding / 2 - xAxisPadding / 20) + xAxisPadding / 4 - xAxisPadding / 40 - (barHeight - (xAxisPadding / 25)) * 2 - (xAxisPadding / 1.5))
+		.attr("width", xAxisPadding / 2)
+		.attr("height", barHeight - 2 * (xAxisPadding / 25))
+		.attr("y", function(d, i)
+				{
+					if(i == 0)
+					{
+						curSessionCount = 0;
+					}
+					numSessions = Object.keys(theNormData[userOrderMap[d]]["Session Ordering"]["Order List"]).length;
+					toReturn = barHeight * i + barHeight * 2 * curSessionCount + barHeight / 2 - (xAxisPadding / 50);
+					curSessionCount += numSessions;
+					return toReturn;
+				})
+		.attr("fill", "#000")
+		.attr("z", 2)
+		.attr("font-weight", "bolder")
+		.attr("font-family", "monospace")
+		.attr("alignment-baseline", "central")
+		.attr("dominant-baseline", "middle")
+		.attr("text-anchor", "middle")
+		.text("Refresh")
+		.attr("initText", "Filter")
+		.style("pointer-events", "none")
+		.attr("id", function(d, i)
+				{
+					return("refreshbuttonuser_label_" + SHA256(userOrderMap[d]));
+				})
+		.classed("clickableBar", true);
+		
+		
 		var downloadButtonsUser = svg.append("g")
 		.selectAll("rect")
 		.data(userOrderArray)

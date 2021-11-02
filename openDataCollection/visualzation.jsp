@@ -2712,6 +2712,117 @@ if(request.getParameter("email") != null)
 	var lastMouseOver;
 	var lastMouseHash;
 	
+	
+	function refreshUser(userName)
+	{
+		var curSelect = "&users=" + userName;
+		d3.json("logExport.json?event=" + eventName + "&datasources=events&normalize=none" + curSelect, async function(error, data)
+		{
+			console.log("Downloaded")
+			console.log(data);
+			let theNormDataInit = ((await retrieveData("indexdata")).value);
+			console.log("Adding to")
+			console.log(theNormDataInit);
+			
+			for(sessionName in data[userName])
+			{
+				theNormDataInit[userName][sessionName]["events"] = data[userName][sessionName]["events"];
+			}
+			
+			try
+			{
+				var isDone = false;
+				while(!isDone)
+				{
+					isDone = await persistDataAndWait("indexdata", theNormDataInit);
+				}
+			}
+			catch(err)
+			{
+				console.log(err);
+			}
+			
+			theNormData = preprocess(theNormDataInit);
+			console.log("New norm data")
+			console.log(theNormData)
+			try
+			{
+				var isDone = false;
+				while(!(isDone == true))
+				{
+					isDone = (await (persistDataAndWait("data", theNormData)));
+				}
+				start(true);
+			}
+			catch(err)
+			{
+				console.log(err);
+			}
+			
+		});
+		/*
+		for(session in theNormData[user]["Session Ordering"]["Order List"])
+		{
+			var curSession = theNormData[user]["Session Ordering"][theNormData[user]["Session Ordering"]["Order List"][session]];
+			console.log(curSession);
+			refreshSession(userName, curSession);
+		}
+		*/
+	}
+	
+	function refreshSession(userName, sessionName)
+	{
+		var curSelect = "&users=" + userName + "&sessions=" + sessionName;
+		d3.json("logExport.json?event=" + eventName + "&datasources=events&normalize=none" + curSelect, async function(error, data)
+		{
+			console.log("Downloaded")
+			console.log(data);
+			let theNormDataInit = ((await retrieveData("indexdata")).value);
+			console.log("Adding to")
+			console.log(theNormDataInit);
+			
+			theNormDataInit[userName][sessionName]["events"] = data[userName][sessionName]["events"];
+			try
+			{
+				var isDone = false;
+				while(!isDone)
+				{
+					isDone = await persistDataAndWait("indexdata", theNormDataInit);
+				}
+			}
+			catch(err)
+			{
+				console.log(err);
+			}
+			
+			theNormData = preprocess(theNormDataInit);
+			console.log("New norm data")
+			console.log(theNormData)
+			try
+			{
+				var isDone = false;
+				while(!(isDone == true))
+				{
+					isDone = (await (persistDataAndWait("data", theNormData)));
+				}
+				if(fromAni)
+				{
+					document.getElementById("addTaskAniStart").value = "Start (MS Session Time)";
+					document.getElementById("addTaskAniEnd").value = "End (MS Session Time)";
+					document.getElementById("addTaskAniName").value = "";
+					document.getElementById("tagsAni").value = "";
+					document.getElementById("addTaskAniGoal").value = "";
+				}
+				start(true);
+			}
+			catch(err)
+			{
+				console.log(err);
+			}
+			
+		});
+	}
+	
 	var curSelectUser = "";
 	var curSelectSession = "";
 	
