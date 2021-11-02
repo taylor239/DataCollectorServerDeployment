@@ -2726,7 +2726,14 @@ if(request.getParameter("email") != null)
 			
 			for(sessionName in data[userName])
 			{
-				theNormDataInit[userName][sessionName]["events"] = data[userName][sessionName]["events"];
+				if(data[userName][sessionName]["events"])
+				{
+					theNormDataInit[userName][sessionName]["events"] = data[userName][sessionName]["events"];
+				}
+				else if(theNormDataInit[userName][sessionName]["events"])
+				{
+					delete theNormDataInit[userName][sessionName]["events"];
+				}
 			}
 			
 			try
