@@ -227,6 +227,8 @@ public class CacheBoundsServlet extends HttpServlet {
 			padder.setID(request.getRequestURL().toString());
 			
 			myConnector.cacheBounds(eventName, admin, padder);
+			
+			//padder.consumeUpdate(myConnector.getActiveMinutes( admin, eventName, 5));
 			while(!padder.getDoneKeepingAlive())
 			{
 				try

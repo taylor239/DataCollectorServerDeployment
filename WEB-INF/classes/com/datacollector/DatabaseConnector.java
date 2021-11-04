@@ -352,6 +352,92 @@ public class DatabaseConnector
 			}
 		}
 		
+		cachedQuery = "SELECT b.* FROM `ActiveHistory` b RIGHT JOIN\n" + 
+				"(\n" + 
+				"    SELECT MAX(a.`snapTime`) AS `snapTime`, a.`adminEmail`, a.`event`, a.`username`, a.`session` FROM `ActiveHistory` a WHERE a.`adminEmail` = ? AND a.`event` = ? AND a.`isCurrent` = 1 GROUP BY a.`adminEmail`, a.`event`, a.`username`, a.`session`\n" + 
+				") c\n" + 
+				"ON c.`event` = b.`event` AND c.`adminEmail` = b.`adminEmail` AND c.`username` = b.`username` AND c.`session` = b.`session` AND c.`snapTime` = b.`snapTime`";
+		
+		
+		myConnector = mySource.getDatabaseConnectionNoTimeout();
+		myStmt = null;
+		myResults = null;
+		
+		try
+		{
+			myStmt = myConnector.prepareStatement(cachedQuery);
+			myStmt.setString(1, adminEmail);
+			myStmt.setString(2, eventName);
+			myResults = myStmt.executeQuery();
+			
+			while(myResults.next())
+			{
+				ConcurrentHashMap nextRow = new ConcurrentHashMap();
+				
+				String userName = myResults.getString("username");
+				String sessionName = myResults.getString("session");
+				String dataType = "activetime";
+				
+				nextRow.put("SnapDate", myResults.getTimestamp("snapTime", cal));
+				nextRow.put("ActiveTime", myResults.getString("minutesActive"));
+				nextRow.put("Resolution", myResults.getString("resolution"));
+				
+				if(!myReturn.containsKey(userName))
+				{
+					myReturn.put(userName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap userMap = (ConcurrentHashMap) myReturn.get(userName);
+				
+				if(!userMap.containsKey(sessionName))
+				{
+					userMap.put(sessionName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userMap.get(sessionName);
+				
+				if(!sessionMap.containsKey(dataType))
+				{
+					sessionMap.put(dataType, new ArrayList());
+				}
+				ArrayList eventList = (ArrayList) sessionMap.get(dataType);
+				
+				eventList.add(nextRow);
+				
+			}
+			
+			
+			myResults.close();
+			
+			myStmt.close();
+			
+			myConnector.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if(myResults != null)
+				{
+					myResults.close();
+				}
+				if(myStmt != null)
+				{
+					myStmt.close();
+				}
+				if(myConnector != null)
+				{
+					myConnector.close();
+				}
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
+		
 		
 		return myReturn;
 	}
@@ -417,6 +503,93 @@ public class DatabaseConnector
 		myConsumer.consumeUpdate(dataType + " : " + username + " : " + session + " : " + count + " : " + startDate + " : " + endDate);
 	}
 	
+	public void cacheActive(String adminEmail, String eventName, ConcurrentHashMap eventMap, DatabaseUpdateConsumer myConsumer, int resolution)
+	{
+		Iterator myIterator = eventMap.entrySet().iterator();
+		while(myIterator.hasNext())
+		{
+			Entry curUser = (Entry) myIterator.next();
+			String userName = (String) curUser.getKey();
+			ConcurrentHashMap sessionMap = (ConcurrentHashMap) curUser.getValue();
+			Iterator sessionIterator = sessionMap.entrySet().iterator();
+			while(sessionIterator.hasNext())
+			{
+				Entry curSession = (Entry) sessionIterator.next();
+				String sessionName = (String) curSession.getKey();
+				ConcurrentHashMap boundsMap = (ConcurrentHashMap) curSession.getValue();
+				Iterator boundsIter = boundsMap.entrySet().iterator();
+				while(boundsIter.hasNext())
+				{
+					Entry boundsEntry = (Entry) boundsIter.next();
+					String boundsType = (String) boundsEntry.getKey();
+					ArrayList bounds = (ArrayList) boundsEntry.getValue();
+					ConcurrentHashMap minMap = (ConcurrentHashMap) bounds.get(0);
+					int total = (int) minMap.get("minutesActive");
+					cacheActive(adminEmail, eventName, userName, sessionName, total, myConsumer, resolution);
+				}
+			}
+		}
+	}
+	
+	public void cacheActive(String adminEmail, String eventName, String username, String session, int minutes, DatabaseUpdateConsumer myConsumer, int resolution)
+	{
+		System.out.println("Caching active for " + adminEmail + " : " + eventName + " : " + username + " : " + minutes);
+		String deactivateOld = "UPDATE `ActiveHistory` SET `isCurrent`=0 WHERE `event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ?";
+		String insertQuery = "INSERT INTO `ActiveHistory`(`event`, `adminEmail`, `username`, `session`, `minutesActive`, `resolution`) VALUES (?, ?, ?, ?, ?, ?)";
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		PreparedStatement myStmt = null;
+		
+		try
+		{
+			myStmt = myConnector.prepareStatement(deactivateOld);
+			myStmt.setString(1, eventName);
+			myStmt.setString(2, adminEmail);
+			myStmt.setString(3, username);
+			myStmt.setString(4, session);
+			myStmt.execute();
+			
+			myStmt.close();
+			
+			myStmt = myConnector.prepareStatement(insertQuery);
+			myStmt.setString(1, eventName);
+			myStmt.setString(2, adminEmail);
+			myStmt.setString(3, username);
+			myStmt.setString(4, session);
+			myStmt.setInt(5, minutes);
+			myStmt.setInt(6, resolution);
+			myStmt.execute();
+			
+			myStmt.close();
+			
+			myConnector.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if(myStmt != null)
+				{
+					myStmt.close();
+				}
+				if(myConnector != null)
+				{
+					myConnector.close();
+				}
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
+		
+		myConsumer.consumeUpdate("minutesactive" + " : " + username + " : " + session + " : " + minutes);
+	}
+	
 	public void cacheBounds(String adminEmail, String eventName, ConcurrentHashMap eventMap, DatabaseUpdateConsumer myConsumer)
 	{
 		Iterator myIterator = eventMap.entrySet().iterator();
@@ -449,6 +622,115 @@ public class DatabaseConnector
 		}
 	}
 	
+	public ConcurrentHashMap getActiveMinutes(String adminEmail, String eventName, int minutesChunk)
+	{
+		ConcurrentHashMap myReturn = new ConcurrentHashMap();
+		String query = "SELECT COUNT(DISTINCT(FROM_UNIXTIME(`theTimestamp` * (60 * ?)))) AS `timecount`, `adminEmail`, `event`, `username`, `session` FROM\n" + 
+				"(\n" + 
+				"SELECT COUNT(*), ROUND(ABS(UNIX_TIMESTAMP(`inputTime`)) / (60 * ?)) AS `theTimestamp`, `adminEmail`, `event`, `username`, `session` FROM `KeyboardInput`\n" + 
+				"WHERE `adminEmail` = ? AND `event` = ?\n" + 
+				"GROUP BY ROUND(ABS(UNIX_TIMESTAMP(`inputTime`)) / (60 * ?)), `adminEmail`, `event`, `username`, `session`\n" + 
+				"UNION\n" + 
+				"SELECT COUNT(*), ROUND(ABS(UNIX_TIMESTAMP(`inputTime`)) / (60 * ?)) AS `theTimetamp`, `adminEmail`, `event`, `username`, `session` FROM `MouseInput`\n" + 
+				"WHERE `adminEmail` = ? AND `event` = ?\n" + 
+				"GROUP BY ROUND(ABS(UNIX_TIMESTAMP(`inputTime`)) / (60 * ?)), `adminEmail`, `event`, `username`, `session`\n" + 
+				")\n" + 
+				"a GROUP BY `adminEmail`, `event`, `username`, `session`";
+		
+		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
+		PreparedStatement myStmt = null;
+		ResultSet myResults = null;
+		
+		try
+		{
+			myStmt = myConnector.prepareStatement(query);
+			myStmt.setInt(1, minutesChunk);
+			myStmt.setInt(2, minutesChunk);
+			myStmt.setString(3, adminEmail);
+			myStmt.setString(4, eventName);
+			myStmt.setInt(5, minutesChunk);
+			myStmt.setInt(6, minutesChunk);
+			myStmt.setString(7, adminEmail);
+			myStmt.setString(8, eventName);
+			myStmt.setInt(9, minutesChunk);
+			
+			//System.out.println(myStmt);
+			
+			myResults = myStmt.executeQuery();
+			
+			while(myResults.next())
+			{
+				ConcurrentHashMap nextRow = new ConcurrentHashMap();
+				
+				String userName = myResults.getString("username");
+				String sessionName = myResults.getString("session");
+				String dataType = "activetime";
+				
+				int totalCount = myResults.getInt("timecount");
+				
+				nextRow.put("minutesActive", totalCount * minutesChunk);
+				
+				if(!myReturn.containsKey(userName))
+				{
+					myReturn.put(userName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap userMap = (ConcurrentHashMap) myReturn.get(userName);
+				
+				if(!userMap.containsKey(sessionName))
+				{
+					userMap.put(sessionName, new ConcurrentHashMap());
+				}
+				ConcurrentHashMap sessionMap = (ConcurrentHashMap) userMap.get(sessionName);
+				
+				if(!sessionMap.containsKey(dataType))
+				{
+					sessionMap.put(dataType, new ArrayList());
+				}
+				ArrayList eventList = (ArrayList) sessionMap.get(dataType);
+				
+				eventList.add(nextRow);
+				
+			}
+			
+			
+			myResults.close();
+			
+			myStmt.close();
+			
+			myConnector.close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if(myResults != null)
+				{
+					myResults.close();
+				}
+				if(myStmt != null)
+				{
+					myStmt.close();
+				}
+				if(myConnector != null)
+				{
+					myConnector.close();
+				}
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
+		
+		//System.out.println(myReturn);
+		
+		return myReturn;
+	}
+	
 	public void cacheBounds(String eventName, String adminEmail, DatabaseUpdateConsumer myConsumer)
 	{
 		ConcurrentHashMap eventMap = new ConcurrentHashMap();
@@ -473,6 +755,10 @@ public class DatabaseConnector
 		cacheBounds(adminEmail, eventName, eventMap, myConsumer);
 		myConsumer.consumeUpdate("Done caching mouse");
 		
+		int timeResolution = 5;
+		eventMap = getActiveMinutes(adminEmail, eventName, timeResolution);
+		cacheActive(adminEmail, eventName, eventMap, myConsumer, timeResolution);
+		myConsumer.consumeUpdate("Done caching active minutes");
 		
 		myConsumer.consumeUpdate("Finished!");
 		

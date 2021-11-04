@@ -99,7 +99,7 @@ if(request.getParameter("email") != null)
 									<a class="expandPlus" onclick="toggleCol(this)">➕</a> <b>Session Name</b>
 								</td>
 								<td class="searchCol">
-									<a class="expandPlus" onclick="toggleCol(this)">➕</a> <b>Total Time (Minutes)</b>
+									<a class="expandPlus" onclick="toggleCol(this)">➕</a> Total Time, <b>Active Time</b>
 								</td>
 								<td class="searchCol">
 									<a class="expandPlus" onclick="toggleCol(this)">➕</a> Start Date
@@ -1148,7 +1148,14 @@ function toggleCol(colToExpand)
 				newCell.innerHTML = sessionName;
 				
 				newCell = newRow.insertCell();
-				newCell.innerHTML = theNormData[user][sessionName]["Index MS Session Max"] / 60000;
+				if(sessionName != "Aggregated")
+				{
+					newCell.innerHTML = Math.round(theNormData[user][sessionName]["Index MS Session Max"] / 60000) + "<br /><b>" + theNormData[user][sessionName]["activetime"][0]["ActiveTime"] + "</b>";
+				}
+				else
+				{
+					newCell.innerHTML = Math.round(theNormData[user][sessionName]["Index MS Session Max"] / 60000);
+				}
 				
 				newCell = newRow.insertCell();
 				newCell.innerHTML = theNormData[user][sessionName]["Index MS Session Min Date"];
@@ -1288,6 +1295,8 @@ function toggleCol(colToExpand)
 		
 		fieldRow.append("td").html("<b>User</b>");
 		fieldRow.append("td").html("<b>Session</b>");
+		fieldRow.append("td").html("<b>Total Time</b>");
+		fieldRow.append("td").html("<b>Active Time</b>");
 		fieldRow.append("td").html("<b>Tasks</b>");
 		fieldRow.append("td").html("<b>Windows</b>");
 		fieldRow.append("td").html("<b>Processes</b>");
@@ -1314,6 +1323,10 @@ function toggleCol(colToExpand)
 				
 				curRow.append("td").html(user);
 				curRow.append("td").html(sessionName);
+				
+				curRow.append("td").html(Math.round(theNormData[user][sessionName]["Index MS Session Max"] / 60000));
+				curRow.append("td").html(theNormData[user][sessionName]["activetime"][0]["ActiveTime"]);
+				
 				if(theNormData[user][sessionName]["eventbounds"])
 				{
 					curRow.append("td").html(theNormData[user][sessionName]["eventbounds"][0]["TotalEntries"]);
