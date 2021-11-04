@@ -1148,7 +1148,7 @@ function toggleCol(colToExpand)
 				newCell.innerHTML = sessionName;
 				
 				newCell = newRow.insertCell();
-				if(sessionName != "Aggregated")
+				if(sessionName != "Aggregated" && theNormData[user][sessionName]["activetime"])
 				{
 					newCell.innerHTML = Math.round(theNormData[user][sessionName]["Index MS Session Max"] / 60000) + "<br /><b>" + theNormData[user][sessionName]["activetime"][0]["ActiveTime"] + "</b>";
 				}
@@ -1325,8 +1325,14 @@ function toggleCol(colToExpand)
 				curRow.append("td").html(sessionName);
 				
 				curRow.append("td").html(Math.round(theNormData[user][sessionName]["Index MS Session Max"] / 60000));
-				curRow.append("td").html(theNormData[user][sessionName]["activetime"][0]["ActiveTime"]);
-				
+				if(theNormData[user][sessionName]["activetime"])
+				{
+					curRow.append("td").html(theNormData[user][sessionName]["activetime"][0]["ActiveTime"]);
+				}
+				else
+				{
+					curRow.append("td").html("0");
+				}
 				if(theNormData[user][sessionName]["eventbounds"])
 				{
 					curRow.append("td").html(theNormData[user][sessionName]["eventbounds"][0]["TotalEntries"]);
