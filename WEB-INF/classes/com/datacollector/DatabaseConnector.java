@@ -755,6 +755,10 @@ public class DatabaseConnector
 		cacheBounds(adminEmail, eventName, eventMap, myConsumer);
 		myConsumer.consumeUpdate("Done caching mouse");
 		
+		eventMap = getScreenshotsHierarchyBounds(eventName, adminEmail);
+		cacheBounds(adminEmail, eventName, eventMap, myConsumer);
+		myConsumer.consumeUpdate("Done caching screenshots");
+		
 		int timeResolution = 5;
 		eventMap = getActiveMinutes(adminEmail, eventName, timeResolution);
 		cacheActive(adminEmail, eventName, eventMap, myConsumer, timeResolution);
