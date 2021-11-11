@@ -30,6 +30,10 @@ import com.google.gson.GsonBuilder;
 
 public class DatabaseConnector
 {
+	//Yeah, the OCR library produced garbage results.  Looks like
+	//if we want OCR we are going to need to do a lot more integration
+	//work or build our own, the wrappers for open source OCR are
+	//not great in Java.  Oh, these variables are deprecated BTW.
 	private static OCRProcessor ocrProc = null;
 	private int numOcrThreads = 2;
 	
@@ -54,35 +58,35 @@ public class DatabaseConnector
 			"ORDER BY `overallUser`, `overallSession`, `overallTime`, `overallTimeChanged`, `overallPid`, `overallXid`";
 	private String userQuery = "SELECT * FROM `openDataCollectionServer`.`User` WHERE `event` = ? AND `adminEmail` = ? ORDER BY `username`, `session` ASC";
 	
-	private String keyboardQuery = "SELECT *, 'keyboard' AS `fromInput` FROM `openDataCollectionServer`.`KeyboardInput`\n" + 
+	private String keyboardQuery = "SELECT *, UNIX_TIMESTAMP(`inputTime`) AS `indexMS`, 'keyboard' AS `fromInput` FROM `openDataCollectionServer`.`KeyboardInput`\n" + 
 			"WHERE `event` = ? AND `adminEmail` = ?\n" + 
 			"ORDER BY `inputTime` ASC";
 	
-	private String keyboardQueryBounds = "SELECT `KeyboardInput`.`username`, `KeyboardInput`.`session`, MIN(`KeyboardInput`.`inputTime`) AS `mintime`, MAX(`KeyboardInput`.`inputTime`) AS `maxtime`, COUNT(*) AS `totalEntries` FROM `openDataCollectionServer`.`KeyboardInput`\n" + 
+	private String keyboardQueryBounds = "SELECT `KeyboardInput`.`username`, `KeyboardInput`.`session`, UNIX_TIMESTAMP(MIN(`KeyboardInput`.`inputTime`)) AS `mintimeMS`, UNIX_TIMESTAMP(MAX(`KeyboardInput`.`inputTime`)) AS `maxtimeMS`, MIN(`KeyboardInput`.`inputTime`) AS `mintime`, MAX(`KeyboardInput`.`inputTime`) AS `maxtime`, COUNT(*) AS `totalEntries` FROM `openDataCollectionServer`.`KeyboardInput`\n" + 
 			"WHERE `event` = ? AND `adminEmail` = ?\n" + 
 			"GROUP BY `KeyboardInput`.`session`, `KeyboardInput`.`username`, `KeyboardInput`.`event`, `KeyboardInput`.`adminEmail`";
 	
-	private String mouseQuery = "SELECT *, 'mouse' AS `fromInput` FROM `openDataCollectionServer`.`MouseInput`\n" + 
+	private String mouseQuery = "SELECT *, UNIX_TIMESTAMP(`inputTime`) AS `indexMS`, 'mouse' AS `fromInput` FROM `openDataCollectionServer`.`MouseInput`\n" + 
 			"WHERE `event` = ? AND `adminEmail` = ?\n" + 
 			"ORDER BY `inputTime` ASC";
 	
-	private String mouseQueryBounds = "SELECT `MouseInput`.`username`, `MouseInput`.`session`, MIN(`MouseInput`.`inputTime`) AS `mintime`, MAX(`MouseInput`.`inputTime`) AS `maxtime`, COUNT(*) AS `totalEntries` FROM `openDataCollectionServer`.`MouseInput`\n" + 
+	private String mouseQueryBounds = "SELECT `MouseInput`.`username`, `MouseInput`.`session`, UNIX_TIMESTAMP(MIN(`MouseInput`.`inputTime`)) AS `mintimeMS`, UNIX_TIMESTAMP(MAX(`MouseInput`.`inputTime`)) AS `maxtimeMS`, MIN(`MouseInput`.`inputTime`) AS `mintime`, MAX(`MouseInput`.`inputTime`) AS `maxtime`, COUNT(*) AS `totalEntries` FROM `openDataCollectionServer`.`MouseInput`\n" + 
 			"WHERE `event` = ? AND `adminEmail` = ?\n" + 
 			"GROUP BY `MouseInput`.`session`, `MouseInput`.`username`, `MouseInput`.`event`, `MouseInput`.`adminEmail`";
 	
-	private String taskQuery = "SELECT * FROM `openDataCollectionServer`.`Task` LEFT JOIN `TaskEvent` ON `Task`.`username` = `TaskEvent`.`username` AND `Task`.`session` = `TaskEvent`.`session` AND `Task`.`event` = `TaskEvent`.`event` AND `Task`.`adminEmail` = `TaskEvent`.`adminEmail` AND `Task`.`taskName` = `TaskEvent`.`taskName`  AND `Task`.`startTimestamp` = `TaskEvent`.`startTimestamp` WHERE `Task`.`event` = ? AND `Task`.`adminEmail` = ? ORDER BY `TaskEvent`.`eventTime` ASC";
+	private String taskQuery = "SELECT *, UNIX_TIMESTAMP(`TaskEvent`.`eventTime`) AS `indexMS` FROM `openDataCollectionServer`.`Task` LEFT JOIN `TaskEvent` ON `Task`.`username` = `TaskEvent`.`username` AND `Task`.`session` = `TaskEvent`.`session` AND `Task`.`event` = `TaskEvent`.`event` AND `Task`.`adminEmail` = `TaskEvent`.`adminEmail` AND `Task`.`taskName` = `TaskEvent`.`taskName`  AND `Task`.`startTimestamp` = `TaskEvent`.`startTimestamp` WHERE `Task`.`event` = ? AND `Task`.`adminEmail` = ? ORDER BY `TaskEvent`.`eventTime` ASC";
 	private String taskTagQuery = "SELECT * FROM `openDataCollectionServer`.`Task` INNER JOIN `TaskTags` ON `Task`.`username` = `TaskTags`.`username` AND `Task`.`session` = `TaskTags`.`session` AND `Task`.`event` = `TaskTags`.`event` AND `Task`.`adminEmail` = `TaskTags`.`adminEmail` AND `Task`.`taskName` = `TaskTags`.`taskName` AND `Task`.`startTimestamp` = `TaskTags`.`startTimestamp` WHERE `Task`.`event` = ? AND `Task`.`adminEmail` = ?";
-	private String taskQueryBounds = "SELECT `TaskEvent`.`username`, `TaskEvent`.`session`, MIN(`TaskEvent`.`eventTime`) AS `mintime`, MAX(`TaskEvent`.`eventTime`) AS `maxtime`, COUNT(*) AS `totalEntries` FROM `openDataCollectionServer`.`Task` LEFT JOIN `TaskEvent` ON `Task`.`username` = `TaskEvent`.`username` AND `Task`.`session` = `TaskEvent`.`session` AND `Task`.`event` = `TaskEvent`.`event` AND `Task`.`adminEmail` = `TaskEvent`.`adminEmail` AND `Task`.`taskName` = `TaskEvent`.`taskName` WHERE `Task`.`event` = ? AND `Task`.`adminEmail` = ? GROUP BY `TaskEvent`.`adminEmail`, `TaskEvent`.`event`, `TaskEvent`.`username`, `TaskEvent`.`session`";
+	private String taskQueryBounds = "SELECT `TaskEvent`.`username`, UNIX_TIMESTAMP(MIN(`TaskEvent`.`eventTime`)) AS `mintimeMS`, UNIX_TIMESTAMP(MAX(`TaskEvent`.`eventTime`)) AS `maxtimeMS`, `TaskEvent`.`session`, MIN(`TaskEvent`.`eventTime`) AS `mintime`, MAX(`TaskEvent`.`eventTime`) AS `maxtime`, COUNT(*) AS `totalEntries` FROM `openDataCollectionServer`.`Task` LEFT JOIN `TaskEvent` ON `Task`.`username` = `TaskEvent`.`username` AND `Task`.`session` = `TaskEvent`.`session` AND `Task`.`event` = `TaskEvent`.`event` AND `Task`.`adminEmail` = `TaskEvent`.`adminEmail` AND `Task`.`taskName` = `TaskEvent`.`taskName` WHERE `Task`.`event` = ? AND `Task`.`adminEmail` = ? GROUP BY `TaskEvent`.`adminEmail`, `TaskEvent`.`event`, `TaskEvent`.`username`, `TaskEvent`.`session`";
 	private String taskQueryTags = "SELECT DISTINCT(`tag`) FROM `TaskTags` WHERE `TaskTags`.`event` = ? AND `TaskTags`.`adminEmail` = ? UNION SELECT `tag` FROM `TaskTagsPublic`";
 	
 	
-	private String imageQuery = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `username` = ? AND `session` = ? AND `event` = ? AND `adminEmail` = ? ORDER BY abs(? - (UNIX_TIMESTAMP(`taken`) * 1000)) LIMIT 1";
-	private String imageQueryExact = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `username` = ? AND `session` = ? AND `event` = ? AND `adminEmail` = ? AND (UNIX_TIMESTAMP(`taken`) * 1000) = ?";
+	private String imageQuery = "SELECT *, UNIX_TIMESTAMP(`taken`) AS `indexMS` FROM `openDataCollectionServer`.`Screenshot` WHERE `username` = ? AND `session` = ? AND `event` = ? AND `adminEmail` = ? ORDER BY abs(? - (UNIX_TIMESTAMP(`taken`) * 1000)) LIMIT 1";
+	private String imageQueryExact = "SELECT *, UNIX_TIMESTAMP(`taken`) AS `indexMS` FROM `openDataCollectionServer`.`Screenshot` WHERE `username` = ? AND `session` = ? AND `event` = ? AND `adminEmail` = ? AND (UNIX_TIMESTAMP(`taken`) * 1000) = ?";
 	//" AND (UNIX_TIMESTAMP(`taken`) * 1000) > ?" - after time
 	//" AND (UNIX_TIMESTAMP(`taken`) * 1000) < ?" - before time
-	private String allImageQuery = "SELECT * FROM `openDataCollectionServer`.`Screenshot` WHERE `event` = ? AND `adminEmail` = ? ORDER BY `taken` ASC";
+	private String allImageQuery = "SELECT *, UNIX_TIMESTAMP(`taken`) AS `indexMS` FROM `openDataCollectionServer`.`Screenshot` WHERE `event` = ? AND `adminEmail` = ? ORDER BY `taken` ASC";
 	
-	private String allImageQueryBounds = "SELECT `Screenshot`.`username`, `Screenshot`.`session`, MIN(`Screenshot`.`taken`) AS `mintime`, MAX(`Screenshot`.`taken`) AS `maxtime`, COUNT(*) AS `totalEntries` FROM `openDataCollectionServer`.`Screenshot` WHERE `event` = ? AND `adminEmail` = ?\n" + 
+	private String allImageQueryBounds = "SELECT `Screenshot`.`username`, `Screenshot`.`session`, UNIX_TIMESTAMP(MIN(`Screenshot`.`taken`)) AS `mintimeMS`, UNIX_TIMESTAMP(MAX(`Screenshot`.`taken`)) AS `maxtimeMS`, MIN(`Screenshot`.`taken`) AS `mintime`, MAX(`Screenshot`.`taken`) AS `maxtime`, COUNT(*) AS `totalEntries` FROM `openDataCollectionServer`.`Screenshot` WHERE `event` = ? AND `adminEmail` = ?\n" + 
 			"GROUP BY `Screenshot`.`session`, `Screenshot`.`username`, `Screenshot`.`event`, `Screenshot`.`adminEmail`";
 	
 	
@@ -90,7 +94,7 @@ public class DatabaseConnector
 	
 	//private String allProcessQueryOld = "SELECT * FROM `Process` LEFT JOIN `ProcessAttributes` ON `Process`.`event` = `ProcessAttributes`.`event` AND `Process`.`adminEmail` = `ProcessAttributes`.`adminEmail` AND `Process`.`username` = `ProcessAttributes`.`username` AND `Process`.`session` = `ProcessAttributes`.`session` AND `Process`.`user` = `ProcessAttributes`.`user` AND `Process`.`pid` = `ProcessAttributes`.`pid` AND `Process`.`start` = `ProcessAttributes`.`start` WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? ORDER BY `ProcessAttributes`.`insertTimestamp` ASC";
 	
-	private String allProcessQuery = "SELECT * FROM `Process` LEFT JOIN \n" + 
+	private String allProcessQuery = "SELECT *, UNIX_TIMESTAMP(`ProcessAttributes`.`timestamp`) AS `indexMS` FROM `Process` LEFT JOIN \n" + 
 			"(\n" + 
 			"SELECT `event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`, GROUP_CONCAT(`arg` ORDER BY `numbered` ASC SEPARATOR ' ') AS `arguments` FROM `ProcessArgs` GROUP BY `ProcessArgs`.`event`, `ProcessArgs`.`adminEmail`, `ProcessArgs`.`username`, `ProcessArgs`.`session`, `ProcessArgs`.`user`, `ProcessArgs`.`pid`, `ProcessArgs`.`start`\n" + 
 			") a\n" + 
@@ -98,7 +102,7 @@ public class DatabaseConnector
 			"LEFT JOIN `ProcessAttributes` ON `Process`.`event` = `ProcessAttributes`.`event` AND `Process`.`adminEmail` = `ProcessAttributes`.`adminEmail` AND `Process`.`username` = `ProcessAttributes`.`username` AND `Process`.`session` = `ProcessAttributes`.`session` AND `Process`.`user` = `ProcessAttributes`.`user` AND `Process`.`pid` = `ProcessAttributes`.`pid` AND `Process`.`start` = `ProcessAttributes`.`start`\n" + 
 			"WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? ORDER BY `ProcessAttributes`.`timestamp` ASC";
 	
-	private String summaryProcessQuery = "SELECT `Process`.*, a.*, MAX(`ProcessAttributes`.`cpu`) AS `maxcpu`, MAX(`ProcessAttributes`.`mem`) AS `maxmem`, MAX(`ProcessAttributes`.`timestamp`) AS `maxtime`, MIN(`ProcessAttributes`.`timestamp`) AS `mintime` FROM `Process` LEFT JOIN \n" + 
+	private String summaryProcessQuery = "SELECT `Process`.*, a.*, MAX(`ProcessAttributes`.`cpu`) AS `maxcpu`, MAX(`ProcessAttributes`.`mem`) AS `maxmem`, UNIX_TIMESTAMP(MIN(`ProcessAttributes`.`timestamp`)) AS `mintimeMS`, UNIX_TIMESTAMP(MAX(`ProcessAttributes`.`timestamp`)) AS `maxtimeMS`, MAX(`ProcessAttributes`.`timestamp`) AS `maxtime`, MIN(`ProcessAttributes`.`timestamp`) AS `mintime` FROM `Process` LEFT JOIN \n" + 
 			"(\n" + 
 			"SELECT `event`, `adminEmail`, `username`, `session`, `user`, `pid`, `start`, GROUP_CONCAT(`arg` ORDER BY `numbered` ASC SEPARATOR ' ') AS `arguments` FROM `ProcessArgs` GROUP BY `ProcessArgs`.`event`, `ProcessArgs`.`adminEmail`, `ProcessArgs`.`username`, `ProcessArgs`.`session`, `ProcessArgs`.`user`, `ProcessArgs`.`pid`, `ProcessArgs`.`start`\n" + 
 			") a\n" + 
@@ -146,10 +150,10 @@ public class DatabaseConnector
 	//		"\n" + 
 	//		"ORDER BY `qu`.`timestamp` ASC";
 	
-	private String allProcessQueryBounds = "SELECT `ProcessAttributes`.`username`, `ProcessAttributes`.`session`, MIN(`ProcessAttributes`.`timestamp`) AS `mintime`, MAX(`ProcessAttributes`.`timestamp`) AS `maxtime`, COUNT(*) AS `totalEntries` FROM `ProcessAttributes` WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? GROUP BY `ProcessAttributes`.`session`, `ProcessAttributes`.`username`, `ProcessAttributes`.`event`, `ProcessAttributes`.`adminEmail`";
+	private String allProcessQueryBounds = "SELECT `ProcessAttributes`.`username`, `ProcessAttributes`.`session`, UNIX_TIMESTAMP(MIN(`ProcessAttributes`.`timestamp`)) AS `mintimeMS`, UNIX_TIMESTAMP(MAX(`ProcessAttributes`.`timestamp`)) AS `maxtimeMS`, MIN(`ProcessAttributes`.`timestamp`) AS `mintime`, MAX(`ProcessAttributes`.`timestamp`) AS `maxtime`, COUNT(*) AS `totalEntries` FROM `ProcessAttributes` WHERE `ProcessAttributes`.`event` = ? AND `ProcessAttributes`.`adminEmail` = ? GROUP BY `ProcessAttributes`.`session`, `ProcessAttributes`.`username`, `ProcessAttributes`.`event`, `ProcessAttributes`.`adminEmail`";
 	
-	private String allWindowQuery = "SELECT * FROM `Window` LEFT JOIN `WindowDetails`ON `Window`.`event` = `WindowDetails`.`event` AND `Window`.`adminEmail` = `WindowDetails`.`adminEmail` AND `Window`.`username` = `WindowDetails`.`username` AND `Window`.`session` = `WindowDetails`.`session` AND `Window`.`user` = `WindowDetails`.`user` AND `Window`.`pid` = `WindowDetails`.`pid` AND `Window`.`start` = `WindowDetails`.`start` AND `Window`.`xid` = `WindowDetails`.`xid` WHERE `WindowDetails`.`event` = ? AND `WindowDetails`.`adminEmail` = ? ORDER BY `WindowDetails`.`timeChanged` ASC";
-	private String allWindowQueryBounds = "SELECT `WindowDetails`.`username`, `WindowDetails`.`session`, MIN(`WindowDetails`.`timeChanged`) AS `mintime`, MAX(`WindowDetails`.`timeChanged`) AS `maxtime`, COUNT(*) AS `totalEntries` FROM `Window` LEFT JOIN `WindowDetails`ON `Window`.`event` = `WindowDetails`.`event` AND `Window`.`adminEmail` = `WindowDetails`.`adminEmail` AND `Window`.`username` = `WindowDetails`.`username` AND `Window`.`session` = `WindowDetails`.`session` AND `Window`.`user` = `WindowDetails`.`user` AND `Window`.`pid` = `WindowDetails`.`pid` AND `Window`.`start` = `WindowDetails`.`start` AND `Window`.`xid` = `WindowDetails`.`xid` WHERE `WindowDetails`.`event` = ? AND `WindowDetails`.`adminEmail` = ? GROUP BY `WindowDetails`.`adminEmail`, `WindowDetails`.`event`, `WindowDetails`.`username`, `WindowDetails`.`session`";
+	private String allWindowQuery = "SELECT *, UNIX_TIMESTAMP(`WindowDetails`.`timeChanged`) AS `indexMS` FROM `Window` LEFT JOIN `WindowDetails`ON `Window`.`event` = `WindowDetails`.`event` AND `Window`.`adminEmail` = `WindowDetails`.`adminEmail` AND `Window`.`username` = `WindowDetails`.`username` AND `Window`.`session` = `WindowDetails`.`session` AND `Window`.`user` = `WindowDetails`.`user` AND `Window`.`pid` = `WindowDetails`.`pid` AND `Window`.`start` = `WindowDetails`.`start` AND `Window`.`xid` = `WindowDetails`.`xid` WHERE `WindowDetails`.`event` = ? AND `WindowDetails`.`adminEmail` = ? ORDER BY `WindowDetails`.`timeChanged` ASC";
+	private String allWindowQueryBounds = "SELECT `WindowDetails`.`username`, `WindowDetails`.`session`, UNIX_TIMESTAMP(MIN(`WindowDetails`.`timeChanged`)) AS `mintimeMS`, UNIX_TIMESTAMP(MAX(`WindowDetails`.`timeChanged`)) AS `maxtimeMS`, MIN(`WindowDetails`.`timeChanged`) AS `mintime`, MAX(`WindowDetails`.`timeChanged`) AS `maxtime`, COUNT(*) AS `totalEntries` FROM `Window` LEFT JOIN `WindowDetails`ON `Window`.`event` = `WindowDetails`.`event` AND `Window`.`adminEmail` = `WindowDetails`.`adminEmail` AND `Window`.`username` = `WindowDetails`.`username` AND `Window`.`session` = `WindowDetails`.`session` AND `Window`.`user` = `WindowDetails`.`user` AND `Window`.`pid` = `WindowDetails`.`pid` AND `Window`.`start` = `WindowDetails`.`start` AND `Window`.`xid` = `WindowDetails`.`xid` WHERE `WindowDetails`.`event` = ? AND `WindowDetails`.`adminEmail` = ? GROUP BY `WindowDetails`.`adminEmail`, `WindowDetails`.`event`, `WindowDetails`.`username`, `WindowDetails`.`session`";
 	
 	private String insertFilter = "INSERT INTO `VisualizationFilters`(`event`, `adminEmail`, `level`, `field`, `value`, `server`, `saveName`, `filterNum`) VALUES ";
 	private String insertFilterValues = "(?,?,?,?,?,?,?,?)";
@@ -166,7 +170,7 @@ public class DatabaseConnector
 			+ "INNER JOIN `TaskEvent` ON `Task`.`event` = `TaskEvent`.`event` AND `Task`.`adminEmail` = `TaskEvent`.`adminEmail` AND `Task`.`username` = `TaskEvent`.`username` AND `Task`.`session` = `TaskEvent`.`session` AND `Task`.`taskName` = `TaskEvent`.`taskName` AND `Task`.`startTimestamp` = `TaskEvent`.`startTimestamp` "
 			+ "WHERE `TaskEvent`.`event` = ? AND `TaskEvent`.`adminEmail` = ? AND `TaskEvent`.`username` = ? AND `TaskEvent`.`session` = ? AND `TaskEvent`.`taskName` = ? AND `TaskEvent`.`source` = ? AND `TaskEvent`.`startTimestamp` = FROM_UNIXTIME(? / 1000)";
 	
-	private String selectTaskEvents = "SELECT * FROM `TaskEvent` WHERE `event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ? AND `taskName` = ? AND `startTimestamp` = FROM_UNIXTIME(? / 1000)";
+	private String selectTaskEvents = "SELECT *, UNIX_TIMESTAMP(`eventTime`) AS `indexMS` FROM `TaskEvent` WHERE `event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ? AND `taskName` = ? AND `startTimestamp` = FROM_UNIXTIME(? / 1000)";
 	
 	private String deleteTask = "DELETE FROM `Task` WHERE `event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ? AND `taskName` = ? AND `startTimestamp` = FROM_UNIXTIME(? / 1000)";
 	
@@ -264,7 +268,7 @@ public class DatabaseConnector
 	{
 		ConcurrentHashMap myReturn = new ConcurrentHashMap();
 		
-		String cachedQuery = "SELECT b.* FROM `BoundsHistory` b RIGHT JOIN\n" + 
+		String cachedQuery = "SELECT b.*, UNIX_TIMESTAMP(b.`startDate`) AS `startDateMS`, UNIX_TIMESTAMP(b.`endDate`) AS `endDateMS` FROM `BoundsHistory` b RIGHT JOIN\n" + 
 				"(\n" + 
 				"    SELECT MAX(a.`snapTime`) AS `snapTime`, a.`adminEmail`, a.`event`, a.`username`, a.`session`, a.`dataType` FROM `BoundsHistory` a WHERE a.`adminEmail` = ? AND a.`event` = ? AND a.`isCurrent` = 1 GROUP BY a.`adminEmail`, a.`event`, a.`username`, a.`session`, a.`dataType`\n" + 
 				") c\n" + 
@@ -280,6 +284,7 @@ public class DatabaseConnector
 			myStmt = myConnector.prepareStatement(cachedQuery);
 			myStmt.setString(1, adminEmail);
 			myStmt.setString(2, eventName);
+			System.out.println(myStmt);
 			myResults = myStmt.executeQuery();
 			
 			while(myResults.next())
@@ -292,9 +297,11 @@ public class DatabaseConnector
 				String dataType = myResults.getString("dataType");
 				
 				nextRow.put("Index", myResults.getTimestamp("startDate", cal));
+				nextRow.put("Index MS", myResults.getDouble("startDateMS") * 1000);
 				nextRow.put("SnapDate", myResults.getTimestamp("snapTime", cal));
 				nextRow.put("TotalEntries", myResults.getString("count"));
 				nextNextRow.put("Index", myResults.getTimestamp("endDate", cal));
+				nextNextRow.put("Index MS", myResults.getDouble("endDateMS") * 1000);
 				
 				if(!myReturn.containsKey(userName))
 				{
@@ -442,10 +449,10 @@ public class DatabaseConnector
 		return myReturn;
 	}
 	
-	public void cacheBounds(String adminEmail, String eventName, String username, String session, String count, Timestamp startDate, Timestamp endDate, String dataType, DatabaseUpdateConsumer myConsumer)
+	public void cacheBounds(String adminEmail, String eventName, String username, String session, String count, double startDate, double endDate, String dataType, DatabaseUpdateConsumer myConsumer)
 	{
 		String deactivateOld = "UPDATE `BoundsHistory` SET `isCurrent`=0 WHERE `event` = ? AND `adminEmail` = ? AND `username` = ? AND `session` = ? AND `dataType` = ?";
-		String insertQuery = "INSERT INTO `BoundsHistory`(`event`, `adminEmail`, `username`, `session`, `count`, `startDate`, `endDate`, `dataType`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+		String insertQuery = "INSERT INTO `BoundsHistory`(`event`, `adminEmail`, `username`, `session`, `count`, `startDate`, `endDate`, `dataType`) VALUES (?, ?, ?, ?, ?, FROM_UNIXTIME(? / 1000), FROM_UNIXTIME(? / 1000), ?)";
 		
 		Connection myConnector = mySource.getDatabaseConnectionNoTimeout();
 		PreparedStatement myStmt = null;
@@ -468,8 +475,10 @@ public class DatabaseConnector
 			myStmt.setString(3, username);
 			myStmt.setString(4, session);
 			myStmt.setString(5, count);
-			myStmt.setTimestamp(6, startDate, cal);
-			myStmt.setTimestamp(7, endDate, cal);
+			//myStmt.setTimestamp(6, startDate, cal);
+			//myStmt.setTimestamp(7, endDate, cal);
+			myStmt.setDouble(6, startDate);
+			myStmt.setDouble(7, endDate);
 			myStmt.setString(8, dataType);
 			myStmt.execute();
 			
@@ -614,8 +623,10 @@ public class DatabaseConnector
 					ConcurrentHashMap minMap = (ConcurrentHashMap) bounds.get(0);
 					ConcurrentHashMap maxMap = (ConcurrentHashMap) bounds.get(1);
 					String total = (String) minMap.get("TotalEntries");
-					Timestamp min = (Timestamp) minMap.get("Index");
-					Timestamp max = (Timestamp) maxMap.get("Index");
+					//Timestamp min = (Timestamp) minMap.get("Index");
+					//Timestamp max = (Timestamp) maxMap.get("Index");
+					double min = (double) minMap.get("Index MS");
+					double max = (double) maxMap.get("Index MS");
 					cacheBounds(adminEmail, eventName, userName, sessionName, total, min, max, boundsType, myConsumer);
 				}
 			}
@@ -982,10 +993,28 @@ public class DatabaseConnector
 							Map.Entry fieldEntry = (Entry) fieldIterator.next();
 							if(fieldEntry.getValue() instanceof Date && ((String)fieldEntry.getKey()).contains("Index"))
 							{
+								String entryMS = fieldEntry.getKey() + " MS";
 								//System.out.println("Date: " + fieldEntry.getKey());
-								curData.put(fieldEntry.getKey() + " MS", ((Date) fieldEntry.getValue()).getTime());
+								if(curData.containsKey(entryMS) && !(curData.get(entryMS) instanceof Long))
+								{
+									if(curData.get(entryMS) instanceof Double)
+									{
+										curData.put(entryMS, (long)((double)curData.get(entryMS)));
+									}
+									else
+									{
+										curData.put(entryMS, Long.parseLong(curData.get(entryMS).toString()));
+									}
+								}
+								else
+								{
+									System.out.println("Needs native time long: "  + dataEntry.getKey());
+									curData.put(entryMS, ((Date) fieldEntry.getValue()).getTime());
+								}
+								
 								//System.out.println("Converted");
-								long thisTime = (long) curData.get(fieldEntry.getKey() + " MS");
+								//System.out.println(curData.get(entryMS).getClass());
+								long thisTime = (long) curData.get(entryMS);
 								//System.out.println("Got converted");
 								if(universalMin > thisTime)
 								{
@@ -1919,6 +1948,7 @@ public class DatabaseConnector
 				nextRow.put("StartTime", myResults.getTimestamp("startTimestamp", cal));
 				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
 				nextRow.put("Index", myResults.getTimestamp("eventTime", cal));
+				nextRow.put("Index MS", myResults.getDouble("indexMS") * 1000);
 				//nextRow.put("Event", myResults.getString("event"));
 				
 				nextRow.put("Description", myResults.getString("eventDescription"));
@@ -2342,9 +2372,9 @@ public class DatabaseConnector
 				//nextRow.put("EventTime", myResults.getTimestamp("eventTime", cal));
 				//nextRow.put("StartTime", myResults.getTimestamp("startTimestamp", cal));
 				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
-				nextRow.put("Index", myResults.getTimestamp("mintime", cal));
+				nextRow.put("Index", myResults.getTimestamp("mintime", cal)); nextRow.put("Index MS", myResults.getDouble("mintimeMS") * 1000);
 				nextRow.put("TotalEntries", myResults.getString("totalEntries"));
-				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal));
+				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal)); nextNextRow.put("Index MS", myResults.getDouble("maxtimeMS") * 1000);
 				//nextRow.put("Event", myResults.getString("event"));
 				
 				//nextRow.put("Description", myResults.getString("eventDescription"));
@@ -2666,6 +2696,7 @@ public class DatabaseConnector
 				
 				nextRow.put("Taken", myResults.getTimestamp("taken", cal));
 				nextRow.put("Index", myResults.getTimestamp("taken", cal));
+				nextRow.put("Index MS", myResults.getDouble("indexMS") * 1000);
 				
 				nextRow.put("Text", myResults.getString("ocrtext"));
 				
@@ -2790,9 +2821,9 @@ public class DatabaseConnector
 				String sessionName = myResults.getString("session");
 				
 				//nextRow.put("Index", myResults.getTimestamp("taken", cal));
-				nextRow.put("Index", myResults.getTimestamp("mintime", cal));
+				nextRow.put("Index", myResults.getTimestamp("mintime", cal)); nextRow.put("Index MS", myResults.getDouble("mintimeMS") * 1000);
 				nextRow.put("TotalEntries", myResults.getString("totalEntries"));
-				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal));
+				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal)); nextNextRow.put("Index MS", myResults.getDouble("maxtimeMS") * 1000);
 				
 				if(!myReturn.containsKey(userName))
 				{
@@ -2926,6 +2957,7 @@ public class DatabaseConnector
 				
 				nextRow.put("Taken", myResults.getTimestamp("taken", cal));
 				nextRow.put("Index", myResults.getTimestamp("taken", cal));
+				nextRow.put("Index MS", myResults.getDouble("indexMS") * 1000);
 				
 				nextRow.put("Path", "./" + userName + "/" + sessionName + "/screenshots/" + ((String)myResults.getTimestamp("taken", cal).toString()).replaceAll(" ", "_") + ".jpg");
 				
@@ -3114,7 +3146,7 @@ public class DatabaseConnector
 				}
 				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
 				nextRow.put("Index", nextRow.get("SnapTime"));
-				
+				nextRow.put("Index MS", myResults.getDouble("indexMS") * 1000);
 				
 				nextRow.put("CPU", myResults.getString("cpu"));
 				nextRow.put("Mem", myResults.getString("mem"));
@@ -3527,9 +3559,9 @@ public class DatabaseConnector
 				//	nextRow.put("SnapTime", myResults.getTimestamp("timestamp", cal));
 				//}
 				//nextRow.put("InsertTime", myResults.getTimestamp("insertTimestamp"));
-				nextRow.put("Index", myResults.getTimestamp("mintime", cal));
+				nextRow.put("Index", myResults.getTimestamp("mintime", cal)); nextRow.put("Index MS", myResults.getDouble("mintimeMS") * 1000);
 				nextRow.put("TotalEntries", myResults.getString("totalEntries"));
-				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal));
+				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal)); nextNextRow.put("Index MS", myResults.getDouble("maxtimeMS") * 1000);
 				
 				
 				//nextRow.put("CPU", myResults.getString("cpu"));
@@ -3849,6 +3881,7 @@ public class DatabaseConnector
 				
 				nextRow.put("InputTime", myResults.getTimestamp("inputTime", cal));
 				nextRow.put("Index", myResults.getTimestamp("inputTime", cal));
+				nextRow.put("Index MS", myResults.getDouble("indexMS") * 1000);
 				
 				nextRow.put("User", myResults.getString("user"));
 				nextRow.put("PID", myResults.getString("pid"));
@@ -3944,9 +3977,9 @@ public class DatabaseConnector
 				//nextRow.put("Session", myResults.getString("session"));
 				String sessionName = myResults.getString("session");
 				
-				nextRow.put("Index", myResults.getTimestamp("mintime", cal));
+				nextRow.put("Index", myResults.getTimestamp("mintime", cal)); nextRow.put("Index MS", myResults.getDouble("mintimeMS") * 1000);
 				nextRow.put("TotalEntries", myResults.getString("totalEntries"));
-				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal));
+				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal)); nextNextRow.put("Index MS", myResults.getDouble("maxtimeMS") * 1000);
 				
 				if(!myReturn.containsKey(userName))
 				{
@@ -4084,6 +4117,7 @@ public class DatabaseConnector
 				
 				nextRow.put("InputTime", myResults.getTimestamp("inputTime", cal));
 				nextRow.put("Index", myResults.getTimestamp("inputTime", cal));
+				nextRow.put("Index MS", myResults.getDouble("indexMS") * 1000);
 				
 				nextRow.put("User", myResults.getString("user"));
 				nextRow.put("PID", myResults.getString("pid"));
@@ -4183,9 +4217,9 @@ public class DatabaseConnector
 				String sessionName = myResults.getString("session");
 				
 				//nextRow.put("Index", myResults.getTimestamp("inputTime", cal));
-				nextRow.put("Index", myResults.getTimestamp("mintime", cal));
+				nextRow.put("Index", myResults.getTimestamp("mintime", cal)); nextRow.put("Index MS", myResults.getDouble("mintimeMS") * 1000);
 				nextRow.put("TotalEntries", myResults.getString("totalEntries"));
-				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal));
+				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal)); nextNextRow.put("Index MS", myResults.getDouble("maxtimeMS") * 1000);
 				
 				
 				if(!myReturn.containsKey(userName))
@@ -4319,6 +4353,7 @@ public class DatabaseConnector
 				
 				nextRow.put("ChangeTime", myResults.getTimestamp("timeChanged", cal));
 				nextRow.put("Index", myResults.getTimestamp("timeChanged", cal));
+				nextRow.put("Index MS", myResults.getDouble("indexMS") * 1000);
 				
 				nextRow.put("User", myResults.getString("user"));
 				nextRow.put("PID", myResults.getString("pid"));
@@ -4423,9 +4458,9 @@ public class DatabaseConnector
 				String sessionName = myResults.getString("session");
 				
 				//nextRow.put("ChangeTime", myResults.getTimestamp("timeChanged", cal));
-				nextRow.put("Index", myResults.getTimestamp("mintime", cal));
+				nextRow.put("Index", myResults.getTimestamp("mintime", cal)); nextRow.put("Index MS", myResults.getDouble("mintimeMS") * 1000);
 				nextRow.put("TotalEntries", myResults.getString("totalEntries"));
-				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal));
+				nextNextRow.put("Index", myResults.getTimestamp("maxtime", cal)); nextNextRow.put("Index MS", myResults.getDouble("maxtimeMS") * 1000);
 				
 				/*
 				nextRow.put("User", myResults.getString("user"));
