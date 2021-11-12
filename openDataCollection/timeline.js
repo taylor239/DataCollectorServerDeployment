@@ -32,7 +32,10 @@
 			d3.select("#legend").selectAll("*").remove();
 			
 			//d3.select("#legend").html("");
-			clearWindow();
+			if(filterChanged)
+			{
+				clearWindow();
+			}
 			
 			let theNormDataInit = ((await retrieveData("data")).value);
 			
@@ -1519,8 +1522,8 @@
 					}
 					d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));d3.select(this).attr("initStroke", d3.select(this).attr("stroke"));
 					d3.select(this).attr("stroke", "#ff0000").attr("stroke-width", xAxisPadding / 50);
-					sessionStroke = d3.select(this);
 					showSession(d["User"], d["Session"]);
+					sessionStroke = d3.select(this);
 				});
 		
 		var playButtons = svg.append("g")
@@ -2248,6 +2251,8 @@
 		d3.select("#legend").select("svg").style("height", (legendHeight * (2 + windowLegend.length + eventTypeArray.length)) + "px");
 		//d3.select("#legend").style("height", getInnerHeight("legendCell") + "px");
 		refreshingStart = false;
+		if(filterChanged)
+		{
 		if(curMode == "default")
 		{
 			showDefault();
@@ -2259,5 +2264,18 @@
 		else if(curMode == "session")
 		{
 			showSession(curSelectUser, curSelectSession);
+		}
+		}
+		else
+		{
+			if(curMode == "session")
+			{
+				var selector = "#background_rect_" + SHA256(curSelectUser + curSelectSession);
+				var curSelectSess = d3.select(selector);
+				curSelectSess.attr("initStrokeWidth", curSelectSess.attr("stroke-width"));
+				curSelectSess.attr("initStroke", curSelectSess.attr("stroke"));
+				curSelectSess.attr("stroke", "#ff0000").attr("stroke-width", xAxisPadding / 50);
+				sessionStroke = curSelectSess;
+			}
 		}
 	}

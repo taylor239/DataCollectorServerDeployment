@@ -2539,6 +2539,12 @@ if(request.getParameter("email") != null)
 	
 	function clearWindow()
 	{
+		curSelectSess = sessionStroke;
+		if(curSelectSess)
+		{
+			curSelectSess.attr("stroke", curSelectSess.attr("initStroke")).attr("stroke-width", curSelectSess.attr("initStrokeWidth"));
+		}
+		
 		if(curPlayButton)
 		{
 			curPlayButton.attr("fill", curPlayButton.attr("initFill"));
@@ -3016,9 +3022,17 @@ if(request.getParameter("email") != null)
 	var cachedMaxCPU;
 	var cachedFinalProcList;
 	var cachedLineFormattedData;
+	var cachedNewSvg;
+	var cachedNewSvgParent;
+	var procPointsCached;
+	var procPointsWindowCached;
+	var enterExitCached;
+	var procLinesCached;
+	
 	
 	async function showSession(owningUser, owningSession)
 	{
+		clearWindow();
 		//if((!filterChanged) && lastSessionUser == curSelectUser && lastSessionSession = curSelectSession)
 		//{
 		//	
@@ -3029,7 +3043,6 @@ if(request.getParameter("email") != null)
 		
 		
 		bottomVizFontSize = bottomVisHeight / 25;
-		clearWindow();
 		
 		curSessionMap = theNormData[owningUser][owningSession];
 		
@@ -3247,17 +3260,38 @@ if(request.getParameter("email") != null)
 		//	.attr("width", visWidthParent)
 		//	.style("max-width", visWidthParent + "px")
 		//	.style("overflow-x", "auto");
+		var newSVG;
+		var newSvgParent;
+		if(!getCached)
+		{
 			
-		var newSVG = axisRow.append("svg")
+			newSVGParent = axisRow.append("svg")
 			.attr("width", visWidth + "px")
 			.attr("height", bottomVisHeight + "px")
-			.attr("id", "processGraphSvg")
-			.append("g");
-
+			.attr("id", "processGraphSvg");
+			var newSVG = newSVGParent.append("g");
+		}
+		else
+		{
+			newSVG = cachedNewSvg;
+			newSVGParent = cachedNewSvgParent;
+			//axisRow.append(newSVGParent);
+			newSVGParent = axisRow.append("svg")
+			.attr("width", visWidth + "px")
+			.attr("height", bottomVisHeight + "px")
+			.attr("id", "processGraphSvg");
+			newnewSVG = newSVGParent.append("g");//.html(newSVG.html());
+			newSVG = newnewSVG;
+		}
+		cachedNewSvg = newSVG;
+		cachedNewSvgParent = newSVGParent;
+		
+		
 		cpuSortedList = [];
 		var maxCPU = 0;
 		if(!getCached)
 		{
+		console.log("Generating new proc list");
 		for(osUser in curProcessMap)
 		{
 			for(started in curProcessMap[osUser])
@@ -3289,6 +3323,7 @@ if(request.getParameter("email") != null)
 		}
 		else
 		{
+			console.log("Using cached proc list");
 			cpuSortedList = cachedSortedList;
 			maxCPU = cachedMaxCPU;
 		}
@@ -3335,7 +3370,14 @@ if(request.getParameter("email") != null)
 		cachedFinalProcList = finalProcList;
 		cachedLineFormattedData = lineFormattedData;
 		
-		var procPoints = newSVG.selectAll("circle")
+		var procPoints;
+		var procPointsWindow;
+		var enterExit;
+		var procLines;
+		
+		//if(!getCached)
+		{
+		procPoints = newSVG.selectAll("circle")
 			.data(finalProcList)
 			.enter()
 			.append("circle")
@@ -3510,9 +3552,9 @@ if(request.getParameter("email") != null)
 				)
 				.curve(d3.curveMonotoneX);
 		
-		var enterExit = [];
+		enterExit = [];
 
-		var procLines = newSVG.selectAll("path")
+		procLines = newSVG.selectAll("path")
 				.data(lineFormattedData)
 				.enter()
 				.append("path")
@@ -3568,7 +3610,7 @@ if(request.getParameter("email") != null)
 							}
 						});
 
-		var procPointsWindow = newSVG.append("g").selectAll("circle")
+		procPointsWindow = newSVG.append("g").selectAll("circle")
 		.data(enterExit)
 		.enter()
 		.append("circle")
@@ -3664,6 +3706,7 @@ if(request.getParameter("email") != null)
 		
 		processTooltipRect = newSVG.append("g")
 		.append("rect")
+		.attr("id", "processTooltipRect")
 		.attr("y", "0px")
 		.attr("x", "0px")
 		.attr("width", "0px")
@@ -3673,6 +3716,7 @@ if(request.getParameter("email") != null)
 		
 		processTooltip = newSVG.append("g")
 		.append("text")
+		.attr("id", "processTooltip")
 		.attr("y", "0px")
 		.attr("x", "0px")
 		//.attr("width", xAxisPadding + "px")
@@ -3683,7 +3727,26 @@ if(request.getParameter("email") != null)
 		.attr("text-anchor", "left")
 		.style("font-weight", "bold")
 		.text("");
-
+		
+		procPointsCached = procPoints;
+		procPointsWindowCached = procPointsWindow;
+		enterExitCached = enterExit;
+		procLinesCached = procLines;
+		}
+		/*
+		else
+		{
+			procPoints = procPointsCached;
+			procPointsWindow = procPointsWindowCached;
+			enterExit = enterExitCached;
+			procLines = procLinesCached;
+			
+			newSVG.insert
+			
+			
+			console.log("Loaded from cache");
+		}
+		*/
 		//var highlightTable = d3.select("#highlightDiv").style('overflow-y', 'scroll').style("height", bottomVisHeight + "px");
 		var highlightTable = d3.select("#highlightDiv").style("height", bottomVisHeight + "px");
 
@@ -3704,10 +3767,18 @@ if(request.getParameter("email") != null)
 				//.attr("font-weight", "bolder")
 				.text("Processes:");
 		
-		cpuSortedList = cpuSortedList.reverse();
+		var revCpuSortedList;
+		if(getCached)
+		{
+			revCpuSortedList = cpuSortedList;
+		}
+		else
+		{
+			revCpuSortedList = cpuSortedList.reverse();
+		}
 		var legendProcess = legendSVGProcess.append("g")
 				.selectAll("rect")
-				.data(cpuSortedList)
+				.data(revCpuSortedList)
 				.enter()
 				.append("rect")
 				.attr("x", 0)
@@ -3793,7 +3864,7 @@ if(request.getParameter("email") != null)
 
 		var legendTextProcess = legendSVGProcess.append("g")
 		.selectAll("text")
-		.data(cpuSortedList)
+		.data(revCpuSortedList)
 		.enter()
 		.append("text")
 		//.attr("font-size", 11)
@@ -3837,7 +3908,7 @@ if(request.getParameter("email") != null)
 
 		var legendTextProcessCmd = legendSVGProcess.append("g")
 		.selectAll("text")
-		.data(cpuSortedList)
+		.data(revCpuSortedList)
 		.enter()
 		.append("text")
 		.style("pointer-events", "none")
