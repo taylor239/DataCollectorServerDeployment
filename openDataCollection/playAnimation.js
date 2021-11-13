@@ -17,7 +17,7 @@ function toggleTaskTable()
 	if(taskToggled)
 	{
 		d3.select("#toggleTaskButton").attr("fill", "Cyan");
-		d3.select("#toggleTaskButtonLabel").text("Show Task");
+		d3.select("#toggleTaskButtonLabel").text("Add Task");
 		
 		d3.select("#taskMenuTable").style("display", "none");
 		
@@ -345,18 +345,19 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	
 	var scaleLabelG = animationSvg.append("g");
 	var scaleLabel = scaleLabelG.append("text")
-			.attr("x", divBounds["width"])
+			//.attr("x", divBounds["width"])
+			.attr("x", 0)
 			.attr("y", (divBounds["height"] * .8))
-			.attr("text-anchor", "end")
+			//.attr("text-anchor", "end")
 			.style("pointer-events", "none")
 			.text("Minutes");
 	
 	var dragLabelG = animationSvg.append("g");
-	var dragLabel = dragLabelG.append("text")
-			.attr("x", 0)
-			.attr("y", (divBounds["height"] * .8))
-			.style("pointer-events", "none")
-			.text("Add Task");
+	//var dragLabel = dragLabelG.append("text")
+	//		.attr("x", 0)
+	//		.attr("y", (divBounds["height"] * .8))
+	//		.style("pointer-events", "none")
+	//		.text("Add Task");
 	
 	var dragBar = dragBarG.append("rect")
 			.attr("x", 0)
@@ -378,16 +379,17 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.attr("pointer-events", "none");
 	
 	var axisLabelG = animationSvg.append("g");
-	var axisLabel = axisLabelG.append("text")
-			.attr("x", 0)
-			.attr("y", (divBounds["height"] * .8) + textPadding)
-			.style("pointer-events", "none")
-			.text("Seek");
+	//var axisLabel = axisLabelG.append("text")
+	//		.attr("x", 0)
+	//		.attr("y", (divBounds["height"] * .8) + textPadding)
+	//		.style("pointer-events", "none")
+	//		.text("Seek");
 	
 	var timeLog = axisLabelG.append("text")
-			.attr("x", divBounds["width"])
+			//.attr("x", divBounds["width"])
+			.attr("x", 0)
 			.attr("y", (divBounds["height"] * .8) + textPadding)
-			.attr("text-anchor", "end")
+			//.attr("text-anchor", "end")
 			.style("pointer-events", "none")
 			.text("Time");
 	
@@ -468,7 +470,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.attr("fill", "Black")
 			.attr("stroke", "Black")
 			.attr("font-size", (divBounds["height"] * .0375))
-			.text("Show Task")
+			.text("Add Task")
 			.style("cursor", "pointer")
 			.attr("id", "toggleTaskButtonLabel")
 			.attr("x", (8 * divBounds["width"]) / 9)

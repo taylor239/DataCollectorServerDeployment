@@ -2543,6 +2543,7 @@ if(request.getParameter("email") != null)
 		if(curSelectSess)
 		{
 			curSelectSess.attr("stroke", curSelectSess.attr("initStroke")).attr("stroke-width", curSelectSess.attr("initStrokeWidth"));
+			sessionStroke = undefined;
 		}
 		
 		if(curPlayButton)
@@ -3032,7 +3033,39 @@ if(request.getParameter("email") != null)
 	
 	async function showSession(owningUser, owningSession)
 	{
-		clearWindow();
+		var selector = "#background_rect_" + SHA256(owningUser + owningSession);
+		if(sessionStroke)
+		{
+			if(sessionStroke.attr("id") != selector)
+			{
+				console.log("Not showing session yet");
+				
+				sessionStroke.attr("stroke-width", sessionStroke.attr("initStrokeWidth"));
+				sessionStroke.attr("stroke", sessionStroke.attr("initStroke"));
+				
+				clearWindow();
+			}
+			else
+			{
+				console.log("Already showing session");
+				return;
+			}
+		}
+		else
+		{
+			clearWindow();
+		}
+		
+		
+		
+		var curSelectSess = d3.select(selector);
+		//console.log(selector);
+		//console.log(curSelectSess);
+		curSelectSess.attr("initStrokeWidth", curSelectSess.attr("stroke-width"));
+		curSelectSess.attr("initStroke", curSelectSess.attr("stroke"));
+		curSelectSess.attr("stroke", "#ff0000").attr("stroke-width", xAxisPadding / 50);
+		
+		sessionStroke = curSelectSess;
 		//if((!filterChanged) && lastSessionUser == curSelectUser && lastSessionSession = curSelectSession)
 		//{
 		//	

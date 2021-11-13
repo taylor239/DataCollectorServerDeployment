@@ -1505,7 +1505,7 @@
 				})
 		.on("click", function(d, i)
 				{
-					
+					/*
 					if(curStroke)
 					{
 						d3.select(curStroke).attr("stroke", "black").attr("stroke-width", d3.select(curStroke).attr("initStrokeWidth"));d3.select(curStroke).attr("stroke", "black").attr("stroke", d3.select(curStroke).attr("initStroke"));
@@ -1514,16 +1514,19 @@
 					{
 						sessionStroke.attr("stroke", "black").attr("stroke-width", sessionStroke.attr("initStrokeWidth"));sessionStroke.attr("stroke", "black").attr("stroke", sessionStroke.attr("initStroke"));
 					}
+					*/
 					if(sessionStroke && sessionStroke.node() == d3.select(this).node())
 					{
 						clearWindow(); curStroke = null; sessionStroke = null;
 						showDefault();
 						return;
 					}
+					/*
 					d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));d3.select(this).attr("initStroke", d3.select(this).attr("stroke"));
 					d3.select(this).attr("stroke", "#ff0000").attr("stroke-width", xAxisPadding / 50);
+					*/
 					showSession(d["User"], d["Session"]);
-					sessionStroke = d3.select(this);
+					//sessionStroke = d3.select(this);
 				});
 		
 		var playButtons = svg.append("g")
@@ -1554,21 +1557,32 @@
 				})
 		.on("click", function(d, i)
 				{
+					/*
 					if(curStroke)
 					{
 						d3.select(curStroke).attr("stroke", "black").attr("stroke-width", d3.select(curStroke).attr("initStrokeWidth"));d3.select(curStroke).attr("stroke", "black").attr("stroke", d3.select(curStroke).attr("initStroke"));
 					}
 					if(curStroke == this)
 					{
-						clearWindow(); curStroke = null;
+						clearWindow();
+						curStroke = null;
 						showDefault();
 						return;
 					}
+					*/
 					//d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));d3.select(this).attr("initStroke", d3.select(this).attr("stroke"));
 					//d3.select(this).attr("stroke", "#ff0000").attr("stroke-width", xAxisPadding / 50);
 					//curStroke = this;
-					showSession(d["User"], d["Session"]);
+					/*
+					var selector = "#background_rect_" + SHA256(d["User"] + d["Session"]);
+					var curSelectSess = d3.select(selector);
+					curSelectSess.attr("initStrokeWidth", curSelectSess.attr("stroke-width"));
+					curSelectSess.attr("initStroke", curSelectSess.attr("stroke"));
+					curSelectSess.attr("stroke", "#ff0000").attr("stroke-width", xAxisPadding / 50);
 					
+					showSession(d["User"], d["Session"]);
+					sessionStroke = curSelectSess;
+					*/
 					//curPlayButton = d3.select(("#playbutton_" + SHA256(d["User"] + d["Session"]))).attr("fill", "red");
 					//curPlayLabel = d3.select(("#playbutton_label_" + SHA256(d["User"] + d["Session"]))).text("Pause");
 					playAnimation(d["User"], d["Session"]);
