@@ -306,8 +306,8 @@ async function playAnimation(owningUser, owningSession, seekTo)
 		.on("start", function(d)
 				{
 					initX = d3.event.x;
-					selectRect.attr("x", initX);
-					selectRect.attr("width", 0);
+					//selectRect.attr("x", initX);
+					//selectRect.attr("width", 0);
 					selectRectAni.attr("x", initX);
 					selectRectAni.attr("width", 0);
 					document.getElementById("addTaskAniStart").value = "Start (MS Session Time)";
@@ -334,8 +334,8 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			startPoint = timeScaleAnimation.invert(initX);
 			endPoint = timeScaleAnimation.invert(x);
 		}
-		selectRect.attr("x", timeScaleAni(startPoint) + xAxisPadding);
-		selectRect.attr("width", timeScaleAni(endPoint - startPoint));
+		//selectRect.attr("x", timeScaleAni(startPoint) + xAxisPadding);
+		//selectRect.attr("width", timeScaleAni(endPoint - startPoint));
 		document.getElementById("addTaskAniStart").value = startPoint;
 		document.getElementById("addTaskAniEnd").value = endPoint;
 	}
