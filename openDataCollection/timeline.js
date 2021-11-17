@@ -1384,7 +1384,9 @@
 					d3.select(this).attr("initStrokeWidth", d3.select(this).attr("stroke-width"));d3.select(this).attr("initStroke", d3.select(this).attr("stroke"));
 					d3.select(this).attr("stroke", "#ffff00").attr("stroke-width", xAxisPadding / 50);
 					curStroke = this;
-					showWindow(d["Owning User"], d["Owning Session"], "Events", d["Index MS"]);
+					console.log("Got click:");
+					console.log(d);
+					showWindow(d["Owning User"], d["Owning Session"], "Events", d["Index MS"], undefined, d);
 				})
 		.classed("clickableBar", true)
 		.attr("z", 3);

@@ -4086,8 +4086,9 @@ if(request.getParameter("email") != null)
 	var curSelectProcess;
 	var curSelElements = [];
 	
-	async function showWindow(username, session, type, timestamp, lookupIndex)
+	async function showWindow(username, session, type, timestamp, lookupIndex, exactEntry)
 	{
+		console.log("Looking up " + username + " : " + session + " : " + timestamp + " : " + lookupIndex);
 		//curMode = "window";
 		curSelectUser = username;
 		curSelectSession = session;
@@ -4099,8 +4100,14 @@ if(request.getParameter("email") != null)
 		{
 			clearWindow();
 		}
-		var curSlot
+		var curSlot;
 		
+		if(exactEntry)
+		{
+			curSlot = exactEntry;
+		}
+		else
+		{
 		curSlot = lookupTable[username][session][type];
 		
 		if(curSlot["data"])
@@ -4123,6 +4130,8 @@ if(request.getParameter("email") != null)
 		{
 			curSlot = curSlot[timestamp];
 		}
+		}
+		console.log(curSlot);
 		
 		curSlot["Hash"] = SHA256(curSlot["User"] + curSlot["Original Session"] + curSlot["Index MS"]);
 		
