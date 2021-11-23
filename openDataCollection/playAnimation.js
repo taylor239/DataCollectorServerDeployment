@@ -46,6 +46,8 @@ function addTaskWrapper(userName, sessionName, isUpdate, fromAni)
 //This plays the animation.
 async function playAnimation(owningUser, owningSession, seekTo)
 {
+	var textReplacement = {};
+	
 	//If it is the same user and we do not have a specific seek time,
 	//restart play at the last known timestamp.
 	if(oldUser == owningUser && oldSession == owningSession)
@@ -87,6 +89,8 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	var windows = theNormData[owningUser][owningSession]["windows"];
 	var processes = (await theNormData[owningUser][owningSession]["processes"]["getfiltered"]()).value;
 	var events = theNormData[owningUser][owningSession]["events"];
+	
+	
 	
 	var garbageToRemove = [];
 	
@@ -476,9 +480,36 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.attr("x", (8 * divBounds["width"]) / 9)
 			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .03125));
 	
+	var fastForward = showTaskAddG.append("rect")
+			.attr("width", divBounds["width"] / 18)
+			.attr("height", (divBounds["height"] * .05))
+			.attr("fill", "Purple")
+			.attr("stroke", "Black")
+			.attr("x", (7 * divBounds["width"]) / 9)
+			.attr("y", (divBounds["height"] * .8) + textPadding)
+			.style("cursor", "pointer")
+			.attr("id", "toggleTaskButton")
+			.on("click", function(d, i)
+					{
+						seekToNextEvent();
+					});
+	var fastForwardLabel = showTaskAddG.append("text")
+			.style("pointer-events", "none")
+			.attr("text-anchor", "middle")
+			.attr("dominant-baseline", "middle")
+			.attr("font-weight", "bolder")
+			.attr("textLength", divBounds["width"] / 18)
+			.attr("fill", "Black")
+			.attr("stroke", "Black")
+			.attr("font-size", (divBounds["height"] * .0375))
+			.text("⏩")
+			.style("cursor", "pointer")
+			.attr("x", (7.25 * divBounds["width"]) / 9)
+			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .03125));
+	
 	var playPauseG = animationSvg.append("g");
 	var playPause = playPauseG.append("rect")
-			.attr("width", divBounds["width"] / 9)
+			.attr("width", divBounds["width"] / 18)
 			.attr("height", (divBounds["height"] * .05))
 			.attr("fill", "Chartreuse")
 			.attr("stroke", "Black")
@@ -496,7 +527,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.attr("font-size", (divBounds["height"] * .0375))
 			.text("⏸")
 			.style("cursor", "pointer")
-			.attr("x", (7 * divBounds["width"]) / 9)
+			.attr("x", (6.75 * divBounds["width"]) / 9)
 			.attr("y", (divBounds["height"] * .8) + textPadding + (divBounds["height"] * .03125));
 	/*
 	var activeWindowTitle = playPauseG.append("text")
@@ -945,6 +976,9 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	
 	var updateProcAni = false;
 	
+	
+	currentDisplayString = "";
+	//Main animation loop, this gets the next frame and processes it
 	async function runAnimationWrapped()
 	{
 		if(foregroundExit)
@@ -1072,6 +1106,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				}
 			}
 		}
+		//The frame is an event frame
 		if(curFrame && curFrame["TaskName"])
 		{
 			if(curFrame["Description"] == "start")
@@ -1113,6 +1148,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				activeEventName.attr("textLength", "")
 			}
 		}
+		//The frame is a window frame
 		if(curFrame && curFrame["FirstClass"])
 		{
 			activeWindow.text(curFrame["FirstClass"]);
@@ -1136,7 +1172,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				activeWindowName.attr("textLength", "")
 			}
 		}
-		
+		//The next frame is a mouse input
 		if(curFrame && curFrame["XLoc"])
 		{
 			var xLoc = Number(curFrame["XLoc"]);
@@ -1164,7 +1200,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			
 			lastMouseClicks.push(nextMouse);
 		}
-		
+		//The next frame is a key press
 		if(curFrame && curFrame["Button"] && (curFrame["Type"] == "press"))// || curFrame["Type"] == "type"))
 		{
 			buttonToType = curFrame["Button"];
@@ -1231,6 +1267,9 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				.attr("text", "⏎")
 				.attr("font-size", textHeight);
 				
+				//Starting new display history
+				currentDisplayString = "";
+				
 				keyboardInputs.unshift(curKeyInput);
 			}
 			else if(buttonToType.length > 1)
@@ -1253,6 +1292,12 @@ async function playAnimation(owningUser, owningSession, seekTo)
 					
 					keyboardInputs.unshift(curKeyInput);
 				}
+				
+				
+				//This holds the current line history
+				currentDisplayString += buttonToType;
+				console.log(currentDisplayString);
+				
 				curKeyInput.attr("text", curKeyInput.attr("text") + buttonToType);
 				curKeyInput.text(curKeyInput.attr("text"));
 				//keyboardInputs.shift();
@@ -1277,7 +1322,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			textScrollBar.attr("height", adjustedBarHeight);
 			textScrollBar.attr("maxY", divBounds["height"]);
 		}
-		
+		//The next frame is a process
 		if(curFrame && curFrame["PID"])
 		{
 			if(curFrame["CPU"] > 0)
@@ -1886,6 +1931,15 @@ async function playAnimation(owningUser, owningSession, seekTo)
 					seekBar.attr("fill", "Crimson").attr("stroke", "Crimson");
 					runAnimation();
 				}
+	}
+	
+	function seekToNextEvent()
+	{
+		if(events[eventsIndex])
+		{
+			eventsTime = Number(events[eventsIndex]["Index MS Session"]);
+			seekTime(eventsTime);
+		}
 	}
 	
 	if(seekTo)
