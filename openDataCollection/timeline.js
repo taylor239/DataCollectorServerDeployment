@@ -1046,9 +1046,12 @@
 					var backgroundRect = d3.select("#background_rect_" + SHA256(d["Owning User"] + d["Owning Session"]));
 					if(!sessionStroke || sessionStroke.node() != backgroundRect.node())
 					{
-						var e = document.createEvent('UIEvents');
-						e.initUIEvent('click', true, true, /* ... */);
-						backgroundRect.node().dispatchEvent(e);
+						if(document.getElementById("loadProcessGraph").checked)
+						{
+							var e = document.createEvent('UIEvents');
+							e.initUIEvent('click', true, true, /* ... */);
+							backgroundRect.node().dispatchEvent(e);
+						}
 					}
 					
 					if(curStroke)
@@ -1366,9 +1369,12 @@
 					var backgroundRect = d3.select("#background_rect_" + SHA256(d["Owning User"] + d["Owning Session"]));
 					if(!sessionStroke || sessionStroke.node() != backgroundRect.node())
 					{
-						var e = document.createEvent('UIEvents');
-						e.initUIEvent('click', true, true, /* ... */);
-						backgroundRect.node().dispatchEvent(e);
+						if(document.getElementById("loadProcessGraph").checked)
+						{
+							var e = document.createEvent('UIEvents');
+							e.initUIEvent('click', true, true, /* ... */);
+							backgroundRect.node().dispatchEvent(e);
+						}
 					}
 					
 					if(curStroke)

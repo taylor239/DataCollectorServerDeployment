@@ -132,6 +132,11 @@ if(request.getParameter("email") != null)
 									<input type="checkbox" id="processAutoSelect" name="processAutoSelect">Process Tooltip Details
 						</td>
 					</tr>
+					<tr>
+						<td colspan="5">
+									<input type="checkbox" id="loadProcessGraph" name="loadProcessGraph">Autoload Process Graph
+						</td>
+					</tr>
 					<tr id="taskTitle1">
 						<td colspan="5">
 							<div align="center">
