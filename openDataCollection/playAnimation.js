@@ -123,7 +123,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	var addTagRowAni = taskMenu.append("tr").append("td")
 			.attr("width", visWidthParent + "px")
 			.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")
-			.html(	"<td colspan=\"2\" width=\"50%\"><div align=\"center\"><b>Search Tags:</b></div><div align=\"center\"><input type=\"text\" style=\"width:75%\" id=\"searchTagsAni\" name=\"searchTagsAni\" value=\"Search/New\" onkeyup=\"filterTags()\"><button type=\"button\" style=\"width:20%\" onclick=\"addTag(true)\">Add</button></div>" +
+			.html(	"<td colspan=\"2\" width=\"50%\"><div align=\"center\"><b>Search Tags:</b></div><div align=\"center\"><input type=\"text\" style=\"width:75%\" id=\"searchTagsAni\" name=\"searchTagsAni\" value=\"Search/New\" onkeyup=\"filterTags(true)\"><button type=\"button\" style=\"width:20%\" onclick=\"addTag(true)\">Add</button></div>" +
 						"<div align=\"center\"><select style=\"width:100%\" name=\"storedTagsAni\" id=\"storedTagsAni\" size=\"3\" multiple>" + selectEntries + "</select></div></td>" +
 						"<td colspan=\"2\" width=\"50%\"><div align=\"center\"><b>Task Tags:</b></div><div align=\"center\"><textarea id=\"tagsAni\" name=\"tagsAni\" rows=\"5\" cols=\"50\"></textarea></div></td>");
 	
@@ -131,6 +131,11 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.attr("width", visWidthParent + "px")
 			.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")
 			.html(	"<td colspan=\"4\" width=\"100%\"><div align=\"center\"><b>Task Goal:</b></div><div align=\"center\"><textarea id=\"addTaskAniGoal\" name=\"addTaskAniGoal\" rows=\"2\" cols=\"100\"></textarea></div></td>");
+	
+	var addGoalRowAni = taskMenu.append("tr").append("td")
+			.attr("width", visWidthParent + "px")
+			.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")
+			.html(	"<td colspan=\"4\" width=\"100%\"><div align=\"center\"><b>Task Note:</b></div><div align=\"center\"><textarea id=\"addTaskAniNote\" name=\"addTaskAniNote\" rows=\"2\" cols=\"100\"></textarea></div></td>");
 	
 	var addTaskAniRow = taskMenu.append("tr").append("td")
 			.attr("width", visWidthParent + "px")
