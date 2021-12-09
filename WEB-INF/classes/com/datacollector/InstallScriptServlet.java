@@ -329,7 +329,7 @@ public class InstallScriptServlet extends HttpServlet {
 			+ "\n\techo \"chrony sync successful\""
 			+ "\nfi"
 			+ "\necho \"Installing wget\""
-			+ "\nsudo apt-get -y install wget >> installOutput.txt" 
+			+ "\ntimeout 30 sudo apt-get -y install wget >> installOutput.txt" 
 			+ "\nif [[ $? > 0 ]]"
 			+ "\nthen"
 			+ "\n\techo \"Warning: wget install failed\""
