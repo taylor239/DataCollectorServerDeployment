@@ -242,6 +242,19 @@ By making your event public, anyone can request a token to participate.
 </tr>
 <tr>
 <td>
+<h4>Autoapprove Tokens?</h4>
+</td>
+</tr>
+<tr>
+<td>
+<p>
+If your event is public, this will automatically approve all token requests.
+</p>
+<input type="checkbox" id="autoapproveevent" name="autoapproveevent" value="autoapproveevent" form="createform">
+</td>
+</tr>
+<tr>
+<td>
 <h4>Tokens</h4>
 </td>
 </tr>
