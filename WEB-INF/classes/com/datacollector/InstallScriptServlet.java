@@ -6,6 +6,7 @@ import java.net.URL;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.UUID;
 
@@ -40,7 +41,7 @@ public class InstallScriptServlet extends HttpServlet {
 	{
 		HttpSession session = request.getSession(true);
 		
-		String curEmail = request.getParameter("username");
+		String curUsername = request.getParameter("username");
 		String curEvent = request.getParameter("event");
 		String curAdmin = request.getParameter("admin");
 		String curDevice = request.getParameter("devicetype");
@@ -73,19 +74,21 @@ public class InstallScriptServlet extends HttpServlet {
 		String taskgui = "";
 		String password = "";
 		
+		
+		
+		DatabaseConnector myConnector=(DatabaseConnector)session.getAttribute("connector");
+		if(myConnector==null)
+		{
+			myConnector=new DatabaseConnector(getServletContext());
+			session.setAttribute("connector", myConnector);
+		}
+		TestingConnectionSource myConnectionSource = myConnector.getConnectionSource();
+		
+		
+		Connection dbConn = myConnectionSource.getDatabaseConnection();
+		
 		try
 		{
-			Class.forName("com.mysql.jdbc.Driver");
-			DatabaseConnector myConnector=(DatabaseConnector)session.getAttribute("connector");
-			if(myConnector==null)
-			{
-				myConnector=new DatabaseConnector(getServletContext());
-				session.setAttribute("connector", myConnector);
-			}
-			TestingConnectionSource myConnectionSource = myConnector.getConnectionSource();
-			
-			
-			Connection dbConn = myConnectionSource.getDatabaseConnection();
 			
 			String eventQuery = "SELECT * FROM `Event` WHERE `Event`.`event` = ? AND `Event`.`adminEmail` = ?";
 			PreparedStatement queryStmt = dbConn.prepareStatement(eventQuery);
@@ -110,6 +113,8 @@ public class InstallScriptServlet extends HttpServlet {
 			{
 				taskgui = "";
 			}
+			myResults.close();
+			queryStmt.close();
 		}
 		catch(Exception e)
 		{
@@ -122,8 +127,28 @@ public class InstallScriptServlet extends HttpServlet {
 		try
 		{
 			myNewToken = UUID.randomUUID().toString();
-			//String args = java.net.URLEncoder.encode("username=" + curEmail + "&event=" + curEvent + "&verifier=" + password + "&admin=" + curAdmin, "UTF-8");
-			String args = "username=" + curEmail + "&event=" + java.net.URLEncoder.encode(curEvent, "UTF-8") + "&verifier=" + password + "&admin=" + curAdmin + "&token=" + java.net.URLEncoder.encode(myNewToken, "UTF-8");
+			
+			String firstQuery = "SELECT * FROM `UserList` WHERE `event` = ? AND `username` = ? AND `adminEmail` = ?";
+			PreparedStatement queryStmt = dbConn.prepareStatement(firstQuery);
+			queryStmt.setString(1, curEvent);
+			queryStmt.setString(2, curUsername);
+			queryStmt.setString(3, curAdmin);
+			
+			ResultSet firstResults = queryStmt.executeQuery();
+			if(!firstResults.next())
+			{
+				System.out.println(curUsername + ": no such user");
+				response.getWriter().append("Supplied token was wrong");
+				response.getWriter().close();
+				firstResults.close();
+				queryStmt.close();
+				dbConn.close();
+				return;
+			}
+			
+			//String args = java.net.URLEncoder.encode("username=" + curUsername + "&event=" + curEvent + "&verifier=" + password + "&admin=" + curAdmin, "UTF-8");
+			/* Old serverside web request to other server endpoints /OWO\
+			String args = "username=" + curUsername + "&event=" + java.net.URLEncoder.encode(curEvent, "UTF-8") + "&verifier=" + password + "&admin=" + curAdmin + "&token=" + java.net.URLEncoder.encode(myNewToken, "UTF-8");
 			String verifierURL = "http://localhost:8080/DataCollectorServer/openDataCollection/UserEventStatus?" + args;
 			System.out.println(verifierURL);
 			URL myURL = new URL(verifierURL);
@@ -136,13 +161,31 @@ public class InstallScriptServlet extends HttpServlet {
 			{
 				return;
 			}
+			*/
 			
 			
 			while(!foundOK)
 			{
 				myNewToken = UUID.randomUUID().toString();
-				//args = java.net.URLEncoder.encode("username=" + curEmail + "&event=" + curEvent + "&verifier=" + password + "&admin=" + curAdmin, "UTF-8");
-				args = "username=" + curEmail + "&event=" + java.net.URLEncoder.encode(curEvent, "UTF-8") + "&verifier=" + password + "&admin=" + curAdmin + "&token=" + java.net.URLEncoder.encode(myNewToken, "UTF-8");
+				
+				String query = "SELECT * FROM `UploadToken` WHERE `event` = ? AND `username` = ? AND `token` = ? AND `adminEmail` = ?";
+				PreparedStatement toInsert = dbConn.prepareStatement(query);
+				
+				toInsert.setString(1, curEvent);
+				toInsert.setString(2, curUsername);
+				toInsert.setString(3, myNewToken);
+				toInsert.setString(4, curAdmin);
+				ResultSet myResults = toInsert.executeQuery();
+				
+				if(!myResults.next())
+				{
+					System.out.println(myNewToken + ": no such token");
+					foundOK = true;
+				}
+				
+				/* Old code where we did localhost web requests on the same server, nothing to see here >_>
+				//args = java.net.URLEncoder.encode("username=" + curUsername + "&event=" + curEvent + "&verifier=" + password + "&admin=" + curAdmin, "UTF-8");
+				args = "username=" + curUsername + "&event=" + java.net.URLEncoder.encode(curEvent, "UTF-8") + "&verifier=" + password + "&admin=" + curAdmin + "&token=" + java.net.URLEncoder.encode(myNewToken, "UTF-8");
 				verifierURL = "http://localhost:8080/DataCollectorServer/openDataCollection/TokenStatus?" + args;
 				System.out.println(verifierURL);
 				myURL = new URL(verifierURL);
@@ -155,14 +198,35 @@ public class InstallScriptServlet extends HttpServlet {
 				{
 					foundOK = true;
 				}
+				*/
 			}
-			args = "username=" + curEmail + "&event=" + java.net.URLEncoder.encode(curEvent, "UTF-8") + "&token=" + java.net.URLEncoder.encode(myNewToken, "UTF-8") + "&admin=" + curAdmin + "&mode=continuous&verifier=" + password;
+			
+			int isContinuous = 0;
+			if(!continuous.equals(""))
+			{
+				isContinuous = 1;
+			}
+			
+			String query = "INSERT INTO `UploadToken` (`event`, `username`, `token`, `continuous`, `adminEmail`) VALUES (?, ?, ?, ?, ?);";
+			
+			PreparedStatement toInsert = dbConn.prepareStatement(query);
+			toInsert.setString(1, curEvent);
+			toInsert.setString(2, curUsername);
+			toInsert.setString(3, myNewToken);
+			toInsert.setInt(4, isContinuous);
+			toInsert.setString(5, curAdmin);
+			toInsert.execute();
+			
+			/* This hacky solution brought to you by earlier versions and already existing server
+			 * endpoints, cringeeeeee <_<
+			args = "username=" + curUsername + "&event=" + java.net.URLEncoder.encode(curEvent, "UTF-8") + "&token=" + java.net.URLEncoder.encode(myNewToken, "UTF-8") + "&admin=" + curAdmin + "&mode=continuous&verifier=" + password;
 			System.out.println("http://localhost:8080/DataCollectorServer/openDataCollection/AddToken?" + args);
 			String addTokenURL = "http://localhost:8080/DataCollectorServer/openDataCollection/AddToken?" + args;
 			myURL = new URL(addTokenURL);
 			in = myURL.openStream();
 			reply = org.apache.commons.io.IOUtils.toString(in);
 			org.apache.commons.io.IOUtils.closeQuietly(in);
+			*/
 			if(!continuous.equals(""))
 			{
 				continuous = "-continuous " + myNewToken + " " + continuous;
@@ -174,7 +238,20 @@ public class InstallScriptServlet extends HttpServlet {
 			e.printStackTrace();
 		}
 		
+		if(dbConn != null)
+		{
+			try
+			{
+				dbConn.close();
+			}
+			catch (SQLException e)
+			{
+				e.printStackTrace();
+			}
+		}
 		
+		//Reverse proxy made this necessary, since URL URL does not match actual server domain
+		//Add a config file to change this I guess :/
 		String serverName = "revenge.cs.arizona.edu";
 		String port = "80";
 		
@@ -229,15 +306,17 @@ public class InstallScriptServlet extends HttpServlet {
 			+ "\n\techo \"OS update successful\""
 			+ "\nfi"
 			+ "\necho \"Synchronizing clock with chrony\""
-			+ "\nsudo sudo apt -y install chrony >> installOutput.txt"
+			+ "\ntimeout 30 sudo apt-get -y install chrony >> installOutput.txt"
 			+ "\nif [[ $? > 0 ]]"
 			+ "\nthen"
 			+ "\n\techo \"Warning: chrony install failed\""
 			+ "\n\tsuccessfulInstall=false"
 			+ "\nelse"
 			+ "\n\techo \"chrony install successful\""
+			+ "\n\tsudo systemctl start chrony >> installOutput.txt"
+			+ "\n\tsudo systemctl enable chrony >> installOutput.txt"
+			+ "\ntimeout 30 sudo chronyd -q >> installOutput.txt"
 			+ "\nfi"
-			+ "\nsudo sudo chronyd -q >> installOutput.txt"
 			+ "\nif [[ $? > 0 ]]"
 			+ "\nthen"
 			+ "\n\techo \"Warning: chrony sync failed, attempting to sync with other tools but assuming clock is accurate already\""
@@ -252,7 +331,7 @@ public class InstallScriptServlet extends HttpServlet {
 			+ "\n\techo \"chrony sync successful\""
 			+ "\nfi"
 			+ "\necho \"Installing wget\""
-			+ "\nsudo apt-get -y install wget >> installOutput.txt" 
+			+ "\ntimeout 30 sudo apt-get -y install wget >> installOutput.txt" 
 			+ "\nif [[ $? > 0 ]]"
 			+ "\nthen"
 			+ "\n\techo \"Warning: wget install failed\""
@@ -387,12 +466,14 @@ public class InstallScriptServlet extends HttpServlet {
 			//+ "\nservice mysql start" 
 			//+ "\nservice tomcat8 start"
 			//+ "\nservice tomcat9 start"
-			+ "\nservice mysql start"
+			//+ "\nservice mysql start"
+			+ "\nsudo systemctl enable mysql >> installOutput.txt"
+			+ "\nsudo systemctl start mysql >> installOutput.txt"
 			+ "\nwhile true;" 
 			+ "\ndo" 
 			+ "\npkill -f \"/usr/bin/java -jar -XX:+IgnoreUnrecognizedVMOptions /opt/dataCollector/DataCollector.jar\"" 
-			//+ "\n/usr/bin/java -Xmx1536m -jar /opt/dataCollector/DataCollector.jar -user " + curEmail + " -server " + serverName + ":" + port + " -event " + curEvent + " -continuous "+ myNewToken + " http://revenge.cs.arizona.edu/DataCollectorServer/openDataCollection/UploadData" + " >> /opt/dataCollector/log.log 2>&1" 
-			+ "\n/usr/bin/java -Xmx1536m -jar -XX:+IgnoreUnrecognizedVMOptions /opt/dataCollector/DataCollector.jar -user " + curEmail + " -server " + serverName + ":" + port + " -adminemail " + curAdmin + " -event " + curEvent + " " + continuous + " " + taskgui + " -screenshot " + screenshotTime + " >> /opt/dataCollector/log.log 2>&1" 
+			//+ "\n/usr/bin/java -Xmx1536m -jar /opt/dataCollector/DataCollector.jar -user " + curUsername + " -server " + serverName + ":" + port + " -event " + curEvent + " -continuous "+ myNewToken + " http://revenge.cs.arizona.edu/DataCollectorServer/openDataCollection/UploadData" + " >> /opt/dataCollector/log.log 2>&1" 
+			+ "\n/usr/bin/java -Xmx1536m -jar -XX:+IgnoreUnrecognizedVMOptions /opt/dataCollector/DataCollector.jar -user " + curUsername + " -server " + serverName + ":" + port + " -adminemail " + curAdmin + " -event '" + curEvent + "' " + continuous + " " + taskgui + " -screenshot " + screenshotTime + " >> /opt/dataCollector/log.log 2>&1" 
 			+ "\necho \"Got a crash: $(date)\" >> /opt/dataCollector/log.log" 
 			+ "\nsleep 2" 
 			+ "\ndone" 
@@ -467,8 +548,8 @@ public class InstallScriptServlet extends HttpServlet {
 			+ "\nwhile true;" 
 			+ "\ndo" 
 			+ "\npkill -f \"/usr/bin/java -jar -XX:+IgnoreUnrecognizedVMOptions /opt/dataCollector/DataCollector.jar\"" 
-			//+ "\n/usr/bin/java -Xmx1536m -jar /opt/dataCollector/DataCollector.jar -user " + curEmail + " -server " + serverName + ":" + port + " -event " + curEvent + " -continuous "+ myNewToken + " http://revenge.cs.arizona.edu/DataCollectorServer/openDataCollection/UploadData" + " >> /opt/dataCollector/log.log 2>&1" 
-			+ "\n/usr/bin/java -Xmx1536m -jar -XX:+IgnoreUnrecognizedVMOptions /opt/dataCollector/DataCollector.jar -user " + curEmail + " -server " + serverName + ":" + port + " -event " + curEvent + " " + continuous + " " + taskgui + " -screenshot " + screenshotTime + " >> /opt/dataCollector/log.log 2>&1" 
+			//+ "\n/usr/bin/java -Xmx1536m -jar /opt/dataCollector/DataCollector.jar -user " + curUsername + " -server " + serverName + ":" + port + " -event " + curEvent + " -continuous "+ myNewToken + " http://revenge.cs.arizona.edu/DataCollectorServer/openDataCollection/UploadData" + " >> /opt/dataCollector/log.log 2>&1" 
+			+ "\n/usr/bin/java -Xmx1536m -jar -XX:+IgnoreUnrecognizedVMOptions /opt/dataCollector/DataCollector.jar -user " + curUsername + " -server " + serverName + ":" + port + " -event " + curEvent + " " + continuous + " " + taskgui + " -screenshot " + screenshotTime + " >> /opt/dataCollector/log.log 2>&1" 
 			+ "\necho \"Got a crash: $(date)\" >> /opt/dataCollector/log.log" 
 			+ "\nsleep 2" 
 			+ "\ndone" 
@@ -572,8 +653,8 @@ public class InstallScriptServlet extends HttpServlet {
 					+ "\nservice tomcat8 start"
 					+ "\nservice tomcat9 start"
 					+ "\npkill -f \"/usr/bin/java -jar -XX:+IgnoreUnrecognizedVMOptions /opt/dataCollector/DataCollector.jar\"" 
-					//+ "\n/usr/bin/java -Xmx1536m -jar /opt/dataCollector/DataCollector.jar -user " + curEmail + " -server " + serverName + ":" + port + " -event " + curEvent + " -continuous "+ myNewToken + " http://revenge.cs.arizona.edu/DataCollectorServer/openDataCollection/UploadData" + " >> /opt/dataCollector/log.log 2>&1" 
-					+ "\n/usr/bin/java -Xmx1536m -jar -XX:+IgnoreUnrecognizedVMOptions /opt/dataCollector/DataCollector.jar -user " + curEmail + " -server " + serverName + ":" + port + " -event " + curEvent + " " + continuous + " " + taskgui + " -screenshot " + screenshotTime + " >> /opt/dataCollector/log.log 2>&1" 
+					//+ "\n/usr/bin/java -Xmx1536m -jar /opt/dataCollector/DataCollector.jar -user " + curUsername + " -server " + serverName + ":" + port + " -event " + curEvent + " -continuous "+ myNewToken + " http://revenge.cs.arizona.edu/DataCollectorServer/openDataCollection/UploadData" + " >> /opt/dataCollector/log.log 2>&1" 
+					+ "\n/usr/bin/java -Xmx1536m -jar -XX:+IgnoreUnrecognizedVMOptions /opt/dataCollector/DataCollector.jar -user " + curUsername + " -server " + serverName + ":" + port + " -event '" + curEvent + "' " + continuous + " " + taskgui + " -screenshot " + screenshotTime + " >> /opt/dataCollector/log.log 2>&1" 
 					+ "\necho \"Got a crash: $(date)\" >> /opt/dataCollector/log.log" 
 					+ "\nsleep 2" 
 					+ "\ndone" 
@@ -652,7 +733,7 @@ public class InstallScriptServlet extends HttpServlet {
 					"echo :wait_for_mysql>> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
 					"echo 	C:\\mysql\\mysql-8.0.23-winx64\\bin\\mysql.exe -uroot -e \";\">> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
 					"echo 	IF ERRORLEVEL 1 GOTO wait_for_mysql>> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" +
-					"echo start /B java -jar -XX:+IgnoreUnrecognizedVMOptions C:\\datacollector\\DataCollector.jar -user " + curEmail + " -server " + serverName + ":" + port + " -adminemail " + curAdmin + " -event " + curEvent + " " + continuous + " " + taskgui + " -screenshot " + screenshotTime + ">> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
+					"echo start /B java -jar -XX:+IgnoreUnrecognizedVMOptions C:\\datacollector\\DataCollector.jar -user " + curUsername + " -server " + serverName + ":" + port + " -adminemail " + curAdmin + " -event '" + curEvent + "' " + continuous + " " + taskgui + " -screenshot " + screenshotTime + ">> \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\StartDataCollection.bat\"\n" + 
 					"shutdown /R\n" + 
 					"";
 		}

@@ -2866,6 +2866,7 @@ if(request.getParameter("email") != null)
 		var taskName = "";
 		var taskTags = "";
 		var taskGoal = "";
+		var taskNote = "";
 		if(fromAni)
 		{
 			startTask = Number(document.getElementById("addTaskAniStart").value) + theNormData[userName][sessionName]["Index MS Session Min Universal"];
@@ -2873,6 +2874,7 @@ if(request.getParameter("email") != null)
 			taskName = document.getElementById("addTaskAniName").value;
 			taskTags = encodeURIComponent(document.getElementById("tagsAni").value);
 			taskGoal = document.getElementById("addTaskAniGoal").value;
+			taskNote = document.getElementById("addTaskAniNote").value;
 		}
 		else if(isUpdate)
 		{
@@ -2881,6 +2883,7 @@ if(request.getParameter("email") != null)
 			taskName = document.getElementById("updateTaskName").value;
 			taskTags = encodeURIComponent(document.getElementById("updateTags").value);
 			taskGoal = document.getElementById("updateTaskGoal").value;
+			taskNote = document.getElementById("updateTaskNote").value;
 		}
 		else
 		{
@@ -2889,9 +2892,10 @@ if(request.getParameter("email") != null)
 			taskName = document.getElementById("addTaskName").value;
 			taskTags = encodeURIComponent(document.getElementById("tags").value);
 			taskGoal = document.getElementById("addTaskGoal").value;
+			taskNote = document.getElementById("addTaskNote").value;
 		}
 		
-		var taskUrl = "addTask.json?event=" + eventName + "&userName=" + userName + "&sessionName=" + sessionName + "&start=" + startTask + "&end=" + endTask + "&taskName=" + taskName + "&taskGoal=" + taskGoal + "&taskTags=" + taskTags;
+		var taskUrl = "addTask.json?event=" + eventName + "&userName=" + userName + "&sessionName=" + sessionName + "&start=" + startTask + "&end=" + endTask + "&taskName=" + taskName + "&taskGoal=" + taskGoal + "&taskNote=" + taskNote + "&taskTags=" + taskTags;
 		
 		d3.json(taskUrl, function(error, data)
 					{
@@ -2953,11 +2957,23 @@ if(request.getParameter("email") != null)
 	}
 	
 	var searchTerms = ["Reverse", "Engineering", "Produces", "Resuls"];
-	function filterTags()
+	function filterTags(isAni)
 	{
-		var input = document.getElementById("searchTags");
+		var input;
+		var selected;
+		
+		if(isAni)
+		{
+			input = document.getElementById("searchTagsAni");
+			selected = document.getElementById("storedTagsAni");
+		}
+		else
+		{
+			input = document.getElementById("searchTags");
+			selected = document.getElementById("storedTags");
+		}
+		
 		var filter = input.value.toUpperCase();
-		var selected = document.getElementById("storedTags");
 		var items = selected.getElementsByTagName("option");
 		for (i = 0; i < items.length; i++)
 		{
@@ -3156,6 +3172,11 @@ if(request.getParameter("email") != null)
 		.attr("width", visWidthParent + "px")
 				.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")
 					.html(	"<td colspan=\"4\" width=\"100%\"><div align=\"center\"><b>Task Goal:</b></div><div align=\"center\"><textarea id=\"addTaskGoal\" name=\"addTaskGoal\" rows=\"2\" cols=\"100\"></textarea></div></td>");
+		
+		var addNoteRow = d3.select("#infoTable").append("tr").append("td")
+		.attr("width", visWidthParent + "px")
+				.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")
+					.html(	"<td colspan=\"4\" width=\"100%\"><div align=\"center\"><b>Task Note:</b></div><div align=\"center\"><textarea id=\"addTaskNote\" name=\"addTaskNote\" rows=\"2\" cols=\"100\"></textarea></div></td>");
 		
 		var addTaskRow = d3.select("#infoTable").append("tr").append("td")
 		.attr("width", visWidthParent + "px")
@@ -4244,6 +4265,12 @@ if(request.getParameter("email") != null)
 				updateRow.append("td")
 					.attr("colspan", "4")
 					.html("<div align='center'>Goal</div><div align='center'><textarea id=\"updateTaskGoal\" name=\"updateTaskGoal\" rows=\"2\" cols=\"100\">" + curSlot["Goal"] + "</textarea></div>");
+				
+				updateRow = d3.select("#extraInfoTable")
+				.append("tr");
+				updateRow.append("td")
+				.attr("colspan", "4")
+				.html("<div align='center'>Note</div><div align='center'><textarea id=\"updateTaskNote\" name=\"updateTaskNote\" rows=\"2\" cols=\"100\">" + curSlot["Note"] + "</textarea></div>");
 				
 				updateRow = d3.select("#extraInfoTable")
 					.append("tr");
