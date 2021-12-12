@@ -55,6 +55,7 @@ public class UploadDataWebsocket
 			System.out.println(session.getId());
 			System.out.println(session);
 			
+			/*
 			if(!curSession.equals(session))
 			{
 				System.out.println("Closing stale session");
@@ -73,6 +74,7 @@ public class UploadDataWebsocket
 					e.printStackTrace();
 				}
 			}
+			*/
 		}
 		
 		httpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
