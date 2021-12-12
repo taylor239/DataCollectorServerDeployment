@@ -45,10 +45,27 @@ public class UploadDataWebsocket
 		while(sessionIter.hasNext())
 		{
 			Session curSession = sessionIter.next();
+			
+			System.out.println("Checking sessions:");
+			
+			System.out.println(curSession.getId());
+			System.out.println(curSession);
+			
+			
+			System.out.println(session.getId());
+			System.out.println(session);
+			
 			if(!curSession.equals(session))
 			{
+				System.out.println("Closing stale session");
 				try
 				{
+					HashMap outputMap = new HashMap();
+					outputMap.put("result", "nokay");
+					outputMap.put("problem", "session colission");
+					Gson gson = new GsonBuilder().create();
+					String toWrite = gson.toJson(outputMap);
+					session.getBasicRemote().sendText(toWrite);
 					curSession.close();
 				}
 				catch (IOException e)
@@ -167,6 +184,7 @@ public class UploadDataWebsocket
 				System.out.println("no such token: " + username + ", " + event + ", " + admin + ", " + token);
 				HashMap outputMap = new HashMap();
 				outputMap.put("result", "nokay");
+				outputMap.put("problem", "token not recognized");
 				String toWrite = gson.toJson(outputMap);
 				session.getBasicRemote().sendText(toWrite);
 				return;
@@ -181,6 +199,7 @@ public class UploadDataWebsocket
 					System.out.println("inactive");
 					HashMap outputMap = new HashMap();
 					outputMap.put("result", "nokay");
+					outputMap.put("problem", "token stale");
 					String toWrite = gson.toJson(outputMap);
 					session.getBasicRemote().sendText(toWrite);
 					return;
@@ -193,8 +212,9 @@ public class UploadDataWebsocket
 						System.out.println("after end date");
 						HashMap outputMap = new HashMap();
 						outputMap.put("result", "nokay");
+						outputMap.put("problem", "event stale");
 						String toWrite = gson.toJson(outputMap);
-						session.getBasicRemote().sendText(toWrite); session.close();
+						session.getBasicRemote().sendText(toWrite); //session.close();
 						return;
 					}
 				}
@@ -455,6 +475,7 @@ public class UploadDataWebsocket
 			
 			HashMap outputMap = new HashMap();
 			outputMap.put("result", "nokay");
+			outputMap.put("problem", "insert issue");
 			String toWrite = gson.toJson(outputMap);
 			try {
 				session.getBasicRemote().sendText(toWrite);
