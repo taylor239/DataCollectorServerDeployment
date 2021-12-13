@@ -469,6 +469,7 @@ public class InstallScriptServlet extends HttpServlet {
 			//+ "\nservice tomcat8 start"
 			//+ "\nservice tomcat9 start"
 			//+ "\nservice mysql start"
+			+ "\nsudo chronyd -q >> /opt/dataCollector/startupOutput.txt"
 			+ "\nsudo systemctl enable mysql >> /opt/dataCollector/startupOutput.txt"
 			+ "\nsudo systemctl start mysql >> /opt/dataCollector/startupOutput.txt"
 			+ "\nsudo service mysql start >> /opt/dataCollector/startupOutput.txt"
