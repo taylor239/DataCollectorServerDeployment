@@ -132,6 +132,11 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")
 			.html(	"<td colspan=\"4\" width=\"100%\"><div align=\"center\"><b>Task Goal:</b></div><div align=\"center\"><textarea id=\"addTaskAniGoal\" name=\"addTaskAniGoal\" rows=\"2\" cols=\"100\"></textarea></div></td>");
 	
+	var addGoalCompletionRow = taskMenu.append("tr").append("td")
+			.attr("width", visWidthParent + "px")
+			.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")
+			.html(	"<td colspan=\"4\" width=\"100%\"><div align=\"center\"><b>Completion Metric:</b></div><div align=\"center\">Incomplete<input type=\"range\" id=\"addTaskAniCompletion\" name=\"addTaskAniCompletion\" value=\"1\" min=\"0\" max=\"1\" step=\"0.01\" style=\"width:80%\" oninput=\"this.nextElementSibling.nextElementSibling.value = Number(this.value).toFixed(2);\">Complete<br /><output>1.00</output></div></td>");
+	
 	var addGoalRowAni = taskMenu.append("tr").append("td")
 			.attr("width", visWidthParent + "px")
 			.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")

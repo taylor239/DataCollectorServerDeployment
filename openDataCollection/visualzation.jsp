@@ -2867,6 +2867,7 @@ if(request.getParameter("email") != null)
 		var taskTags = "";
 		var taskGoal = "";
 		var taskNote = "";
+		var taskCompletion = 0;
 		if(fromAni)
 		{
 			startTask = Number(document.getElementById("addTaskAniStart").value) + theNormData[userName][sessionName]["Index MS Session Min Universal"];
@@ -2875,6 +2876,7 @@ if(request.getParameter("email") != null)
 			taskTags = encodeURIComponent(document.getElementById("tagsAni").value);
 			taskGoal = document.getElementById("addTaskAniGoal").value;
 			taskNote = document.getElementById("addTaskAniNote").value;
+			taskCompletion = Number(document.getElementById("addTaskAniCompletion").value);
 		}
 		else if(isUpdate)
 		{
@@ -2884,6 +2886,7 @@ if(request.getParameter("email") != null)
 			taskTags = encodeURIComponent(document.getElementById("updateTags").value);
 			taskGoal = document.getElementById("updateTaskGoal").value;
 			taskNote = document.getElementById("updateTaskNote").value;
+			taskCompletion = Number(document.getElementById("updateTaskCompletion").value);
 		}
 		else
 		{
@@ -2893,9 +2896,10 @@ if(request.getParameter("email") != null)
 			taskTags = encodeURIComponent(document.getElementById("tags").value);
 			taskGoal = document.getElementById("addTaskGoal").value;
 			taskNote = document.getElementById("addTaskNote").value;
+			taskCompletion = Number(document.getElementById("addTaskCompletion").value);
 		}
 		
-		var taskUrl = "addTask.json?event=" + eventName + "&userName=" + userName + "&sessionName=" + sessionName + "&start=" + startTask + "&end=" + endTask + "&taskName=" + taskName + "&taskGoal=" + taskGoal + "&taskNote=" + taskNote + "&taskTags=" + taskTags;
+		var taskUrl = "addTask.json?event=" + eventName + "&userName=" + userName + "&sessionName=" + sessionName + "&start=" + startTask + "&end=" + endTask + "&taskName=" + taskName + "&taskGoal=" + taskGoal + "&taskCompletion=" + taskCompletion + "&taskNote=" + taskNote + "&taskTags=" + taskTags;
 		
 		d3.json(taskUrl, function(error, data)
 					{
@@ -2942,6 +2946,8 @@ if(request.getParameter("email") != null)
 										document.getElementById("addTaskAniName").value = "";
 										document.getElementById("tagsAni").value = "";
 										document.getElementById("addTaskAniGoal").value = "";
+										document.getElementById("addTaskAniCompletion").value = "1.00";
+										document.getElementById("addTaskAniCompletion").nextElementSibling.nextElementSibling.value = "1.00";
 									}
 									start(true);
 								}
@@ -3172,6 +3178,11 @@ if(request.getParameter("email") != null)
 		.attr("width", visWidthParent + "px")
 				.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")
 					.html(	"<td colspan=\"4\" width=\"100%\"><div align=\"center\"><b>Task Goal:</b></div><div align=\"center\"><textarea id=\"addTaskGoal\" name=\"addTaskGoal\" rows=\"2\" cols=\"100\"></textarea></div></td>");
+		
+		var addGoalCompletionRow = d3.select("#infoTable").append("tr").append("td")
+		.attr("width", visWidthParent + "px")
+				.append("table").attr("width", visWidthParent + "px").append("tr").attr("width", visWidthParent + "px")
+					.html(	"<td colspan=\"4\" width=\"100%\"><div align=\"center\"><b>Completion Metric:</b></div><div align=\"center\">Incomplete<input type=\"range\" id=\"addTaskCompletion\" name=\"addTaskCompletion\" value=\"1\" min=\"0\" max=\"1\" step=\"0.01\" style=\"width:80%\" oninput=\"this.nextElementSibling.nextElementSibling.value = Number(this.value).toFixed(2);\">Complete<br /><output>1.00</output></div></td>");
 		
 		var addNoteRow = d3.select("#infoTable").append("tr").append("td")
 		.attr("width", visWidthParent + "px")
@@ -4265,6 +4276,12 @@ if(request.getParameter("email") != null)
 				updateRow.append("td")
 					.attr("colspan", "4")
 					.html("<div align='center'>Goal</div><div align='center'><textarea id=\"updateTaskGoal\" name=\"updateTaskGoal\" rows=\"2\" cols=\"100\">" + curSlot["Goal"] + "</textarea></div>");
+				
+				updateRow = d3.select("#extraInfoTable")
+					.append("tr");
+				updateRow.append("td")
+					.attr("colspan", "4")
+					.html("<div align=\"center\">Completion</div><div align=\"center\">Incomplete<input type=\"range\" id=\"updateTaskCompletion\" name=\"updateTaskCompletion\" value=\"" + Number(curSlot["Completion"]) + "\" min=\"0\" max=\"1\" step=\"0.01\" style=\"width:80%\" oninput=\"this.nextElementSibling.nextElementSibling.value = Number(this.value).toFixed(2);\">Complete<br /><output>" + Number(curSlot["Completion"]).toFixed(2) + "</output></div>");
 				
 				updateRow = d3.select("#extraInfoTable")
 				.append("tr");

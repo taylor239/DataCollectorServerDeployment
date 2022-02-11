@@ -1052,6 +1052,10 @@
 							e.initUIEvent('click', true, true, /* ... */);
 							backgroundRect.node().dispatchEvent(e);
 						}
+						else
+						{
+							event.stopPropagation();
+						}
 					}
 					
 					if(curStroke)
@@ -1374,6 +1378,10 @@
 							var e = document.createEvent('UIEvents');
 							e.initUIEvent('click', true, true, /* ... */);
 							backgroundRect.node().dispatchEvent(e);
+						}
+						else
+						{
+							event.stopPropagation();
 						}
 					}
 					
