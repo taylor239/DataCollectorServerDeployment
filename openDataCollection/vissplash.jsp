@@ -131,7 +131,7 @@ if(request.getParameter("email") != null)
 							</tr>
 							<tr>
 								<td colspan="12">
-									<div align="center"><input type="button" value="Refresh Search" onclick="refreshSearch()"><input type="button" value="Visualize Selected" onclick="visualize()"><input type="button" value="Statistics" onclick="stats()"></div>
+									<div align="center"><input type="button" value="Refresh Search" onclick="refreshSearch()"><input type="button" value="Visualize Selected" onclick="visualize()"><input type="button" value="Statistics" onclick="stats()"><input type="button" value="Metrics" onclick="metrics()"></div>
 								</td>
 							</tr>
 							<tr>
@@ -314,6 +314,24 @@ function toggleCol(colToExpand)
 
 
 <script>
+
+	function roundTo(n, digits) {
+    var negative = false;
+    if (digits === undefined) {
+        digits = 0;
+    }
+    if (n < 0) {
+        negative = true;
+        n = n * -1;
+    }
+    var multiplicator = Math.pow(10, digits);
+    n = parseFloat((n * multiplicator).toFixed(11));
+    n = (Math.round(n) / multiplicator).toFixed(digits);
+    if (negative) {
+        n = (n * -1).toFixed(digits);
+    }
+    return n;
+}
 
 	var visWidth = window.innerWidth;
 	var visHeight = window.innerHeight;
@@ -1075,7 +1093,7 @@ function toggleCol(colToExpand)
 			}
 			
 			
-			d3.json("logExport.json?event=" + eventName + "&datasources=windows,events,environment,processsummary&normalize=none" + userSessionFilter, async function(error, data)
+			d3.json("logExport.json?event=" + eventName + "&datasources=windows,events,environment,processsummary,metrics&normalize=none" + userSessionFilter, async function(error, data)
 				{
 					try
 					{
@@ -1381,6 +1399,155 @@ function toggleCol(colToExpand)
 				{
 					curRow.append("td").html("0");
 				}
+			}
+		}
+		
+	}
+	
+	function metrics()
+	{
+		showLightbox("<tr><td><table id='statsTable' width='100%'>" + 
+						"<tr id='statsTitleRow'>" + 
+							"<td id='statsTitleCol'><h1>Average Performance Metrics</h1></td>" + 
+						"</tr>" + 
+						"<tr id='statsBodyRow'>" + 
+							"<td id='statsBodyCol'>" + 
+								"<table id='innerStatsBody'></table>" + 
+							"</td>" + 
+						"</tr>" + 
+					"</table></tr></td>");
+		
+		var statsTable = d3.select("#innerStatsBody");
+		var fieldRow = statsTable.append("tr");
+		
+		const metricList = new Set();
+		
+		for(user in theNormData)
+		{
+			for(session in theNormData[user]["Session Ordering"]["Order List"])
+			{
+				let sessionName = theNormData[user]["Session Ordering"][theNormData[user]["Session Ordering"]["Order List"][session]];
+				
+				if(sessionName == "Aggregated")
+				{
+					continue;
+				}
+				
+				theNormData[user][sessionName]["metricsMap"] = {};
+				if(theNormData[user][sessionName]["metrics"])
+				{
+					for(entry in theNormData[user][sessionName]["metrics"])
+					{
+						metricList.add(theNormData[user][sessionName]["metrics"][entry]["MetricName"]);
+						theNormData[user][sessionName]["metricsMap"][theNormData[user][sessionName]["metrics"][entry]["MetricName"]] = theNormData[user][sessionName]["metrics"][entry];
+					}
+				}
+			}
+		}
+		
+		fieldRow.append("td").html("<b>User</b>");
+		fieldRow.append("td").html("<b>Session</b>");
+		fieldRow.append("td").html("<b>Total Time</b>");
+		fieldRow.append("td").html("<b>Active Time</b>");
+		fieldRow.append("td").html("<b>Environment</b>");
+		metricList.forEach (function(value)
+		{
+			fieldRow.append("td").attr("colspan", 2).html("<b>" + value + "</b>");
+		})
+		
+		var totalRows = fieldRow.selectAll("td").size();
+		
+		fieldRow.selectAll("td").attr("width", ((1 / totalRows) * 100) + "%");
+		
+		for(user in theNormData)
+		{
+			for(session in theNormData[user]["Session Ordering"]["Order List"])
+			{
+				let sessionName = theNormData[user]["Session Ordering"][theNormData[user]["Session Ordering"]["Order List"][session]];
+				
+				if(sessionName == "Aggregated")
+				{
+					continue;
+				}
+				
+				var curRow = statsTable.append("tr");
+				
+				curRow.append("td").html(user);
+				curRow.append("td").html(sessionName);
+				
+				curRow.append("td").html(Math.round(theNormData[user][sessionName]["Index MS Session Max"] / 60000));
+				if(theNormData[user][sessionName]["activetime"])
+				{
+					curRow.append("td").html(theNormData[user][sessionName]["activetime"][0]["ActiveTime"]);
+				}
+				else
+				{
+					curRow.append("td").html("0");
+				}
+				
+				//if(theNormData[user][sessionName]["environment"])
+				//{
+				//	curRow.append("td").html(theNormData[user][sessionName]["environment"][0]["Environment"]);
+				//}
+				//else
+				//{
+				//	curRow.append("td").html("");
+				//}
+				
+				if(theNormData[user][sessionName]["environment"])
+				{
+					curRow.append("td").html("<textarea readonly style=\"width: 100%; height: 100%;\">" + theNormData[user][sessionName]["environment"][0]["Environment"] + "</textarea>");
+				}
+				else
+				{
+					curRow.append("td").html("");
+				}
+				
+				
+				//var envLines = theNormData[user][sessionName]["environment"][0]["Environment"].split(/\n/);
+				//var newCellHTML = "<select style=\"width:100%\" multiple name='" + SHA256(user+sessionName + "_environment_metrics") + "' id='" + SHA256(user+sessionName + "_environment_metrics") + "'>";
+				//for(entry in envLines)
+				//{
+				//	var curOption = "<option value=" + envLines[entry] + ">" + envLines[entry] + "</option>";
+				//	newCellHTML += curOption;
+				//}
+				//newCellHTML += "</select>"
+				//newCell = curRow.append("td").html(newCellHTML);
+				
+				metricList.forEach (function(value)
+				{
+					//if(theNormData[user][sessionName]["metricsMap"][value])
+					//{
+					//	var curMetric = theNormData[user][sessionName]["metricsMap"][value];
+					//	if(curMetric["MetricUnit2"] == "None")
+					//	{
+					//		curRow.append("td").attr("colspan", 2).html(curMetric["<textarea readonly style=\"width: 100%; height: 100%;\">" + "MetricValue1"] + " " + curMetric["MetricUnit1"] + "</textarea>");
+					//	}
+					//	else
+					//	{
+					//		curRow.append("td").html("<textarea readonly style=\"width: 100%; height: 100%;\">" + curMetric["MetricValue1"] + " " + curMetric["MetricUnit1"] + "</textarea>");
+					//		curRow.append("td").html("<textarea readonly style=\"width: 100%; height: 100%;\">" + curMetric["MetricValue2"] + " " + curMetric["MetricUnit2"] + "</textarea>");
+					//	}
+					//}
+					if(theNormData[user][sessionName]["metricsMap"][value])
+					{
+						var curMetric = theNormData[user][sessionName]["metricsMap"][value];
+						if(curMetric["MetricUnit2"] == "None")
+						{
+							curRow.append("td").attr("colspan", 2).html(roundTo(curMetric["MetricValue1"], 2) + " " + curMetric["MetricUnit1"]);
+						}
+						else
+						{
+							curRow.append("td").html(roundTo(curMetric["MetricValue1"], 2) + " " + curMetric["MetricUnit1"]);
+							curRow.append("td").html(roundTo(curMetric["MetricValue2"], 2) + " " + curMetric["MetricUnit2"]);
+						}
+					}
+					else
+					{
+						curRow.append("td").attr("colspan", 2).html("");
+					}
+				})
+				
 			}
 		}
 		
