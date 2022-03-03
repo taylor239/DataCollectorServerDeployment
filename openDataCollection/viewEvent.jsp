@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8"
-    pageEncoding="UTF-8" import="java.util.ArrayList, java.util.HashMap, com.datacollector.*, java.sql.*"%>
+    pageEncoding="UTF-8" import="java.util.ArrayList, java.util.HashMap, com.datacollector.*, java.sql.*, org.apache.commons.lang3.StringEscapeUtils"%>
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
@@ -49,6 +49,8 @@ if(request.getParameter("email") != null)
 	}
 }
 
+ArrayList taggerList = new ArrayList();
+
 if(session.getAttribute("admin") != null)
 {
 boolean newEvent = request.getParameter("newevent") != null && request.getParameter("newevent").equals("newevent");
@@ -57,6 +59,7 @@ if(newEventName != null)
 {
 	eventName = newEventName;
 }
+
 String newStartDate = request.getParameter("startdate");
 String newEndDate = request.getParameter("enddate");
 String newPassword = request.getParameter("eventpassword");
@@ -69,6 +72,85 @@ String newServer = request.getParameter("eventserver");
 String contactName = request.getParameter("contactname");
 String contactContact = request.getParameter("contactcontact");
 String contactNameRemove = request.getParameter("contactnameremove");
+
+
+String taggerQuery = "SELECT * FROM `EventPassword` WHERE `event` = ? AND `adminEmail` = ? ORDER BY `password` ASC";
+
+try
+{
+	
+	if(request.getParameter("addviewer") != null)
+	{
+		String addStmtString = "INSERT INTO `EventPassword`(`event`, `adminEmail`, `password`, `tagger`, `anon`) VALUES (?,?,?,?,?)";
+		PreparedStatement addStmt = dbConn.prepareStatement(addStmtString);
+		addStmt.setString(2, (String)session.getAttribute("admin"));
+		addStmt.setString(1, eventName);
+		addStmt.setString(3, request.getParameter("viewerpassword"));
+		if(!request.getParameter("viewertagger").equals(""))
+		{
+			addStmt.setString(4, request.getParameter("viewertagger"));
+		}
+		else
+		{
+			addStmt.setString(4, null);
+		}
+		if(request.getParameter("vieweranon") != null)
+		{
+			addStmt.setInt(5, 1);
+		}
+		else
+		{
+			addStmt.setInt(5, 0);
+		}
+		addStmt.execute();
+		addStmt.close();
+	}
+	
+	PreparedStatement queryStmt = dbConn.prepareStatement(taggerQuery);
+	queryStmt.setString(2, (String)session.getAttribute("admin"));
+	queryStmt.setString(1, eventName);
+	ResultSet myResults = queryStmt.executeQuery();
+	if(request.getParameter("updateviewer") != null)
+	{
+		String deleteRequestQuery = "DELETE FROM `EventPassword` WHERE `event` = ? AND `adminEmail` = ? AND `password` = ?";
+		PreparedStatement deleteStmt = dbConn.prepareStatement(deleteRequestQuery);
+		
+		deleteStmt.setString(2, (String)session.getAttribute("admin"));
+		deleteStmt.setString(1, eventName);
+		
+		while(myResults.next())
+		{
+			String curPassword = myResults.getString("password");
+			if(request.getParameter(curPassword) != null)
+			{
+				deleteStmt.setString(3, curPassword);
+				deleteStmt.execute();
+			}
+		}
+		
+		deleteStmt.close();
+		myResults = queryStmt.executeQuery();
+	}
+	
+	while(myResults.next())
+	{
+		HashMap curTaggerMap = new HashMap();
+		curTaggerMap.put("password", myResults.getString("password"));
+		curTaggerMap.put("tagger", myResults.getString("tagger"));
+		if(myResults.wasNull())
+		{
+			curTaggerMap.put("tagger", "<i>Cannot Tag</i>");
+		}
+		curTaggerMap.put("anon", myResults.getString("anon"));
+		taggerList.add(curTaggerMap);
+	}
+}
+catch(Exception e)
+{
+	e.printStackTrace();
+}
+
+
 
 ArrayList requesterName = new ArrayList();
 ArrayList requesterEmail = new ArrayList();
@@ -87,26 +169,26 @@ try
 	deleteStmt.setString(2, (String)session.getAttribute("admin"));
 	while(myResults.next())
 	{
-		if(myResults.getString("requestedUsername") != null)
+		if(StringEscapeUtils.escapeHtml4(myResults.getString("requestedUsername")) != null)
 		{
-			if(request.getParameter(myResults.getString("requestedUsername")).equals("accept"))
+			if(request.getParameter(StringEscapeUtils.escapeHtml4(myResults.getString("requestedUsername"))).equals("accept"))
 			{
 				if(newTokens == null)
 				{
-					newTokens = myResults.getString("requestedUsername");
+					newTokens = StringEscapeUtils.escapeHtml4(myResults.getString("requestedUsername"));
 				}
 				else
 				{
-					newTokens += "," + myResults.getString("requestedUsername");
+					newTokens += "," + StringEscapeUtils.escapeHtml4(myResults.getString("requestedUsername"));
 				}
 				requesterName.add(myResults.getString("requestedName"));
 				requesterEmail.add(myResults.getString("requestedEmail"));
-				deleteStmt.setString(3, myResults.getString("requestedUsername"));
+				deleteStmt.setString(3, StringEscapeUtils.escapeHtml4(myResults.getString("requestedUsername")));
 				deleteStmt.execute();
 			}
-			else if(request.getParameter(myResults.getString("requestedUsername")).equals("deny"))
+			else if(request.getParameter(StringEscapeUtils.escapeHtml4(myResults.getString("requestedUsername"))).equals("deny"))
 			{
-				deleteStmt.setString(3, myResults.getString("requestedUsername"));
+				deleteStmt.setString(3, StringEscapeUtils.escapeHtml4(myResults.getString("requestedUsername")));
 				deleteStmt.execute();
 			}
 		}
@@ -283,6 +365,7 @@ catch(Exception e)
 }
 
 }
+
 
 %>
 <body>
@@ -752,19 +835,19 @@ catch(Exception e)
 			%>
 			<tr>
 			<td width="25%">
-			<%=myResults.getString("requestedUsername") %>
+			<%=StringEscapeUtils.escapeHtml4(StringEscapeUtils.escapeHtml4(myResults.getString("requestedUsername"))) %>
 			</td>
 			<td width="25%">
-			<%=myResults.getString("requesterName") %>
+			<%=StringEscapeUtils.escapeHtml4(myResults.getString("requesterName")) %>
 			</td>
 			<td width="25%">
-			<%=myResults.getString("requesterEmail") %>
+			<%=StringEscapeUtils.escapeHtml4(myResults.getString("requesterEmail")) %>
 			</td>
 			<td width="12.5%">
-			<input type="radio" id="<%=myResults.getString("requestedUsername") %>" name="<%=myResults.getString("requestedUsername") %>" value="accept" form="tokenrequestform">
+			<input type="radio" id="<%=StringEscapeUtils.escapeHtml4(myResults.getString("requestedUsername")) %>" name="<%=StringEscapeUtils.escapeHtml4(myResults.getString("requestedUsername")) %>" value="accept" form="tokenrequestform">
 			</td>
 			<td width="12.5%">
-			<input type="radio" id="<%=myResults.getString("requestedUsername") %>" name="<%=myResults.getString("requestedUsername") %>" value="deny" form="tokenrequestform">
+			<input type="radio" id="<%=StringEscapeUtils.escapeHtml4(myResults.getString("requestedUsername")) %>" name="<%=StringEscapeUtils.escapeHtml4(myResults.getString("requestedUsername")) %>" value="deny" form="tokenrequestform">
 			</td>
 			</tr>
 			<%
@@ -789,6 +872,124 @@ catch(Exception e)
 	</form>
 	</td>
 	</tr>
+	<tr>
+	<td>
+	<h4>Viewers</h4>
+	</td>
+	</tr>
+	
+	
+	<tr>
+	<td>
+		<table width="100%">
+		<tr>
+		<td width="40%">
+		<b>Password and Link</b>
+		</td>
+		<td width="40%">
+		<b>Tag ID</b>
+		</td>
+		<td width="10%">
+		<b>Anon</b>
+		</td>
+		<td width="10%">
+		<b>Delete</b>
+		</td>
+		</tr>
+		<form action="viewEvent.jsp" id="updateviewerform">
+		<input type="hidden" id="updateviewer" name="updateviewer" value="updateviewer" form="updateviewerform">
+		<input type="hidden" id="eventnamerequest" name="eventname" value="<%=eventName %>" form="updateviewerform">
+		<%
+		
+		for(int x = 0; x < taggerList.size(); x++)
+		{
+			HashMap curMap = (HashMap)taggerList.get(x);
+			%>
+			<tr>
+			<td width="40%">
+			<a href="vissplash.jsp?event=<%=eventName %>&eventPassword=<%=curMap.get("password") %>&eventAdmin=<%=(String)session.getAttribute("admin") %>"><%=curMap.get("password") %></a>
+			</td>
+			<td width="40%">
+			<%=curMap.get("tagger") %>
+			</td>
+			<td width="10%">
+			<%
+			if(curMap.get("anon").equals("1"))
+			{
+				%>
+				X
+				<%
+			}
+			else
+			{
+				
+			}
+			%>
+			</td>
+			<td width="10%">
+			<input type="checkbox" id=<%=curMap.get("password") %> name=<%=curMap.get("password") %> value=<%=curMap.get("password") %> form="updateviewerform">
+			</td>
+			</tr>
+			<%
+		}
+		
+		%>
+		<tr>
+		<td colspan=3>
+		</td>
+		<td>
+		<input type="submit" value="Submit" form="updateviewerform">
+		</td>
+		</tr>
+		</form>
+		</table>
+	</td>
+	</tr>
+	
+	<tr>
+	<td>
+	<h4>Add Viewer</h4>
+	</td>
+	</tr>
+	
+	<tr>
+	<td>
+		<table width="100%">
+		<tr>
+		<td width="40%">
+		Password
+		</td>
+		<td width="40%">
+		Tag ID
+		</td>
+		<td width="10%">
+		Anon
+		</td>
+		<td width="10%">
+		</td>
+		</tr>
+		<form action="viewEvent.jsp" id="viewerrequestform">
+		<input type="hidden" id="addviewer" name="addviewer" value="addviewer" form="viewerrequestform">
+		<input type="hidden" id="eventnamerequest" name="eventname" value="<%=eventName %>" form="viewerrequestform">
+		<tr>
+		<td width="40%">
+		<input type="text" id="viewerpassword" name="viewerpassword" value="" form="viewerrequestform">
+		</td>
+		<td width="40%">
+		<input type="text" id="viewertagger" name="viewertagger" value="" form="viewerrequestform">
+		</td>
+		<td width="10%">
+		<input type="checkbox" id="vieweranon" name="vieweranon" value="vieweranon"  form="viewerrequestform">
+		</td>
+		<td width="10%">
+		<input type="submit" value="Submit" form="viewerrequestform">
+		</td>
+		</tr>
+		</form>
+		</table>
+	</td>
+	</tr>
+	
 </table>
 </div>
 </body>
