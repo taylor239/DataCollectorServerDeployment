@@ -1313,8 +1313,8 @@ function toggleCol(colToExpand)
 		
 		fieldRow.append("td").html("<b>User</b>");
 		fieldRow.append("td").html("<b>Session</b>");
-		fieldRow.append("td").html("<b>Total Time</b>");
-		fieldRow.append("td").html("<b>Active Time</b>");
+		fieldRow.append("td").html("<b>Total Time (s)</b>");
+		fieldRow.append("td").html("<b>Active Time (m)</b>");
 		fieldRow.append("td").html("<b>Tasks</b>");
 		fieldRow.append("td").html("<b>Windows</b>");
 		fieldRow.append("td").html("<b>Processes</b>");
@@ -1342,7 +1342,7 @@ function toggleCol(colToExpand)
 				curRow.append("td").html(user);
 				curRow.append("td").html(sessionName);
 				
-				curRow.append("td").html(Math.round(theNormData[user][sessionName]["Index MS Session Max"] / 60000));
+				curRow.append("td").html(Math.round(theNormData[user][sessionName]["Index MS Session Max"] / 1000));
 				if(theNormData[user][sessionName]["activetime"])
 				{
 					curRow.append("td").html(theNormData[user][sessionName]["activetime"][0]["ActiveTime"]);
@@ -1412,7 +1412,7 @@ function toggleCol(colToExpand)
 						"</tr>" + 
 						"<tr id='statsBodyRow'>" + 
 							"<td id='statsBodyCol'>" + 
-								"<table id='innerStatsBody'></table>" + 
+								"<table id='innerStatsBody' style='table-layout: fixed;'></table>" + 
 							"</td>" + 
 						"</tr>" + 
 					"</table></tr></td>");
@@ -1447,8 +1447,8 @@ function toggleCol(colToExpand)
 		
 		fieldRow.append("td").html("<b>User</b>");
 		fieldRow.append("td").html("<b>Session</b>");
-		fieldRow.append("td").html("<b>Total Time</b>");
-		fieldRow.append("td").html("<b>Active Time</b>");
+		fieldRow.append("td").html("<b>Total Time (ms)</b>");
+		fieldRow.append("td").html("<b>Active Time (m)</b>");
 		fieldRow.append("td").html("<b>Environment</b>");
 		metricList.forEach (function(value)
 		{
@@ -1473,9 +1473,9 @@ function toggleCol(colToExpand)
 				var curRow = statsTable.append("tr");
 				
 				curRow.append("td").html(user);
-				curRow.append("td").html(sessionName);
+				curRow.append("td").html(sessionName).style("word-break", "break-all");
 				
-				curRow.append("td").html(Math.round(theNormData[user][sessionName]["Index MS Session Max"] / 60000));
+				curRow.append("td").html(Math.round(theNormData[user][sessionName]["Index MS Session Max"]));
 				if(theNormData[user][sessionName]["activetime"])
 				{
 					curRow.append("td").html(theNormData[user][sessionName]["activetime"][0]["ActiveTime"]);
@@ -1485,23 +1485,23 @@ function toggleCol(colToExpand)
 					curRow.append("td").html("0");
 				}
 				
-				//if(theNormData[user][sessionName]["environment"])
-				//{
-				//	curRow.append("td").html(theNormData[user][sessionName]["environment"][0]["Environment"]);
-				//}
-				//else
-				//{
-				//	curRow.append("td").html("");
-				//}
-				
 				if(theNormData[user][sessionName]["environment"])
 				{
-					curRow.append("td").html("<textarea readonly style=\"width: 100%; height: 100%;\">" + theNormData[user][sessionName]["environment"][0]["Environment"] + "</textarea>");
+					curRow.append("td").style("height", "5em").style("word-break", "break-all").append("div").style("overflow-y", "scroll").html(theNormData[user][sessionName]["environment"][0]["Environment"]).style("word-break", "break-all").style("height", "100%");
 				}
 				else
 				{
 					curRow.append("td").html("");
 				}
+				
+				//if(theNormData[user][sessionName]["environment"])
+				//{
+				//	curRow.append("td").html("<textarea readonly style=\"width: 100%; height: 100%;\">" + theNormData[user][sessionName]["environment"][0]["Environment"] + "</textarea>");
+				//}
+				//else
+				//{
+				//	curRow.append("td").html("");
+				//}
 				
 				
 				//var envLines = theNormData[user][sessionName]["environment"][0]["Environment"].split(/\n/);
