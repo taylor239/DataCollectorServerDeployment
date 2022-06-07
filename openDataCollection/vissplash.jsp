@@ -315,23 +315,49 @@ function toggleCol(colToExpand)
 
 <script>
 
-	function roundTo(n, digits) {
-    var negative = false;
-    if (digits === undefined) {
-        digits = 0;
-    }
-    if (n < 0) {
-        negative = true;
-        n = n * -1;
-    }
-    var multiplicator = Math.pow(10, digits);
-    n = parseFloat((n * multiplicator).toFixed(11));
-    n = (Math.round(n) / multiplicator).toFixed(digits);
-    if (negative) {
-        n = (n * -1).toFixed(digits);
-    }
-    return n;
+function deepEqual(a,b)
+{
+  if( (typeof a == 'object' && a != null) &&
+      (typeof b == 'object' && b != null) )
+  {
+     var count = [0,0];
+     for( var key in a) count[0]++;
+     for( var key in b) count[1]++;
+     if( count[0]-count[1] != 0) {return false;}
+     for( var key in a)
+     {
+       if(!(key in b) || !deepEqual(a[key],b[key])) {return false;}
+     }
+     for( var key in b)
+     {
+       if(!(key in a) || !deepEqual(b[key],a[key])) {return false;}
+     }
+     return true;
+  }
+  else
+  {
+     return a === b;
+  }
 }
+
+	function roundTo(n, digits)
+	{
+	    var negative = false;
+	    if (digits === undefined) {
+	        digits = 0;
+	    }
+	    if (n < 0) {
+	        negative = true;
+	        n = n * -1;
+	    }
+	    var multiplicator = Math.pow(10, digits);
+	    n = parseFloat((n * multiplicator).toFixed(11));
+	    n = (Math.round(n) / multiplicator).toFixed(digits);
+	    if (negative) {
+	        n = (n * -1).toFixed(digits);
+	    }
+	    return n;
+	}
 
 	var visWidth = window.innerWidth;
 	var visHeight = window.innerHeight;
@@ -1042,7 +1068,7 @@ function toggleCol(colToExpand)
 	
 	var searchTerms = [];
 	
-	async function downloadData()
+	async function downloadData(sessionsToQuery)
 	{
 		d3.select("body").style("cursor", "wait");
 		
@@ -1059,7 +1085,7 @@ function toggleCol(colToExpand)
 				searchTerms = data;
 			});
 			
-			processParameters();
+			//processParameters();
 			var userSessionFilter = "";
 			
 			if(usersToQuery && usersToQuery.length > 0)
@@ -1093,35 +1119,48 @@ function toggleCol(colToExpand)
 			}
 			
 			
+			var theNormDataInit = {};
+			if(await hasData("indexdata_" + eventName))
+			{
+				theNormDataInit = ((await retrieveData("indexdata_" + eventName)).value);
+				console.log(theNormDataInit);
+			}
+			
 			d3.json("logExport.json?event=" + eventName + "&datasources=windows,events,environment,processsummary,metrics&normalize=none" + userSessionFilter, async function(error, data)
 				{
+					//This iterates through everything to search for sessions
+					//which need updating.  If we pass username with the session
+					//then we can more optimally update just the sessions we need
+					//to update rather than search through all known sessions.
+					//But this takes work and the O(n) runtime here is OK.
+					if(theNormDataInit && sessionsToQuery)
+					{
+						for(user in data)
+						{
+							for(session in data[user])
+							{
+								if(sessionsToQuery.includes(session))
+								{
+									theNormDataInit[user][session] = data[user][session];
+								}
+							}
+						}
+						data = theNormDataInit;
+					}
 					try
 					{
 						var isDone = false;
 						while(!isDone)
 						{
-							isDone = await persistDataAndWait("indexdata", data);
+							isDone = await persistDataAndWait("indexdata_" + eventName, data);
 						}
 					}
 					catch(err)
 					{
 						console.log(err);
 					}
+					
 					theNormData = await preprocess(data);
-					/*
-					try
-					{
-						var isDone = false;
-						while(!isDone)
-						{
-							isDone = await persistDataAndWait("data", theNormData);
-						}
-					}
-					catch(err)
-					{
-						console.log(err);
-					}
-					*/
 					theNormDataDone = true;
 					
 					d3.select("#title")
@@ -1734,7 +1773,157 @@ function toggleCol(colToExpand)
 		}
 	}
 	
-	downloadData();
+	async function needsUpdate()
+	{
+		await persistDataAndWait("indexdata", "true");
+		while(!(await hasData("indexdata")))
+		{
+			await persistDataAndWait("indexdata", "true");
+			await retrieveData("indexdata");
+			console.log("Waiting on persist");
+		}
+		
+		d3.json("getTags.json?event=" + eventName, async function(error, data)
+		{
+			searchTerms = data;
+		});
+		
+		processParameters();
+		var userSessionFilter = "";
+		
+		if(usersToQuery && usersToQuery.length > 0)
+		{
+			var first = true;
+			userSessionFilter += "&users=";
+			for(userEntry in usersToQuery)
+			{
+				if(!first)
+				{
+					userSessionFilter += ",";
+				}
+				userSessionFilter += usersToQuery[userEntry];
+				first = false;
+			}
+		}
+		
+		if(sessionsToQuery && sessionsToQuery.length > 0)
+		{
+			var first = true;
+			userSessionFilter += "&sessions=";
+			for(sessionEntry in sessionsToQuery)
+			{
+				if(!first)
+				{
+					userSessionFilter += ",";
+				}
+				userSessionFilter += sessionsToQuery[sessionEntry];
+				first = false;
+			}
+		}
+		 
+		
+		//console.log(await hasData("indexdata_" + eventName));
+		var theNormDataInit = {};
+		if(await hasData("indexdata_" + eventName))
+		{
+			theNormDataInit = ((await retrieveData("indexdata_" + eventName)).value);
+			console.log(theNormDataInit);
+		}
+		else
+		{
+			console.log("No prev data");
+			downloadData(sessionsToQuery);
+			return;
+		}
+		
+		if(!theNormDataInit)
+		{
+			console.log("No prev data");
+			downloadData(sessionsToQuery);
+			return;
+		}
+		
+		d3.json("logExport.json?event=" + eventName + "&datasources=environment&normalize=none" + userSessionFilter, async function(error, data)
+		{
+			try
+			{
+				sessionsToQuery = [];
+				//isDone = await persistDataAndWait("indexdata", data);
+				for(user in data)
+				{
+					//console.log("Checking user: " + user);
+					for(session in data[user])
+					{
+						//console.log("\tChecking session: " + session);
+						if(user in theNormDataInit && session in theNormDataInit[user])
+						{
+							for(dataType in data[user][session])
+							{
+								//console.log("\t\tChecking data type: " + dataType);
+								if(data[user][session][dataType].length == 2)
+								{
+									//console.log("\t\tType is bound");
+									if(deepEqual(data[user][session][dataType], theNormDataInit[user][session][dataType]))
+									{
+										
+									}
+									else
+									{
+										console.log("Checking user: " + user);
+										console.log("\tChecking session: " + session);
+										console.log("\t\tChecking data type: " + dataType);
+										sessionsToQuery.push(session);
+									}
+								}
+							}
+						}
+						else
+						{
+							sessionsToQuery.push(session);
+							console.log("\tMissing.");
+						}
+					}
+				}
+				if(sessionsToQuery.length > 0)
+				{
+					downloadData(sessionsToQuery);
+				}
+				else
+				{
+					theNormData = await preprocess(theNormDataInit);
+					theNormDataDone = true;
+					
+					
+					
+					d3.select("body").style("cursor", "");
+					buildTable();
+				}
+			}
+			catch(err)
+			{
+				console.log(err);
+			}
+			
+			d3.select("#title")
+				.html(origTitle + "<br />Bound data: <b>" + downloadedSize + "</b> bytes downloaded.")
+			
+			
+			d3.select("body").style("cursor", "");
+			
+		})
+		.on("progress", function(d, i)
+				{
+					downloadedSize = d["loaded"];
+					d3.select("#title")
+							.html(origTitle + "<br />Bound Size: <b>" + d["loaded"] + "</b> bytes")
+					//console.log(d);
+				});
+		
+		
+	}
+	
+	
+	needsUpdate();
 
 </script>
 </html>

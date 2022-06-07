@@ -4362,6 +4362,19 @@ if(request.getParameter("email") != null)
 		var baseURL = "vissplash.jsp?event=" + eventName + "&eventAdmin=" + eventAdmin;
 		window.location.replace(baseURL);
 	}
+	
+	async function initPersist()
+	{
+		await persistDataAndWait("indexdata", "true");
+		while(!(await hasData("indexdata")))
+		{
+			await persistDataAndWait("indexdata", "true");
+			await retrieveData("indexdata");
+			console.log("Waiting on persist");
+		}
+	}
+	
+	initPersist();
 
 </script>
 <script src="./timeline.js" onload="main()"></script>
