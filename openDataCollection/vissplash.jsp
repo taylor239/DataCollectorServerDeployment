@@ -385,6 +385,12 @@ function deepEqual(a,b)
 			aggregateSession = {}
 			listsToAdd = {}
 			newSession = {}
+			
+			if(dataToModify[user]["Aggregated"])
+			{
+				delete dataToModify[user]["Aggregated"];
+			}
+			
 			for(session in dataToModify[user])
 			{
 				if(Object.keys(dataToModify[user][session]).length < 3)
@@ -1123,26 +1129,29 @@ function deepEqual(a,b)
 			if(await hasData("indexdata_" + eventName))
 			{
 				theNormDataInit = ((await retrieveData("indexdata_" + eventName)).value);
-				console.log(theNormDataInit);
+				
 			}
 			
 			d3.json("logExport.json?event=" + eventName + "&datasources=windows,events,environment,processsummary,metrics&normalize=none" + userSessionFilter, async function(error, data)
 				{
-					//This iterates through everything to search for sessions
-					//which need updating.  If we pass username with the session
-					//then we can more optimally update just the sessions we need
-					//to update rather than search through all known sessions.
-					//But this takes work and the O(n) runtime here is OK.
-					if(theNormDataInit && theNormDataInit.length > 0 && sessionsToQuery)
+					
+					if(theNormDataInit && Object.keys(theNormDataInit).length > 0)
 					{
 						for(user in data)
 						{
+							if(theNormDataInit[user]["Aggregated"])
+							{
+								delete theNormDataInit[user]["Aggregated"];
+							}
 							for(session in data[user])
 							{
-								if(sessionsToQuery.includes(session))
-								{
+								//console.log("Adding session: " + user + ":" + session);
+								//console.log(data[user][session]);
+								//if(sessionsToQuery.includes(session))
+								//{
 									theNormDataInit[user][session] = data[user][session];
-								}
+								//}
+								//console.log(theNormDataInit[user][session]);
 							}
 						}
 						data = theNormDataInit;
@@ -1160,7 +1169,9 @@ function deepEqual(a,b)
 						console.log(err);
 					}
 					
-					theNormData = await preprocess(data);
+					
+					
+					theNormData = await (preprocess(data));
 					theNormDataDone = true;
 					
 					d3.select("#title")
@@ -1205,9 +1216,16 @@ function deepEqual(a,b)
 				newCell.innerHTML = sessionName;
 				
 				newCell = newRow.insertCell();
-				if(sessionName != "Aggregated" && theNormData[user][sessionName]["activetime"])
+				if(sessionName != "Aggregated")
 				{
-					newCell.innerHTML = Math.round(theNormData[user][sessionName]["Index MS Session Max"] / 60000) + "<br /><b>" + theNormData[user][sessionName]["activetime"][0]["ActiveTime"] + "</b>";
+					if(theNormData[user][sessionName]["activetime"])
+					{
+						newCell.innerHTML = Math.round(theNormData[user][sessionName]["Index MS Session Max"] / 60000) + "<br /><b>" + theNormData[user][sessionName]["activetime"][0]["ActiveTime"] + "</b>";
+					}
+					else
+					{
+						newCell.innerHTML = Math.round(theNormData[user][sessionName]["Index MS Session Max"] / 60000) + "<br /><b>" + "0" + "</b>";
+					}
 				}
 				else
 				{
@@ -1827,7 +1845,7 @@ function deepEqual(a,b)
 		if(await hasData("indexdata_" + eventName))
 		{
 			theNormDataInit = ((await retrieveData("indexdata_" + eventName)).value);
-			console.log(theNormDataInit);
+			
 		}
 		else
 		{
@@ -1863,7 +1881,12 @@ function deepEqual(a,b)
 								if(data[user][session][dataType].length == 2)
 								{
 									//console.log("\t\tType is bound");
-									if(deepEqual(data[user][session][dataType], theNormDataInit[user][session][dataType]))
+									//console.log(data[user][session][dataType]);
+									//console.log(theNormDataInit[user][session][dataType]);
+									if(theNormDataInit[user][session][dataType] && data[user][session][dataType]
+										&& data[user][session][dataType][0] && data[user][session][dataType][1] && theNormDataInit[user][session][dataType][0] && theNormDataInit[user][session][dataType][1]
+										&& data[user][session][dataType][0]["Index MS"] == theNormDataInit[user][session][dataType][0]["Index MS"]
+										&& data[user][session][dataType][1]["Index MS"] == theNormDataInit[user][session][dataType][1]["Index MS"])
 									{
 										
 									}
@@ -1905,7 +1928,7 @@ function deepEqual(a,b)
 			}
 			
 			d3.select("#title")
-				.html(origTitle + "<br />Bound data: <b>" + downloadedSize + "</b> bytes downloaded.")
+				.html(origTitle + "<br />Bound data: <b>" + downloadedSize + "</b> bytes downloaded.  All sessions are up to date.")
 			
 			
 			d3.select("body").style("cursor", "");
@@ -1915,7 +1938,7 @@ function deepEqual(a,b)
 				{
 					downloadedSize = d["loaded"];
 					d3.select("#title")
-							.html(origTitle + "<br />Bound Size: <b>" + d["loaded"] + "</b> bytes")
+							.html(origTitle + "<br />Checking cached sessions with bound data. Bound Size: <b>" + d["loaded"] + "</b> bytes")
 					//console.log(d);
 				});
 		

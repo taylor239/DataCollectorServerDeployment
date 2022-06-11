@@ -3297,6 +3297,11 @@ if(request.getParameter("email") != null)
 				.style("max-width", visWidthParent + "px")
 				.style("overflow-x", "auto");
 		
+		axisRow = axisRow.append("div")
+		.attr("width", visWidthParent)
+		.style("max-width", visWidthParent + "px")
+		.style("overflow-x", "auto");
+		
 		var addTaskAxisSVG = axisRow.append("svg")
 				.attr("class", "clickableBar")
 				.attr("width", visWidth + "px")
