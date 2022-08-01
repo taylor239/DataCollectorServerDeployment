@@ -949,7 +949,8 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			
 			curScreenshot.attr("href", "data:image/jpg;base64," + (await curFrame["Screenshot"]()));
 			
-			textHeight = curScreenshot.attr("width") / 50;
+			//textHeight = curScreenshot.attr("width") / 50;
+			textHeight = divBounds["height"] / 50;
 			
 			startY = (divBounds["height"] * .8);
 			
@@ -971,11 +972,14 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				
 			}
 			lastScreenshot = curScreenshot;
-			for(toRemove in garbageToRemove)
+			if(curFrame["Type"] == "key")
 			{
-				if(curFrame["Index MS Session"] - garbageToRemove[toRemove]["Index MS Session"] > 10000)
+				for(toRemove in garbageToRemove)
 				{
-					garbageToRemove[toRemove].remove();
+					if(curFrame["Index MS Session"] - garbageToRemove[toRemove]["Index MS Session"] > 10000)
+					{
+						garbageToRemove[toRemove].remove();
+					}
 				}
 			}
 		
@@ -987,6 +991,10 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	var updateProcAni = false;
 	
 	
+	var curKeyRatioX = 1;
+	var curKeyRatioY = 1;
+	var frameWidth = 0;
+	var frameHeight = 0;
 	currentDisplayString = "";
 	//Main animation loop, this gets the next frame and processes it
 	async function runAnimationWrapped()
@@ -1056,9 +1064,23 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			
 			//lastImg.src = "data:image/jpg;base64," + (await curFrame["Screenshot"]());
 			lastImg = await loadImage(curFrame);
-
+			
 			var xRatio = divBounds["width"] / lastImg["naturalWidth"];
 			var yRatio = (divBounds["height"] * .8) / lastImg["naturalHeight"];
+			
+			if(curFrame["Type"] == "key")
+			{
+				frameWidth = lastImg["naturalWidth"];
+				frameHeight = lastImg["naturalHeight"]
+				curKeyRatioX = xRatio;
+				curKeyRatioY = yRatio;
+			}
+			else
+			{
+				xRatio = curKeyRatioX;
+				yRatio = curKeyRatioY;
+			}
+			
 			var finalRatio = xRatio;
 			if(xRatio > yRatio)
 			{
@@ -1066,10 +1088,15 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			}
 			
 			var finalWidth = finalRatio * lastImg["width"];
-			var finalX = (divBounds["width"] - finalWidth) / 2;
+			
+			var finalFrameWidth = finalRatio * frameWidth;
+			var finalOffset = (Number(curFrame["X"]) / frameWidth) * finalFrameWidth;
+			
+			var finalX = ((divBounds["width"] - (finalFrameWidth)) / 2) + finalOffset;
 			
 			curScreenshot.attr("width", finalWidth)
 						.attr("x", finalX)
+						.attr("y", finalRatio * Number(curFrame["Y"]))
 						.attr("onload", function()
 								{
 									
@@ -1078,7 +1105,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 			
 			curScreenshot.attr("href", "data:image/jpg;base64," + (await curFrame["Screenshot"]()));
 			
-			textHeight = curScreenshot.attr("width") / 50;
+			textHeight = divBounds["height"] / 50;//curScreenshot.attr("width") / 50;
 			
 			//startY = finalRatio * lastImg["height"];
 			var startYOld = startY;
@@ -1108,11 +1135,14 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				//lastScreenshot.remove();
 			}
 			lastScreenshot = curScreenshot;
-			for(toRemove in garbageToRemove)
+			if(curFrame["Type"] == "key")
 			{
-				//if(curFrame["Index MS Session"] - garbageToRemove[toRemove]["Index MS Session"] > 10000)
+				for(toRemove in garbageToRemove)
 				{
-					garbageToRemove[toRemove].remove();
+					//if(curFrame["Index MS Session"] - garbageToRemove[toRemove]["Index MS Session"] > 10000)
+					{
+						garbageToRemove[toRemove].remove();
+					}
 				}
 			}
 		}
@@ -1746,10 +1776,21 @@ async function playAnimation(owningUser, owningSession, seekTo)
 				curTop = {};
 				updateProcAni = true;
 				var curDiff = Infinity;
+				var screenshotFrameStack = [];
 				if(screenshots && screenshots.length > 0)
 				{
 					screenshotIndex = closestIndexMSBinarySession(screenshots, selectTime);
 					var curScreenshot = screenshots[screenshotIndex];
+					while(curScreenshot["Type"] != "key")
+					{
+						if(screenshotIndex <= 0)
+						{
+							break;
+						}
+						screenshotFrameStack.push(curScreenshot);
+						screenshotIndex--;
+						curScreenshot = screenshots[screenshotIndex];
+					}
 				}
 				if(keystrokes && keystrokes.length > 0)
 				{
@@ -1852,7 +1893,7 @@ async function playAnimation(owningUser, owningSession, seekTo)
 					}
 				}
 				
-				while(screenshots && screenshotIndex < screenshots.length && Number(screenshots[screenshotIndex]["Index MS Session"]) < Number(selectedEntry["Index MS Session"]))
+				while(screenshots && screenshotIndex < screenshots.length && Number(screenshots[screenshotIndex]["Index MS Session"]) < Number(selectedEntry["Index MS Session"]) && screenshots[screenshotIndex]["Type"] != "key")
 				{
 					screenshotIndex++;
 				}

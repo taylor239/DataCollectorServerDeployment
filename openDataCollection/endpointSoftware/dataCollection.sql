@@ -217,6 +217,10 @@ CREATE TABLE `Screenshot` (
   `session` varchar(50) NOT NULL,
   `taken` timestamp(3) NOT NULL DEFAULT (utc_timestamp(3)),
   `screenshot` longblob NOT NULL,
+   `frameType` varchar(5) NOT NULL DEFAULT 'key',
+   `encoding` varchar(5) NOT NULL DEFAULT 'jpg',
+   `xStart` int NOT NULL DEFAULT 0,
+   `yStart` int NOT NULL DEFAULT 0,
   `insertTimestamp` timestamp(3) NOT NULL DEFAULT (utc_timestamp(3))
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
