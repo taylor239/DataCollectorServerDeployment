@@ -62,6 +62,17 @@ if(request.getParameter("email") != null)
 		}
 	}
 }
+
+String domainURL = ProxyDomainInfo.getProxiedDomain();
+String applicationURL = ProxyDomainInfo.getApplicationPath();
+if(domainURL.equals(""))
+{
+	domainURL = request.getServerName();
+}
+if(applicationURL.equals(""))
+{
+	applicationURL = "/DataCollectorServerDeployment";
+}
 %>
 <body>
 <div align="center">
@@ -255,6 +266,201 @@ If your event is public, this will automatically approve all token requests.
 </tr>
 <tr>
 <td>
+<h4>Autorestart?</h4>
+</td>
+</tr>
+<tr>
+<td>
+<p>
+When subjects install the endpoint monitor, this will automatically restart their devices.
+</p>
+<input type="checkbox" id="autorestart" name="autorestart" value="autorestart" form="createform">
+</td>
+</tr>
+<tr>
+<td>
+<h4>Collect Metrics?</h4>
+</td>
+</tr>
+<tr>
+<td>
+<p>
+This option causes the endpoint monitor (on new installs) to collect metrics in order to identify bottlenecks in the data collection software.
+</p>
+<input type="checkbox" id="collectmetrics" name="collectmetrics" value="collectmetrics" form="createform">
+</td>
+</tr>
+<tr>
+<td>
+<h4>Polling Intervals</h4>
+</td>
+</tr>
+<tr>
+<td>
+<p>
+These options change the polling intervals for screenshots and process data.
+The shorter the interval, the more data gets collected and the higher the
+resource use.  Specifically, the screenshot interval is the period the endpoint
+monitor waits between the completion of one screenshot record and the start of
+the next screenshot record.  Window data gets polled with screenshots as well;
+both of these data sources also get captured upon input from the keyboard or
+mouse.  Likewise, process data polling collects a complete snapshot of running
+system processes (and, potentially, threads) with the listed interval between
+each poll.  Polls are in microseconds and are multiplied for lower performance
+devices such as RPIs.
+</p>
+<table width="100%">
+	<tr>
+	<td width="50%">
+	Screenshot Interval
+	</td>
+	<td width="50%">
+	Process Interval
+	</td>
+	</tr>
+	<tr>
+	<td>
+	<input type="text" value="100" id="screenshotinterval" name="screenshotinterval" form="createform">
+	</td>
+	<td>
+	<input type="text" value="10000" id="processinterval" name="processinterval" form="createform">
+	</td>
+	</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<h4>Process Granularity</h4>
+</td>
+</tr>
+<tr>
+<td>
+<p>
+The endpoint monitor process information may be either limited to just the process or include thread level granularity.
+</p>
+<select name="processgranularity" id="processgranularity" form="createform">
+	<option value="process">process</option>
+	<option value="thread">thread</option>
+</select>
+</td>
+</tr>
+<tr>
+<td>
+<h4>Image Compression</h4>
+</td>
+</tr>
+<tr>
+<td>
+<p>
+This option selects the type of image compression subjects will use.  This option, if
+changed, will only apply to future installs and will not alter the compression for
+devices with the software installed already.  Images are compressed according to a
+<i>diff algorithm</i> and an <i>image compression algorithm</i>.
+</p>
+<br />
+<p>
+The <i>diff
+algorithm</i> can be set to store either a full-frame, pixel by pixel difference
+between a frame and its previous frame with the "diff" option; store the smallest
+possible rectangular portion of the screenshot encompassing differences between a frame
+and the previous frame with the "boundrect" option; or skip diff compression altogether
+by selecting "none".  Both diff algorithms support image reconstruction and do not
+inherently cause lossiness, though the <i>image compression algorithm</i> lossiness
+level may be influenced by the diff algorithm selected.  The two diff algorithm options
+result in less data required for storage and transfer for the visualization or download.
+They also have differing performance impacts on the endpoint monitor, including
+possibly decreasing frame rate or increasing CPU use, depending on the particular
+device running the software.  Key frames (full frames) periodically taken prevent data
+corruption in the event of glitches/bugs or accumulating lossiness due to the
+<i>image compression algorithm</i> used.
+</p>
+<br />
+<p>
+The <i>image compression algorithm</i> compresses individual frames (or frame portions)
+in order to reduce storage requirements.  The algorithm supports whichever compression
+algorithms are available in the Java distribution installed, which typically offers
+"png" and "jpg" algorithms - these are the only options offered here for simplicity.  For full frame diff, an alpha (transparency) layer must
+be supported in the compression algorithm, so jpg will not work; png is the safest
+option to use with this particular diff algorithm.  In addition to a compression type,
+a compression level enables greater compression at the cost of lossiness in the data -
+ie., screenshots will not be perfect copies of the source data from subjects' devices
+if lossy compression levels/algorithms are used.  Compression levels range from a max
+of 0 (lossless for png formats) to a minimum of 1.
+</p>
+	<table width="100%">
+		<tr>
+			<td width="33.333%">
+			Diff Compression Type
+			</td>
+			<td width="33.333%">
+			Image Compression Type
+			</td>
+			<td width="33.333%">
+			Image Compression Amount
+			</td>
+		</tr>
+		<tr>
+			<td>
+			<select name="diffcomp" id="diffcomp" form="createform">
+				<option value="diff">diff</option>
+				<option value="boundrect">boundrect</option>
+				<option value="">none</option>
+			</select>
+			</td>
+			<td>
+			<select name="imagecomp" id="imagecomp" form="createform">
+				<option id="pngselect" value="png">png</option>
+				<option id="jpgselect" value="jpg" disabled>jpg</option>
+			</select>
+			</td>
+			<td>
+				<table>
+				<tr>
+				<td>
+				<input type="range" min="0" max="100" value="0" id="comprange">
+				</td>
+				<td>
+				<input type="text" size="3" id="compamount" name="compamount" form="createform" value="0">
+				</td>
+				</tr>
+				</table>
+				<script>
+					var compSlider = document.getElementById("comprange");
+					var compForm = document.getElementById("compamount");
+					compForm.value = compSlider.value;
+					compSlider.oninput = function()
+					{
+						compForm.value = Number(this.value) / 100;
+					}
+					
+					var diffSelect = document.getElementById("diffcomp");
+					var imageSelect = document.getElementById("imagecomp");
+					diffSelect.onchange = function()
+					{
+						var curComp = this.value;
+						if(curComp == "diff")
+						{
+							document.getElementById("jpgselect").setAttribute("disabled", "");
+							if(imageSelect.value == "jpg")
+							{
+								imageSelect.value = "png";
+							}
+						}
+						else
+						{
+							document.getElementById("jpgselect").removeAttribute("disabled");
+						}
+					}
+					
+				</script>
+			</td>
+		</tr>
+	</table>
+</td>
+</tr>
+<tr>
+<td>
 <h4>Tokens</h4>
 </td>
 </tr>
@@ -293,7 +499,7 @@ Contact Info
 <p>
 This is the address participants' data collection will upload to.  The default value is to this server.  If you deploy this server elsewhere or want to run a custom server to receive the data, change this value, otherwise leave it as the default and the data will be available on this server.
 </p>
-<input type="text" id="eventserver" name="eventserver" form="createform" value="ws://revenge.cs.arizona.edu/DataCollectorServer/UploadData">
+<input type="text" id="eventserver" name="eventserver" form="createform" value="ws://<%=domainURL %><%=applicationURL %>/UploadData">
 </td>
 </tr>
 <tr>

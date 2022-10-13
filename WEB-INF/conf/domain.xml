@@ -1,0 +1,5 @@
+<domain id="proxy">
+	<port>80</port>
+	<address>revenge2.cs.arizona.edu</address>
+	<application>/DataCollectorServer</application>
+</domain>

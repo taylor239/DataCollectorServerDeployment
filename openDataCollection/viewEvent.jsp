@@ -73,6 +73,16 @@ String contactName = request.getParameter("contactname");
 String contactContact = request.getParameter("contactcontact");
 String contactNameRemove = request.getParameter("contactnameremove");
 
+boolean newAutorestartEvent = request.getParameter("autorestart") != null && request.getParameter("autorestart").equals("autorestart");
+String newDiffType = request.getParameter("diffcomp");
+String newImageType = request.getParameter("imagecomp");
+String newImageAmount = request.getParameter("compamount");
+
+boolean newMetrics = request.getParameter("collectmetrics") != null && request.getParameter("collectmetrics").equals("collectmetrics");
+String newGranularity = request.getParameter("processgranularity");
+String newScreenshotInterval = request.getParameter("screenshotinterval");
+String newProcessInterval = request.getParameter("processinterval");
+
 
 String taggerQuery = "SELECT * FROM `EventPassword` WHERE `event` = ? AND `adminEmail` = ? ORDER BY `password` ASC";
 
@@ -219,7 +229,11 @@ if(removeTokens != null && !removeTokens.equals(""))
 boolean deleteData = request.getParameter("deletedata") != null && request.getParameter("deletedata").equals("deletedata");
 
 
-String insertEvent = "INSERT INTO `Event`(`event`, `start`, `end`, `description`, `continuous`, `taskgui`, `password`, `adminEmail`, `public`, `publicEvent`, `dynamicTokens`) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE `event` = VALUES(`event`), `start` = VALUES(`start`), `end` = VALUES(`end`), `description` = VALUES(`description`), `continuous` = VALUES(`continuous`), `taskgui` = VALUES(`taskgui`), `password` = VALUES(`password`), `adminEmail` = VALUES(`adminEmail`), `public` = VALUES(`public`), `publicEvent` = VALUES(`publicEvent`), `dynamicTokens` = VALUES(`dynamicTokens`)";
+String insertEvent = "INSERT INTO `Event`"
++"(`event`, `start`, `end`, `description`, `continuous`, `taskgui`, `password`, `adminEmail`, `public`, `publicEvent`, `dynamicTokens`, `autorestart`, `diffType`, `compType`, `compAmount`, `metrics`, `processGranularity`, `screenshotInterval`, `processInterval`) "
++"VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
++"ON DUPLICATE KEY UPDATE "
++"`event` = VALUES(`event`), `start` = VALUES(`start`), `end` = VALUES(`end`), `description` = VALUES(`description`), `continuous` = VALUES(`continuous`), `taskgui` = VALUES(`taskgui`), `password` = VALUES(`password`), `adminEmail` = VALUES(`adminEmail`), `public` = VALUES(`public`), `publicEvent` = VALUES(`publicEvent`), `dynamicTokens` = VALUES(`dynamicTokens`), `autorestart` = VALUES(`autorestart`), `diffType` = VALUES(`diffType`), `compType` = VALUES(`compType`), `compAmount` = VALUES(`compAmount`), `metrics` = VALUES(`metrics`), `processGranularity` = VALUES(`processGranularity`), `screenshotInterval` = VALUES(`screenshotInterval`), `processInterval` = VALUES(`processInterval`)";
 if(newEventName != null && !newEventName.equals("") && newDescription != null && !newDescription.equals(""))
 {
 try
@@ -236,11 +250,24 @@ try
 	insertStmt.setBoolean(9, newPublic);
 	insertStmt.setBoolean(10, newPublicEvent);
 	insertStmt.setBoolean(11, newAutoapproveEvent);
+	insertStmt.setBoolean(12, newAutorestartEvent);
+	insertStmt.setString(13, newDiffType);
+	insertStmt.setString(14, newImageType);
+	insertStmt.setString(15, newImageAmount);
+	insertStmt.setBoolean(16, newMetrics);
+	insertStmt.setString(17, newGranularity);
+	insertStmt.setString(18, newScreenshotInterval);
+	insertStmt.setString(19, newProcessInterval);
 	insertStmt.execute();
 	insertStmt.close();
 }
 catch(Exception e)
 {
+	%>
+	<script>
+	console.log("Got an event error, check server log for details");
+	</script>
+	<%
 	e.printStackTrace();
 }
 }
@@ -261,6 +288,11 @@ try
 }
 catch(Exception e)
 {
+	%>
+	<script>
+	console.log("Got a contact error, check server log for details");
+	</script>
+	<%
 	e.printStackTrace();
 }
 }
@@ -293,6 +325,11 @@ try
 }
 catch(Exception e)
 {
+	%>
+	<script>
+	console.log("Got a contact delete error, check server log for details");
+	</script>
+	<%
 	e.printStackTrace();
 }
 }
@@ -326,6 +363,11 @@ try
 }
 catch(Exception e)
 {
+	%>
+	<script>
+	console.log("Got a token add error, check server log for details");
+	</script>
+	<%
 	e.printStackTrace();
 }
 }
@@ -360,6 +402,11 @@ try
 }
 catch(Exception e)
 {
+	%>
+	<script>
+	console.log("Got a token remove error, check server log for details");
+	</script>
+	<%
 	e.printStackTrace();
 }
 }
@@ -389,6 +436,17 @@ boolean publicEvent = false;
 boolean publicPublic = false;
 boolean autoapproveEvent = false;
 boolean autoapprove = false;
+
+boolean autorestart = false;
+String diffType = "";
+String compType = "";
+String compAmount = "";
+
+boolean metrics = false;
+String processGranularity = "";
+String screenshotInterval = "";
+String processInterval = "";
+
 try
 {
 	PreparedStatement selectStatement = dbConn.prepareStatement(selectTotalEvent);
@@ -410,10 +468,25 @@ try
 		publicEvent = myResults.getInt("publicEvent") == 1;
 		publicPublic = myResults.getInt("public") == 1;
 		autoapproveEvent = myResults.getInt("dynamicTokens") == 1;
+		
+		autorestart = myResults.getInt("autorestart") == 1;
+		diffType = myResults.getString("diffType");
+		compType = myResults.getString("compType");
+		compAmount = myResults.getString("compAmount");
+		
+		metrics = myResults.getInt("metrics") == 1;
+		processGranularity = myResults.getString("processGranularity");
+		screenshotInterval = myResults.getString("screenshotInterval");
+		processInterval = myResults.getString("processInterval");
 	}
 }
 catch(Exception e)
 {
+	%>
+	<script>
+	console.log("Got an event read error, check server log for details");
+	</script>
+	<%
 	e.printStackTrace();
 }
 
@@ -540,7 +613,12 @@ catch(Exception e)
 	A zip version of the export which, additionally, has image files and relative paths to them in the json for screenshots if "screenshots" is specified.
 	</p>
 	<p>
-	Note that these links can be customized with parameters for various purposes.  "email" and "password" can be passed to log you in as you do the export, which is helpful for uses which do no manage a session.
+	Note that these links can be customized with parameters for various purposes.  "email" and "password" can be passed to log you in as you do the export, which is helpful for uses which do no manage a session.  <b>These links also serve the entirety of this event's data, which could cause the server to crash if the data size is too larget for the server's memory.</b>  The data may be segmented by using the following arguments:
+	<ul>
+		<li><b>first</b> and <b>count</b>, which select only <i>count</i> individual pieces of data, per data category selected, starting at index <i>first</i>.  The data is sorted according to time, so the entire event data can be reconstructed efficiently one frame at a time with this method.</li>
+		<li><b>users</b>, which specifies the user tokens (in a comma separated list) to export data for.</li>
+		<li><b>sessions</b>, which similarly only selects data from sessions in the supplied comma separated list.</li>
+	</ul>
 	Additionally, different parameters can be used to filter and limit the data set, allowing for smaller data size.  Those parameters are as follows:
 	</p>
 	<ul>
@@ -562,8 +640,9 @@ catch(Exception e)
 				<li><b>processes:</b> enabled in default link; contains background process information.</li>
 				<li><b>windows:</b> enabled in default link; contains active (foreground) window information.</li>
 				<li><b>events:</b> enabled in default link; contains task completion information.</li>
-				<li><b>screenshots:</b> disabled in default link; has base64 encoded screenshots.  <b>screenshotindices</b> can also be specified which includes the index data but not the actual encoded image.</li>
-				<li><b>video:</b> disabled in default link; builds a mkv formatted video from the screenshots for each session, encoded to base64 for json output.</li>
+				<li><b>screenshots:</b> disabled in default link; has base64 encoded screenshots or actual image files in .zip output.  <b>screenshotindices</b> can also be specified which includes the index data but not the actual encoded image.</li>
+				<li><b>compositedscreenshots:</b> same as screenshots, but will reconstruct complete frames from diff frames instead of serving those frames as raw diffs.</li>
+				<li><b>video:</b> disabled in default link; builds a mkv formatted video from the screenshots for each session, encoded to base64 for json output.  Currently broken and disabled.</li>
 			</ul>
 		</li>
 		<li>
@@ -705,6 +784,242 @@ catch(Exception e)
 	}
 	%>
 	<input type="checkbox" id="autoapproveevent" name="autoapproveevent" value="autoapproveevent" <%=autoapproveEventChecked %> form="createform">
+	</td>
+	</tr>
+	<tr>
+	<td>
+	<h4>Autorestart?</h4>
+	</td>
+	</tr>
+	<tr>
+	<td>
+	<p>
+	When subjects install the endpoint monitor, this will automatically restart their devices.
+	</p>
+	<%
+	String autorestartChecked = "";
+	if(autorestart)
+	{
+		autorestartChecked = "checked";
+	}
+	%>
+	<input type="checkbox" id="autorestart" name="autorestart" value="autorestart" <%=autorestartChecked %> form="createform">
+	</td>
+	</tr>
+	<tr>
+	<td>
+	<h4>Collect Metrics?</h4>
+	</td>
+	</tr>
+	<tr>
+	<td>
+	<p>
+	This option causes the endpoint monitor (on new installs) to collect metrics in order to identify bottlenecks in the data collection software.
+	</p>
+	<%
+	String metricsChecked = "";
+	if(metrics)
+	{
+		metricsChecked = "checked";
+	}
+	%>
+	<input type="checkbox" id="collectmetrics" name="collectmetrics" value="collectmetrics" <%=metricsChecked %> form="createform">
+	</td>
+	</tr>
+	<tr>
+	<td>
+	<h4>Polling Intervals</h4>
+	</td>
+	</tr>
+	<tr>
+	<td>
+	<p>
+	These options change the polling intervals for screenshots and process data.
+	The shorter the interval, the more data gets collected and the higher the
+	resource use.  Specifically, the screenshot interval is the period the endpoint
+	monitor waits between the completion of one screenshot record and the start of
+	the next screenshot record.  Window data gets polled with screenshots as well;
+	both of these data sources also get captured upon input from the keyboard or
+	mouse.  Likewise, process data polling collects a complete snapshot of running
+	system processes (and, potentially, threads) with the listed interval between
+	each poll.  Polls are in microseconds and are multiplied for lower performance
+	devices such as RPIs.
+	</p>
+	<table width="100%">
+		<tr>
+		<td width="50%">
+		Screenshot Interval
+		</td>
+		<td width="50%">
+		Process Interval
+		</td>
+		</tr>
+		<tr>
+		<td>
+		<input type="text" value="<%=screenshotInterval %>" id="screenshotinterval" name="screenshotinterval" form="createform">
+		</td>
+		<td>
+		<input type="text" value="<%=processInterval %>" id="processinterval" name="processinterval" form="createform">
+		</td>
+		</tr>
+	</table>
+	</td>
+	</tr>
+	<tr>
+	<td>
+	<h4>Process Granularity</h4>
+	</td>
+	</tr>
+	<tr>
+	<td>
+	<p>
+	The endpoint monitor process information may be either limited to just the process or include thread level granularity.
+	</p>
+	<select name="processgranularity" id="processgranularity" form="createform">
+		<option value="process">process</option>
+		<option value="thread">thread</option>
+	</select>
+	<script>
+	document.getElementById("processgranularity").value = "<%=processGranularity %>";
+	</script>
+	</td>
+	</tr>
+	<tr>
+	<td>
+	<h4>Image Compression</h4>
+	</td>
+	</tr>
+	<tr>
+	<td>
+	<p>
+	This option selects the type of image compression subjects will use.  This option, if
+	changed, will only apply to future installs and will not alter the compression for
+	devices with the software installed already.  Images are compressed according to a
+	<i>diff algorithm</i> and an <i>image compression algorithm</i>.
+	</p>
+	<br />
+	<p>
+	The <i>diff
+	algorithm</i> can be set to store either a full-frame, pixel by pixel difference
+	between a frame and its previous frame with the "diff" option; store the smallest
+	possible rectangular portion of the screenshot encompassing differences between a frame
+	and the previous frame with the "boundrect" option; or skip diff compression altogether
+	by selecting "none".  Both diff algorithms support image reconstruction and do not
+	inherently cause lossiness, though the <i>image compression algorithm</i> lossiness
+	level may be influenced by the diff algorithm selected.  The two diff algorithm options
+	result in less data required for storage and transfer for the visualization or download.
+	They also have differing performance impacts on the endpoint monitor, including
+	possibly decreasing frame rate or increasing CPU use, depending on the particular
+	device running the software.  Key frames (full frames) periodically taken prevent data
+	corruption in the event of glitches/bugs or accumulating lossiness due to the
+	<i>image compression algorithm</i> used.
+	</p>
+	<br />
+	<p>
+	The <i>image compression algorithm</i> compresses individual frames (or frame portions)
+	in order to reduce storage requirements.  The algorithm supports whichever compression
+	algorithms are available in the Java distribution installed, which typically offers
+	"png" and "jpg" algorithms - these are the only options offered here for simplicity.  For full frame diff, an alpha (transparency) layer must
+	be supported in the compression algorithm, so jpg will not work; png is the safest
+	option to use with this particular diff algorithm.  In addition to a compression type,
+	a compression level enables greater compression at the cost of lossiness in the data -
+	ie., screenshots will not be perfect copies of the source data from subjects' devices
+	if lossy compression levels/algorithms are used.  Compression levels range from a max
+	of 0 (lossless for png formats) to a minimum of 1.
+	</p>
+		<table width="100%">
+			<tr>
+				<td width="33.333%">
+				Diff Compression Type
+				</td>
+				<td width="33.333%">
+				Image Compression Type
+				</td>
+				<td width="33.333%">
+				Image Compression Amount
+				</td>
+			</tr>
+			<tr>
+				<td>
+				<select name="diffcomp" id="diffcomp" form="createform">
+					<option value="diff">diff</option>
+					<option value="boundrect">boundrect</option>
+					<option value="">none</option>
+				</select>
+				</td>
+				<td>
+				<select name="imagecomp" id="imagecomp" form="createform">
+					<option id="pngselect" value="png">png</option>
+					<option id="jpgselect" value="jpg" disabled>jpg</option>
+				</select>
+				</td>
+				<td>
+					<table>
+					<tr>
+					<td>
+					<input type="range" min="0" max="100" value="0" id="comprange">
+					</td>
+					<td>
+					<input type="text" size="3" id="compamount" name="compamount" form="createform" value="0">
+					</td>
+					</tr>
+					</table>
+					<script>
+						var compSlider = document.getElementById("comprange");
+						var compForm = document.getElementById("compamount");
+						compForm.value = compSlider.value;
+						compSlider.oninput = function()
+						{
+							compForm.value = Number(this.value) / 100;
+						}
+						
+						var diffSelect = document.getElementById("diffcomp");
+						var imageSelect = document.getElementById("imagecomp");
+						diffSelect.onchange = function()
+						{
+							var curComp = this.value;
+							if(curComp == "diff")
+							{
+								document.getElementById("jpgselect").setAttribute("disabled", "");
+								if(imageSelect.value == "jpg")
+								{
+									imageSelect.value = "png";
+								}
+							}
+							else
+							{
+								document.getElementById("jpgselect").removeAttribute("disabled");
+							}
+						}
+						<%
+						//if(diffType.equals(""))
+						//{
+						//	diffType = "none";
+						//}
+						%>
+						diffSelect.value = "<%=diffType %>";
+						imageSelect.value = "<%=compType %>";
+						compForm.value = <%=compAmount %>;
+						compSlider.value = <%=compAmount %> * 100;
+						
+						var curComp = diffSelect.value;
+						if(curComp == "diff")
+						{
+							document.getElementById("jpgselect").setAttribute("disabled", "");
+							if(imageSelect.value == "jpg")
+							{
+								imageSelect.value = "png";
+							}
+						}
+						else
+						{
+							document.getElementById("jpgselect").removeAttribute("disabled");
+						}
+						
+					</script>
+				</td>
+			</tr>
+		</table>
 	</td>
 	</tr>
 	<tr>
