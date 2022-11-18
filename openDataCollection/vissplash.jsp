@@ -1139,7 +1139,7 @@ function deepEqual(a,b)
 					{
 						for(user in data)
 						{
-							if(theNormDataInit[user]["Aggregated"])
+							if(user in theNormDataInit && "Aggregated" in theNormDataInit[user])
 							{
 								delete theNormDataInit[user]["Aggregated"];
 							}

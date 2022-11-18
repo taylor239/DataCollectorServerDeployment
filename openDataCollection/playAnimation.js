@@ -85,7 +85,12 @@ async function playAnimation(owningUser, owningSession, seekTo)
 	{
 		keystrokes = getKeyValue.value;
 	}
-	var mouse = (await theNormData[owningUser][owningSession]["mouse"]["getfiltered"]()).value;
+	var getMouseValue = (await theNormData[owningUser][owningSession]["mouse"]["getfiltered"]()).value;
+	var mouse;
+	if(getMouseValue)
+	{
+		mouose = getMouseValue.value;
+	}
 	var windows = theNormData[owningUser][owningSession]["windows"];
 	var processes = (await theNormData[owningUser][owningSession]["processes"]["getfiltered"]()).value;
 	var events = theNormData[owningUser][owningSession]["events"];
