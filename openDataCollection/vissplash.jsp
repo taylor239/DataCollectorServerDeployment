@@ -1149,6 +1149,10 @@ function deepEqual(a,b)
 								//console.log(data[user][session]);
 								//if(sessionsToQuery.includes(session))
 								//{
+									if(!theNormDataInit[user])
+									{
+										theNormDataInit[user] = {};
+									}
 									theNormDataInit[user][session] = data[user][session];
 								//}
 								//console.log(theNormDataInit[user][session]);
