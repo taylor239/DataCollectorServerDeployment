@@ -1151,6 +1151,7 @@ function deepEqual(a,b)
 								//{
 									if(!theNormDataInit[user])
 									{
+										console.log("User not detected: ") + user;
 										theNormDataInit[user] = {};
 									}
 									theNormDataInit[user][session] = data[user][session];
