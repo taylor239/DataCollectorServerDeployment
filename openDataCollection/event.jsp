@@ -39,12 +39,14 @@ if(requestedName == null)
 	requestedName = "anonymous";
 }
 
+PreparedStatement queryStmt = null;
+ResultSet myResults = null;
 try
 {
-	PreparedStatement queryStmt = dbConn.prepareStatement(query);
+	queryStmt = dbConn.prepareStatement(query);
 	queryStmt.setString(1, event);
 	queryStmt.setString(2, admin);
-	ResultSet myResults = queryStmt.executeQuery();
+	myResults = queryStmt.executeQuery();
 	if(!myResults.next())
 	{
 		return;
@@ -63,54 +65,84 @@ try
 		contactName.add(myResults.getString("name"));
 		contacts.add(myResults.getString("contact"));
 	}
+	myResults.close();
+	queryStmt.close();
+	dbConn.close();
 }
 catch(Exception e)
 {
 	e.printStackTrace();
 }
+finally
+{
+	try { if (myResults != null) myResults.close(); } catch(Exception e) { }
+    try { if (queryStmt != null) queryStmt.close(); } catch(Exception e) { }
+    try { if (dbConn != null) dbConn.close(); } catch(Exception e) { }
+}
+
 boolean failed = false;
 boolean insertedRequest = false;
 if((!dynamicToken) && publicEvent && requestedToken != null && !requestedToken.equals(""))
 {
+	dbConn = myConnectionSource.getDatabaseConnection();
 	insertedRequest = true;
 	try
 	{
 		String requestInsert = "INSERT INTO `TokenRequest`(`event`, `adminEmail`, `requestedUsername`, `requesterName`, `requesterEmail`) VALUES (?,?,?,?,?)";
 		
 		PreparedStatement requestStmt = dbConn.prepareStatement(requestInsert);
+		queryStmt = requestStmt;
 		requestStmt.setString(1, event);
 		requestStmt.setString(2, admin);
 		requestStmt.setString(3, StringEscapeUtils.escapeHtml4(requestedToken).replaceAll(",", "").replaceAll("\"", ""));
 		requestStmt.setString(4, StringEscapeUtils.escapeHtml4(requestedName).replaceAll("\"", ""));
 		requestStmt.setString(5, StringEscapeUtils.escapeHtml4(requestedEmail).replaceAll("\"", ""));
 		requestStmt.execute();
+		
+		queryStmt.close();
+		dbConn.close();
 	}
 	catch(Exception e)
 	{
 		failed = true;
 		e.printStackTrace();
 	}
+	finally
+	{
+	    try { if (queryStmt != null) queryStmt.close(); } catch(Exception e) { }
+	    try { if (dbConn != null) dbConn.close(); } catch(Exception e) { }
+	}
 }
 
 if(dynamicToken && requestedToken != null && !requestedToken.equals(""))
 {
+	dbConn = myConnectionSource.getDatabaseConnection();
 	insertedRequest = true;
 	try
 	{
 		String requestInsert = "INSERT INTO `UserList`(`event`, `adminEmail`, `username`, `name`, `email`) VALUES (?,?,?,?,?)";
 		
 		PreparedStatement requestStmt = dbConn.prepareStatement(requestInsert);
+		queryStmt = requestStmt;
 		requestStmt.setString(1, event);
 		requestStmt.setString(2, admin);
 		requestStmt.setString(3, StringEscapeUtils.escapeHtml4(requestedToken).replaceAll(",", "").replaceAll("\"", ""));
 		requestStmt.setString(4, StringEscapeUtils.escapeHtml4(requestedName).replaceAll("\"", ""));
 		requestStmt.setString(5, StringEscapeUtils.escapeHtml4(requestedEmail).replaceAll("\"", ""));
 		requestStmt.execute();
+		
+		queryStmt.close();
+		dbConn.close();
 	}
 	catch(Exception e)
 	{
 		failed = true;
 		e.printStackTrace();
+	}
+	finally
+	{
+	    try { if (queryStmt != null) queryStmt.close(); } catch(Exception e) { }
+	    try { if (dbConn != null) dbConn.close(); } catch(Exception e) { }
 	}
 }
 

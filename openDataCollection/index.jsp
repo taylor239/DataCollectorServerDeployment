@@ -85,7 +85,7 @@ String admin = request.getParameter("admin");
 if(admin == null || admin.isEmpty())
 {
 	publicEvents = true;
-	admin = "cgtboy1988@yahoo.com";
+	admin = "none";
 }
 %>
 <tr>
@@ -123,11 +123,13 @@ TestingConnectionSource myConnectionSource = myConnector.getConnectionSource();
 
 Connection dbConn = myConnectionSource.getDatabaseConnection();
 String query = "SELECT * FROM `openDataCollectionServer`.`Event` WHERE `adminEmail` = ? AND `publicEvent` = 1";
+PreparedStatement queryStmt = null;
+ResultSet myResults = null;
 try
 {
-	PreparedStatement queryStmt = dbConn.prepareStatement(query);
+	queryStmt = dbConn.prepareStatement(query);
 	queryStmt.setString(1, admin);
-	ResultSet myResults = queryStmt.executeQuery();
+	myResults = queryStmt.executeQuery();
 	while(myResults.next())
 	{
 		String event = myResults.getString("event");
@@ -135,10 +137,19 @@ try
 		<option value="<%=event %>"><%=event %></option>
 		<%
 	}
+	myResults.close();
+	queryStmt.close();
+	dbConn.close();
 }
 catch(Exception e)
 {
 	e.printStackTrace();
+}
+finally
+{
+	try { if (myResults != null) myResults.close(); } catch(Exception e) { }
+    try { if (queryStmt != null) queryStmt.close(); } catch(Exception e) { }
+    try { if (dbConn != null) dbConn.close(); } catch(Exception e) { }
 }
 
 %>

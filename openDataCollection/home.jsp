@@ -16,7 +16,7 @@ if(myConnector==null)
 }
 TestingConnectionSource myConnectionSource = myConnector.getConnectionSource();
 
-Connection dbConn = myConnectionSource.getDatabaseConnection();
+Connection dbConn = null;
 
 if(request.getParameter("email") != null)
 {
@@ -30,23 +30,34 @@ if(request.getParameter("email") != null)
 		{
 			String adminName = request.getParameter("name");
 			String signupQuery = "INSERT INTO `openDataCollectionServer`.`Admin`(`adminEmail`, `adminPassword`, `name`) VALUES (?, ?, ?)";
+			PreparedStatement loginStmt = null;
 			try
 			{
-				PreparedStatement loginStmt = dbConn.prepareStatement(signupQuery);
+				dbConn = myConnectionSource.getDatabaseConnection();
+				loginStmt = dbConn.prepareStatement(signupQuery);
 				loginStmt.setString(1, adminEmail);
 				loginStmt.setString(2, password);
 				loginStmt.setString(3, adminName);
 				loginStmt.execute();
+				loginStmt.close();
+				dbConn.close();
 			}
 			catch(Exception e)
 			{
 				e.printStackTrace();
 			}
+			finally
+			{
+				try { if (loginStmt != null) loginStmt.close(); } catch(Exception e) { }
+			    try { if (dbConn != null) dbConn.close(); } catch(Exception e) { }
+			}
 		}
 		String loginQuery = "SELECT * FROM `openDataCollectionServer`.`Admin` WHERE `adminEmail` = ? AND `adminPassword` = ?";
+		PreparedStatement queryStmt = null;
 		try
 		{
-			PreparedStatement queryStmt = dbConn.prepareStatement(loginQuery);
+			dbConn = myConnectionSource.getDatabaseConnection();
+			queryStmt = dbConn.prepareStatement(loginQuery);
 			queryStmt.setString(1, adminEmail);
 			queryStmt.setString(2, password);
 			ResultSet myResults = queryStmt.executeQuery();
@@ -55,10 +66,17 @@ if(request.getParameter("email") != null)
 				session.setAttribute("admin", myResults.getString("adminEmail"));
 				session.setAttribute("adminName", myResults.getString("name"));
 			}
+			queryStmt.close();
+			dbConn.close();
 		}
 		catch(Exception e)
 		{
 			e.printStackTrace();
+		}
+		finally
+		{
+			try { if (queryStmt != null) queryStmt.close(); } catch(Exception e) { }
+		    try { if (dbConn != null) dbConn.close(); } catch(Exception e) { }
 		}
 	}
 }
@@ -144,9 +162,11 @@ Please select an event to view from the list below:
 <option value="none">Select here</option>
 <%
 String query = "SELECT * FROM `openDataCollectionServer`.`Event` WHERE `adminEmail` = ?";
+PreparedStatement queryStmt = null;
 try
 {
-	PreparedStatement queryStmt = dbConn.prepareStatement(query);
+	dbConn = myConnectionSource.getDatabaseConnection();
+	queryStmt = dbConn.prepareStatement(query);
 	queryStmt.setString(1, admin);
 	ResultSet myResults = queryStmt.executeQuery();
 	while(myResults.next())
@@ -156,10 +176,17 @@ try
 		<option value="<%=event %>"><%=event %></option>
 		<%
 	}
+	queryStmt.close();
+	dbConn.close();
 }
 catch(Exception e)
 {
 	e.printStackTrace();
+}
+finally
+{
+	try { if (queryStmt != null) queryStmt.close(); } catch(Exception e) { }
+    try { if (dbConn != null) dbConn.close(); } catch(Exception e) { }
 }
 
 %>
