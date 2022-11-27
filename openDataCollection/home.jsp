@@ -91,6 +91,7 @@ if(applicationURL.equals(""))
 {
 	applicationURL = "/DataCollectorServerDeployment";
 }
+UploadMonitor uploadMonitor = UploadMonitor.getUploadMonitor();
 %>
 <body>
 <div align="center">
@@ -144,6 +145,57 @@ String admin = (String)session.getAttribute("admin");
 	</h3>
 	</td>
 	</tr>
+<tr>
+	<td>
+		<h3>Server Info</h3>
+	</td>
+</tr>
+<tr>
+<td colspan=2>
+<table>
+<tr>
+	<td>
+		<b>Available Memory:</b>
+	</td>
+	<td>
+		<%=myConnector.freeMemory() %> bytes
+	</td>
+</tr>
+<tr>
+	<td>
+		<b>Total Active Uploads:</b>
+	</td>
+	<td>	
+		<%=uploadMonitor.getNumTokensActive() %>
+	</td>
+</tr>
+<tr>
+	<td>
+		<b>Total Users with Uploads:</b>
+	</td>
+	<td>	
+		<%=uploadMonitor.getNumUsersActive() %>
+	</td>
+</tr>
+<tr>
+	<td>
+		<b>Total Events with Uploads:</b>
+	</td>
+	<td>	
+		<%=uploadMonitor.getNumEventsActive() %>
+	</td>
+</tr>
+<tr>
+	<td>
+		<b>Total Admins with Uploads:</b>
+	</td>
+	<td>	
+		<%=uploadMonitor.getNumAdminsActive() %>
+	</td>
+</tr>
+</table>
+</td>
+</tr>
 <tr>
 <td>
 <h3>

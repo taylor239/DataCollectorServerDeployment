@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8"
-    pageEncoding="UTF-8" import="java.util.ArrayList, java.util.HashMap, com.datacollector.*, java.sql.*, org.apache.commons.lang3.StringEscapeUtils"%>
+    pageEncoding="UTF-8" import="java.util.ArrayList, java.util.HashMap, com.datacollector.*, java.sql.*, org.apache.commons.lang3.StringEscapeUtils, java.util.concurrent.ConcurrentHashMap, java.util.Map.Entry, java.util.Map"%>
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
@@ -588,6 +588,16 @@ catch(Exception e)
 	e.printStackTrace();
 }
 
+
+UploadMonitor uploadMonitor = UploadMonitor.getUploadMonitor();
+ConcurrentHashMap uploadMap = uploadMonitor.getEventMap(admin, eventName);
+if(uploadMap != null)
+{
+	int numUploaders = uploadMap.size();
+	%>
+		<p> There are currently <%=numUploaders %> uploads active for this event.  Details on each upload can be viewed <a href="activeUploadTable.jsp?event=<%=eventName %>">here</a>. </p>
+	<%
+}
 %>
 	</td>
 	</tr>
